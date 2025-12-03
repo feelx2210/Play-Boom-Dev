@@ -646,21 +646,28 @@ class Player {
         
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        if (this.skullEffect === 'sickness') {
-            if (Math.random() < 0.05) this.plantBomb();
-            this.skullTimer--; if (this.skullTimer <= 0) this.skullEffect = null;
-        }
-        
+       // --- HIER DEN NEUEN CODE EINFÜGEN ---
         let currentSpeed = this.speed;
-        if (this.skullEffect === 'speed_rush') { currentSpeed *= 2; this.skullTimer--; if (this.skullTimer <= 0) this.skullEffect = null; }
-        else if (this.skullEffect === 'slow') { currentSpeed *= 0.5; this.skullTimer--; if (this.skullTimer <= 0) this.skullEffect = null; }
 
-        const gx = Math.round(this.x / TILE_SIZE);
-        const gy = Math.round(this.y / TILE_SIZE);
-        if (gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H) {
-            if (grid[gy][gx] === TYPES.WATER) {
-                currentSpeed *= 0.5; 
+        if (this.skullEffect) {
+            // Timer IMMER runterzählen, egal welcher Effekt
+            this.skullTimer--;
+            
+            if (this.skullTimer <= 0) {
+                this.skullEffect = null;
+                createFloatingText(this.x, this.y, "CURED!", "#00ff00");
+            } else {
+                // Aktive Effekte anwenden
+                if (this.skullEffect === 'sickness') {
+                    if (Math.random() < 0.05) this.plantBomb();
+                } else if (this.skullEffect === 'speed_rush') {
+                    currentSpeed *= 2;
+                } else if (this.skullEffect === 'slow') {
+                    currentSpeed *= 0.5;
+                }
             }
+        }
+        // -------------------------------------
         }
 
         let dx = 0, dy = 0;
