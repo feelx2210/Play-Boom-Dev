@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { isSolid, createFloatingText } from './utils.js';
 import { drawCharacterSprite } from './graphics.js';
 
-// Helper für Canvas Access
+// Helper für Canvas Access nice
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
