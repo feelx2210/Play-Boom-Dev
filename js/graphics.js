@@ -3,7 +3,6 @@ import { state } from './state.js';
 
 const spriteCache = {};
 
-// --- CACHE FUNKTION ---
 function getCachedSprite(charDef, d, isCursed) {
     const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
     if (spriteCache[key]) return spriteCache[key];
@@ -13,7 +12,6 @@ function getCachedSprite(charDef, d, isCursed) {
     const ctx = c.getContext('2d');
     ctx.translate(24, 24);
 
-    // Zeichnen...
     if (charDef.id === 'lucifer') {
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
@@ -51,7 +49,7 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'side') { ctx.fillStyle = '#005599'; ctx.fillRect(6, -20, 10, 14); ctx.fillStyle = '#fff'; ctx.fillRect(10, -17, 4, 6); ctx.fillStyle = '#000'; ctx.fillRect(12, -16, 2, 2); ctx.fillStyle = furBase; ctx.fillRect(-4, -14, 12, 26); ctx.fillStyle = furLite; ctx.fillRect(-4, -14, 12, 4); }
     }
     if (isCursed && Math.floor(Date.now()/100)%2===0) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.fillRect(-25, -35, 50, 60); ctx.globalCompositeOperation = 'source-over'; }
-    
+
     spriteCache[key] = c;
     return c;
 }
@@ -181,6 +179,14 @@ function drawCampfire(ctx, x, y) {
     ctx.quadraticCurveTo(0 + sway, -15, 5, 5);
     ctx.fill();
 
+    // Rauch
+    if (Math.random() < 0.3) {
+        ctx.fillStyle = 'rgba(50, 50, 50, 0.5)';
+        const rx = (Math.random() - 0.5) * 20;
+        const ry = -20 - Math.random() * 20;
+        ctx.fillRect(rx, ry, 4, 4);
+    }
+
     ctx.restore();
 }
 
@@ -189,11 +195,12 @@ export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // --- HELL-BODEN TEXTUR (ASCHE) ---
+    // --- NEU: HELL-BODEN TEXTUR (ASCHE) ---
     if (state.currentLevel.id === 'hell') {
-        ctx.fillStyle = 'rgba(80, 60, 60, 0.2)'; 
+        ctx.fillStyle = 'rgba(80, 60, 60, 0.2)'; // Graue "Asche"-Flecken
         for (let y = 0; y < GRID_H; y++) {
             for (let x = 0; x < GRID_W; x++) {
+                // Statisches Rauschen basierend auf Koordinaten
                 let seed = x * 37 + y * 13;
                 for (let i = 0; i < 4; i++) {
                      seed = (seed * 9301 + 49297) % 233280;
@@ -205,6 +212,7 @@ export function draw(ctx, canvas) {
             }
         }
     }
+    // ---------------------------------------
 
     // --- BOOST PADS (Hell & Ice) ---
     if (state.currentLevel.id === 'hell' || state.currentLevel.id === 'ice') {
@@ -225,7 +233,7 @@ export function draw(ctx, canvas) {
         OIL_PADS.forEach(oil => {
             const px = oil.x * TILE_SIZE; const py = oil.y * TILE_SIZE;
             // Dunkler, glänzender "Ölfleck"
-            ctx.fillStyle = '#0a0505'; 
+            ctx.fillStyle = '#0a0505'; // Sehr dunkles Schwarz
             ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
             // Schimmer
             ctx.fillStyle = 'rgba(50, 30, 30, 0.3)';
@@ -350,6 +358,7 @@ export function draw(ctx, canvas) {
         ctx.beginPath(); ctx.arc(px + TILE_SIZE/2, py + TILE_SIZE/2, 16 * scale, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + TILE_SIZE/2 + 8, py + TILE_SIZE/2 - 8); ctx.lineTo(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14); ctx.stroke();
         ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14, 3, 0, Math.PI*2); ctx.fill();
+        // Funkelnde Zündschnur
         const tipX = px + TILE_SIZE/2 + 12 * scale; const tipY = py + TILE_SIZE/2 - 14 * scale;
         ctx.fillStyle = Math.random() > 0.5 ? '#ffff00' : '#ff4400'; ctx.beginPath(); ctx.arc(tipX, tipY, 3 + Math.random()*2, 0, Math.PI*2); ctx.fill();
         for(let j=0; j<3; j++) { const angle = Math.random() * Math.PI * 2; const dist = 2 + Math.random() * 6; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8; ctx.fillRect(tipX + Math.cos(angle)*dist, tipY + Math.sin(angle)*dist, 2, 2); ctx.globalAlpha = 1.0; }
