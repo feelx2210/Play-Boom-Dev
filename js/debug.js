@@ -1,5 +1,5 @@
 // --- DEBUG SYSTEM ---
-// Zeigt Fehler direkt im Spiel an, damit wir wissen, was los ist.
+// Zeigt Fehler direkt im Spiel an, damit wir wissen, was los ist. Hilfreich
 
 const debugOverlay = document.createElement('div');
 debugOverlay.id = 'debug-overlay';
