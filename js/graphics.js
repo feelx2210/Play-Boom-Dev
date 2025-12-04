@@ -49,10 +49,12 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'side') { ctx.fillStyle = '#005599'; ctx.fillRect(6, -20, 10, 14); ctx.fillStyle = '#fff'; ctx.fillRect(10, -17, 4, 6); ctx.fillStyle = '#000'; ctx.fillRect(12, -16, 2, 2); ctx.fillStyle = furBase; ctx.fillRect(-4, -14, 12, 26); ctx.fillStyle = furLite; ctx.fillRect(-4, -14, 12, 4); }
     }
     if (isCursed && Math.floor(Date.now()/100)%2===0) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.fillRect(-25, -35, 50, 60); ctx.globalCompositeOperation = 'source-over'; }
-    
+
     spriteCache[key] = c;
     return c;
 }
+
+// --- EXPORTIERTE ZEICHENFUNKTIONEN ---
 
 export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = {x:0, y:1}) {
     ctx.save();
@@ -106,6 +108,7 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
+// --- FLAMMEN & EFFEKTE (LOKAL) ---
 function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
     grad.addColorStop(0, innerColor);
@@ -183,47 +186,6 @@ function drawCampfire(ctx, x, y) {
         const ry = -20 - Math.random() * 20;
         ctx.fillRect(rx, ry, 4, 4);
     }
-
-    ctx.restore();
-}
-
-// --- NEU: EINFRIER-ANIMATION ---
-function drawIceFreeze(ctx, x, y, life, maxLife) {
-    const cx = x + 24;
-    const cy = y + 24;
-    
-    // Fortschritt: 1.0 = Start, 0.0 = Ende
-    const progress = life / maxLife; 
-    
-    // Wachsende Kristalle (von außen nach innen)
-    // Wir nutzen das Gegenteil von progress (0 bis 1) für das Wachstum
-    const growth = 1 - progress; 
-    
-    ctx.save();
-    ctx.translate(cx, cy);
-    
-    // Farbe: Hellblau/Weiß mit Transparenz
-    ctx.fillStyle = `rgba(200, 230, 255, ${0.5 + growth * 0.5})`;
-    
-    // Zeichne 4 Kristall-Arme, die zur Mitte wachsen
-    for(let i=0; i<4; i++) {
-        ctx.rotate(Math.PI / 2);
-        // Länge des Kristalls
-        const len = 24 * growth; 
-        ctx.beginPath();
-        ctx.moveTo(0, -24); // Start am Rand (oben, da rotiert)
-        ctx.lineTo(-10, -24 + len); // Linke Ecke
-        ctx.lineTo(0, -24 + len + 10); // Spitze zur Mitte
-        ctx.lineTo(10, -24 + len); // Rechte Ecke
-        ctx.fill();
-    }
-    
-    // Zusätzlicher "Nebel"
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(0, 0, 20 * growth, 0, Math.PI*2);
-    ctx.fill();
 
     ctx.restore();
 }
@@ -335,13 +297,6 @@ export function draw(ctx, canvas) {
                 }
             }
 
-            // --- OIL FIELDS (Überschreibt andere Bodentexturen, wenn es Öl ist) ---
-            // Hinweis: Wir zeichnen hier nicht drüber, sondern in Constants ist es definiert.
-            // Allerdings ist OIL_PADS eine Liste von Koordinaten, nicht ein Grid-Typ, 
-            // daher malen wir es oben (vor dem Grid) oder hier. 
-            // Da wir oben schon `OIL_PADS` gemalt haben (Zeile 186), passt das so.
-            // ---------------------------------------------------------------------
-
             if (tile === TYPES.WALL_HARD) {
                 if (state.currentLevel.id === 'ice') {
                     ctx.fillStyle = '#4466ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
@@ -416,27 +371,24 @@ export function draw(ctx, canvas) {
             const max = p.maxLife || 100;
             const currentLife = p.life;
             const age = max - currentLife;
-
-            const cx = px + TILE_SIZE/2;
-            const cy = py + TILE_SIZE/2;
+            const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
             
             ctx.save();
 
-            const explosionDuration = 120;
+            const explosionDuration = 100;
 
             if (age < 15) {
-                // PHASE 1: EXPLOSION (Start)
+                // PHASE 1: EXPLOSION START
                 const grow = age / 15;
                 drawFlame(ctx, cx, cy, 18 * grow, '#ffffff', '#ffff00', 0.1);
             } 
             else if (age < explosionDuration) {
-                // PHASE 2: LODERN
+                // PHASE 2: EXPLOSION SUSTAIN (Beam / Center)
                 const pulse = Math.sin(Date.now() / 30) * 2;
                 const baseSize = 16; 
-                // --- CHECK FÜR ÖL-FEUER ---
-                const isOil = p.isOilFire;
-                const inner = isOil ? '#ff5500' : (p.isNapalm ? '#ffaa00' : '#ffff44');
-                const outer = isOil ? '#000000' : (p.isNapalm ? '#ff2200' : '#ff6600');
+                
+                const inner = p.isNapalm ? '#ffaa00' : '#ffff44';
+                const outer = p.isNapalm ? '#ff2200' : '#ff6600';
 
                 if (p.type === 'center') {
                     drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.2);
@@ -498,8 +450,6 @@ export function draw(ctx, canvas) {
             ctx.restore();
         } else if (p.text) {
             ctx.fillStyle = p.color; ctx.font = '10px "Press Start 2P"'; ctx.fillText(p.text, p.x, p.y);
-        } else if (p.type === 'freeze_anim') {
-            drawIceFreeze(ctx, p.gx * TILE_SIZE, p.gy * TILE_SIZE, p.life, p.maxLife);
         } else {
             ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size || 4, p.size || 4);
         }
@@ -507,272 +457,3 @@ export function draw(ctx, canvas) {
 
     state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
 }
-
-}
-
-{
-type: uploaded file
-fileName: feelx2210/play-boom/Play-Boom-d85bfe3f229cd3113691cc1e50c7a52093dd34f8/js/state.js
-fullContent:
-import { LEVELS } from './constants.js';
-//added for push
-export const state = {
-    grid: [],
-    items: [],
-    bombs: [],
-    particles: [],
-    players: [],
-    currentLevel: LEVELS.hell,
-    selectedCharIndex: 0,
-    selectedLevelKey: 'hell',
-    menuState: 0,
-    isGameOver: false,
-    isPaused: false,
-    hellFireTimer: 0,
-    hellFirePhase: 'IDLE', 
-    hellFireActive: false,
-    keys: {}
-};
-
-}
-
-{
-type: uploaded file
-fileName: feelx2210/play-boom/Play-Boom-d85bfe3f229cd3113691cc1e50c7a52093dd34f8/style.css
-fullContent:
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-body {
-    background-color: #050505;
-    color: #ff3333;
-    font-family: 'Press Start 2P', cursive;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-    overflow: hidden;
-}
-
-#game-container {
-    position: relative;
-    box-shadow: 0 0 20px #ff0000;
-    border: 4px solid #550000;
-    background-color: #000;
-    width: 720px; 
-    height: 720px;
-    transition: box-shadow 0.5s, border-color 0.5s; 
-}
-
-canvas {
-    display: block;
-    background: #110000;
-    image-rendering: pixelated; 
-}
-
-/* --- UI LAYER --- */
-#ui-layer {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    display: flex;
-    justify-content: flex-start; 
-    pointer-events: none;
-    text-shadow: 2px 2px 0 #000;
-    font-size: 14px;
-    z-index: 10;
-}
-
-/* PAUSE BUTTON */
-#pause-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 30px;
-    height: 30px;
-    background: rgba(50, 0, 0, 0.8);
-    border: 2px solid #ff0000;
-    color: #fff;
-    font-family: sans-serif;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 100;
-    pointer-events: auto;
-}
-#pause-btn:hover { background: #ff0000; color: #000; }
-
-/* --- SCREENS --- */
-.screen {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 20;
-    pointer-events: auto;
-}
-
-h1 { font-size: 40px; color: #ff0000; text-shadow: 4px 4px 0 #550000; margin-bottom: 40px; }
-h2 { font-size: 20px; color: #ffffff; margin-top: 20px; margin-bottom: 10px; }
-
-.selection-grid {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-    padding: 10px;
-    border-radius: 8px;
-    transition: 0.3s;
-}
-
-/* Active Menu Row */
-.selection-grid.active-group {
-    border: 2px dashed #ffff00;
-    background: rgba(50, 50, 0, 0.3);
-    opacity: 1;
-}
-.selection-grid.inactive-group {
-    border: 2px solid transparent;
-    opacity: 0.4;
-}
-
-.option-card {
-    border: 2px solid #555;
-    padding: 10px;
-    cursor: pointer;
-    text-align: center;
-    transition: 0.2s;
-    width: 100px; 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-.option-card:hover { border-color: #fff; transform: scale(1.05); }
-.option-card.selected { border-color: #ff0000; background: #220000; box-shadow: 0 0 10px #ff0000; }
-
-.preview-canvas {
-    margin-bottom: 10px;
-    border: 2px solid #333;
-    background: #000;
-}
-
-.card-label {
-    font-size: 12px;
-    color: #ddd;
-}
-
-/* CONTROLS MENU */
-.controls-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
-    width: 80%;
-    max-width: 400px;
-}
-.control-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 16px;
-    color: #ddd;
-}
-.key-btn {
-    background: #333;
-    border: 2px solid #555;
-    color: #fff;
-    padding: 8px 16px;
-    cursor: pointer;
-    width: 180px;
-    text-align: center;
-    font-family: inherit;
-    font-size: 12px;
-    margin-top: 0; 
-    box-shadow: none; 
-}
-.key-btn.active { background: #aa0000; border-color: #ff0000; color: #fff; animation: pulse 0.5s infinite; }
-
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-
-/* Buttons */
-button.main-btn {
-    background: #ff0000;
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    font-family: inherit;
-    font-size: 20px;
-    cursor: pointer;
-    margin-top: 30px;
-    box-shadow: 4px 4px 0 #550000;
-    border: 4px solid transparent;
-}
-button.main-btn:hover { background: #ff4444; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #550000; }
-button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
-
-button.main-btn.focused {
-    background: #fff;
-    color: #ff0000;
-    border-color: #ff0000;
-    animation: pulse 1s infinite;
-}
-
-.btn-secondary {
-    background: #444;
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    font-family: inherit;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 15px;
-    box-shadow: 4px 4px 0 #222;
-}
-.btn-secondary:hover { background: #666; box-shadow: 6px 6px 0 #222; }
-
-.hud-item {
-    background: rgba(0,0,0,0.5);
-    padding: 5px 10px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 15px; 
-}
-
-.hidden { display: none !important; }
-
-}
-
-<ctrl46>Here are the updated files to implement the ice block respawn mechanic in the `ice` level.
-
-### 1. `js/state.js`
-
-Add `iceRespawnTimer` to the initial state.
-
-```javascript
-import { LEVELS } from './constants.js';
-
-export const state = {
-    grid: [],
-    items: [],
-    bombs: [],
-    particles: [],
-    players: [],
-    currentLevel: LEVELS.hell,
-    selectedCharIndex: 0,
-    selectedLevelKey: 'hell',
-    menuState: 0,
-    isGameOver: false,
-    isPaused: false,
-    hellFireTimer: 0,
-    hellFirePhase: 'IDLE', 
-    hellFireActive: false,
-    iceRespawnTimer: 0, // NEU: Timer für das Zufrieren im Eis-Level
-    keys: {}
-};
