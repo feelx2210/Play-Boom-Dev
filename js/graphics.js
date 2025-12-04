@@ -106,48 +106,42 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
-// --- NEUE EXPLOSIONS-GRAFIKEN (Prozedural generiert) ---
+// --- HIER SIND DIE NEUEN FLAMMEN-FUNKTIONEN ---
+function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
+    const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
+    grad.addColorStop(0, innerColor);
+    grad.addColorStop(1, outerColor);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    const points = 16;
+    for (let i = 0; i < points; i++) {
+        const angle = (i / points) * Math.PI * 2;
+        const r = radius * (1 - jaggy + Math.random() * jaggy * 2);
+        const px = x + Math.cos(angle) * r;
+        const py = y + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+}
 
-// Hilfsfunktion: Zeichnet einen "Strahl" für Middle und End Teile
+// NEU: Zeichnet einen Strahl für Mitte und Enden
 function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     const half = width / 2;
-    
-    // Äußerer Rand (Orange/Rot)
     ctx.fillStyle = colorOuter;
-    
-    // Wir zeichnen ein Rechteck, das etwas "wackelt" (Jaggy)
     ctx.beginPath();
-    
-    // Oben links bis oben rechts
     ctx.moveTo(x - 24, y - half);
     for(let i = -24; i <= 24; i+=4) ctx.lineTo(x + i, y - half + (Math.random()-0.5)*4);
-    
-    if (isEnd) {
-        // Runde Spitze am Ende (rechts)
-        ctx.quadraticCurveTo(x + 30, y, x + 24, y + half);
-    } else {
-        ctx.lineTo(x + 24, y + half);
-    }
-    
-    // Unten rechts bis unten links
+    if (isEnd) ctx.quadraticCurveTo(x + 30, y, x + 24, y + half); else ctx.lineTo(x + 24, y + half);
     for(let i = 24; i >= -24; i-=4) ctx.lineTo(x + i, y + half + (Math.random()-0.5)*4);
-    ctx.closePath();
-    ctx.fill();
-
-    // Innerer Kern (Gelb/Hell) - etwas schmaler
+    ctx.closePath(); ctx.fill();
+    
     ctx.fillStyle = colorInner;
-    ctx.beginPath();
-    ctx.moveTo(x - 24, y - half*0.6);
-    if (isEnd) {
-        ctx.lineTo(x + 18, y - half*0.6);
-        ctx.quadraticCurveTo(x + 24, y, x + 18, y + half*0.6);
-    } else {
-        ctx.lineTo(x + 24, y - half*0.6);
-        ctx.lineTo(x + 24, y + half*0.6);
-    }
-    ctx.lineTo(x - 24, y + half*0.6);
-    ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x - 24, y - half*0.6);
+    if (isEnd) { ctx.lineTo(x + 18, y - half*0.6); ctx.quadraticCurveTo(x + 24, y, x + 18, y + half*0.6); } 
+    else { ctx.lineTo(x + 24, y - half*0.6); ctx.lineTo(x + 24, y + half*0.6); }
+    ctx.lineTo(x - 24, y + half*0.6); ctx.fill();
 }
+// --------------------------------------------------
 
 export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
@@ -314,54 +308,92 @@ export function draw(ctx, canvas) {
         }
     });
 
-    // --- NEUE GEZIELTE FEUER-ZEICHEN-LOGIK ---
+    // --- ZEICHNEN DES FEUERS MIT NEUER ZEITBASIERTER LOGIK ---
     state.particles.forEach(p => {
         const px = p.gx * TILE_SIZE;
         const py = p.gy * TILE_SIZE;
 
         if (p.isFire) {
-            const max = p.maxLife || 100; 
-            const pct = p.life / max; // 1.0 -> 0.0
+            const max = p.maxLife || 100;
+            const currentLife = p.life;
+            const age = max - currentLife;
+
             const cx = px + TILE_SIZE/2;
             const cy = py + TILE_SIZE/2;
             
             ctx.save();
 
-            let inner = p.isNapalm ? '#ffcc00' : '#ffffaa';
-            let outer = p.isNapalm ? '#ff4400' : '#ff8800';
+            // Standard-Dauer für die "Explosion" ist 120 Frames.
+            // Bei normalen Bomben entspricht das maxLife.
+            // Bei Napalm ist maxLife 720, aber die "Explosion" dauert nur die ersten 120 Frames.
+            const explosionDuration = 120;
 
-            // Transparenz am Ende
-            if (pct < 0.2) ctx.globalAlpha = pct * 5;
+            // 1. Phase: Explosion (die ersten 15 Frames)
+            if (age < 15) {
+                // Schnell wachsender, heller Blitz
+                const grow = age / 15; // 0 -> 1
+                drawFlame(ctx, cx, cy, 28 * grow, '#ffffff', '#ffff00', 0.1);
+            } 
+            // 2. Phase: Lodern (bis Frame 120)
+            else if (age < explosionDuration) {
+                const pulse = Math.sin(Date.now() / 30) * 2;
+                const baseSize = 22;
+                const inner = p.isNapalm ? '#ffaa00' : '#ffff44';
+                const outer = p.isNapalm ? '#ff2200' : '#ff6600';
 
-            if (p.type === 'center') {
-                // --- ZENTRUM: Großer, heller Kreis/Explosion ---
-                const size = 22 + Math.sin(Date.now()/40)*2;
-                ctx.fillStyle = outer;
-                ctx.beginPath(); ctx.arc(cx, cy, size, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = inner;
-                ctx.beginPath(); ctx.arc(cx, cy, size*0.7, 0, Math.PI*2); ctx.fill();
-            
-            } else {
-                // --- STRAHL oder ENDE ---
-                // Zuerst Rotation bestimmen
-                let angle = 0;
-                if (p.dir) {
-                    if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2; // Oben
-                    if (p.dir.x === 0 && p.dir.y === 1) angle = Math.PI/2;   // Unten
-                    if (p.dir.x === -1 && p.dir.y === 0) angle = Math.PI;    // Links
-                    if (p.dir.x === 1 && p.dir.y === 0) angle = 0;           // Rechts
+                if (p.type === 'center') {
+                    // Zentrum: Runder Feuerball
+                    drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.2);
+                } else {
+                    // Strahl: Gerichtet, mit Rotation
+                    let angle = 0;
+                    if (p.dir) {
+                        if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2;
+                        if (p.dir.x === 0 && p.dir.y === 1) angle = Math.PI/2;
+                        if (p.dir.x === -1 && p.dir.y === 0) angle = Math.PI;
+                        if (p.dir.x === 1 && p.dir.y === 0) angle = 0;
+                    }
+                    ctx.translate(cx, cy);
+                    ctx.rotate(angle);
+                    // Strahl zeichnen
+                    const beamWidth = 40 + Math.sin(Date.now()/40)*4;
+                    drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
+                }
+            } 
+            // 3. Phase: Glut / Abklingen (nur relevant für Napalm, da normale Bomben hier tot sind)
+            else {
+                // Berechne Fortschritt im Glut-Teil (von 0 bis 1)
+                const emberDuration = max - explosionDuration;
+                let emberProgress = 0;
+                if (emberDuration > 0) {
+                    emberProgress = (age - explosionDuration) / emberDuration; // 0 -> 1
                 }
 
-                // Canvas zum Zentrum bewegen und rotieren
-                ctx.translate(cx, cy);
-                ctx.rotate(angle);
-
-                const beamWidth = 40 + Math.sin(Date.now()/40)*4; // Pulsieren
+                // Dunkelrot/Grau, pulsierend, langsam ausblendend am Ende
+                const shrink = 1 - emberProgress; // 1 -> 0
+                ctx.globalAlpha = shrink;
                 
-                // Zeichne den Strahl (oder Spitze)
-                drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
+                const inner = '#aa4400';
+                const outer = '#333333';
+                
+                // Glut glimmt nur noch am Boden
+                if (p.type === 'center') {
+                    drawFlame(ctx, cx, cy, 15, inner, outer, 0.4);
+                } else {
+                    // Rotation beibehalten für Glut-Form
+                    let angle = 0;
+                    if (p.dir) {
+                        if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2;
+                        if (p.dir.x === 0 && p.dir.y === 1) angle = Math.PI/2;
+                        if (p.dir.x === -1 && p.dir.y === 0) angle = Math.PI;
+                        if (p.dir.x === 1 && p.dir.y === 0) angle = 0;
+                    }
+                    ctx.translate(cx, cy);
+                    ctx.rotate(angle);
+                    // Kleinerer, dunklerer Strahl
+                    drawBeam(ctx, 0, 0, 30, inner, outer, p.type === 'end');
+                }
             }
-
             ctx.restore();
 
         } else if (p.text) {
@@ -370,7 +402,6 @@ export function draw(ctx, canvas) {
             ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size || 4, p.size || 4);
         }
     });
-    // -----------------------------------------------------------
 
     state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
 }
