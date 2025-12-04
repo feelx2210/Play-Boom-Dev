@@ -1,4 +1,4 @@
-import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, HELL_CENTER } from './constants.js';
+import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER } from './constants.js';
 import { state } from './state.js';
 
 const spriteCache = {};
@@ -12,6 +12,8 @@ function getCachedSprite(charDef, d, isCursed) {
     const ctx = c.getContext('2d');
     ctx.translate(24, 24);
 
+    // (Hier bleibt der Character-Code unverändert, ich habe ihn gekürzt damit es übersichtlich bleibt, aber du musst den ganzen Block behalten!)
+    // --- FÜGE HIER BITTE DEN UNVERÄNDERTEN CHARACTER-CODE EIN (wie in der vorigen Version) ---
     if (charDef.id === 'lucifer') {
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
@@ -49,6 +51,7 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'side') { ctx.fillStyle = '#005599'; ctx.fillRect(6, -20, 10, 14); ctx.fillStyle = '#fff'; ctx.fillRect(10, -17, 4, 6); ctx.fillStyle = '#000'; ctx.fillRect(12, -16, 2, 2); ctx.fillStyle = furBase; ctx.fillRect(-4, -14, 12, 26); ctx.fillStyle = furLite; ctx.fillRect(-4, -14, 12, 4); }
     }
     if (isCursed && Math.floor(Date.now()/100)%2===0) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.fillRect(-25, -35, 50, 60); ctx.globalCompositeOperation = 'source-over'; }
+    // --- CHARACTER CODE ENDE ---
 
     spriteCache[key] = c;
     return c;
@@ -106,7 +109,6 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
-// --- HIER SIND DIE NEUEN FLAMMEN-FUNKTIONEN ---
 function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
     grad.addColorStop(0, innerColor);
@@ -124,7 +126,6 @@ function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     ctx.closePath(); ctx.fill();
 }
 
-// NEU: Zeichnet einen Strahl für Mitte und Enden
 function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     const half = width / 2;
     ctx.fillStyle = colorOuter;
@@ -141,12 +142,12 @@ function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     else { ctx.lineTo(x + 24, y - half*0.6); ctx.lineTo(x + 24, y + half*0.6); }
     ctx.lineTo(x - 24, y + half*0.6); ctx.fill();
 }
-// --------------------------------------------------
 
 export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // --- BOOST PADS (Hell & Ice) ---
     if (state.currentLevel.id === 'hell' || state.currentLevel.id === 'ice') {
         BOOST_PADS.forEach(pad => {
             const px = pad.x * TILE_SIZE; const py = pad.y * TILE_SIZE;
@@ -157,6 +158,21 @@ export function draw(ctx, canvas) {
             ctx.fillRect(px + 8, py + 20, 32, 8);
             ctx.beginPath(); ctx.moveTo(px+2, py+24); ctx.lineTo(px+10, py+18); ctx.lineTo(px+10, py+30); ctx.fill(); 
             ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
+        });
+    }
+
+    // --- OIL PADS (Hell only) ---
+    if (state.currentLevel.id === 'hell') {
+        OIL_PADS.forEach(oil => {
+            const px = oil.x * TILE_SIZE; const py = oil.y * TILE_SIZE;
+            // Dunkler, glänzender "Ölfleck"
+            ctx.fillStyle = '#0a0505'; // Sehr dunkles Schwarz
+            ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+            // Schimmer
+            ctx.fillStyle = 'rgba(50, 30, 30, 0.3)';
+            ctx.beginPath(); ctx.arc(px + 15, py + 15, 10, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(40, 20, 20, 0.2)';
+            ctx.beginPath(); ctx.arc(px + 35, py + 30, 8, 0, Math.PI*2); ctx.fill();
         });
     }
 
@@ -205,7 +221,6 @@ export function draw(ctx, canvas) {
             if (item !== ITEMS.NONE && state.grid[y][x] !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
             
             let tile = state.grid[y][x];
-            // Visual Fix: Wenn hier eine Bombe liegt, zeichne den Untergrund!
             if (tile === TYPES.BOMB) {
                 const bomb = state.bombs.find(b => b.gx === x && b.gy === y);
                 if (bomb && bomb.underlyingTile !== undefined) {
@@ -214,6 +229,13 @@ export function draw(ctx, canvas) {
                     tile = TYPES.EMPTY;
                 }
             }
+
+            // --- OIL FIELDS (Überschreibt andere Bodentexturen, wenn es Öl ist) ---
+            // Hinweis: Wir zeichnen hier nicht drüber, sondern in Constants ist es definiert.
+            // Allerdings ist OIL_PADS eine Liste von Koordinaten, nicht ein Grid-Typ, 
+            // daher malen wir es oben (vor dem Grid) oder hier. 
+            // Da wir oben schon `OIL_PADS` gemalt haben (Zeile 186), passt das so.
+            // ---------------------------------------------------------------------
 
             if (tile === TYPES.WALL_HARD) {
                 if (state.currentLevel.id === 'ice') {
@@ -271,7 +293,6 @@ export function draw(ctx, canvas) {
 
     state.bombs.forEach(b => {
         const px = b.px; const py = b.py; 
-        
         const scale = 1 + Math.sin(Date.now() / 100) * 0.1;
         
         let baseColor = '#444444'; 
@@ -309,36 +330,29 @@ export function draw(ctx, canvas) {
         }
     });
 
-    // --- ZEICHNEN DES FEUERS MIT NEUER ZEITBASIERTER LOGIK ---
     state.particles.forEach(p => {
-        const px = p.gx * TILE_SIZE;
-        const py = p.gy * TILE_SIZE;
+        const px = p.gx * TILE_SIZE; const py = p.gy * TILE_SIZE;
 
         if (p.isFire) {
             const max = p.maxLife || 100;
             const currentLife = p.life;
             const age = max - currentLife;
-
-            const cx = px + TILE_SIZE/2;
-            const cy = py + TILE_SIZE/2;
+            const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
             
             ctx.save();
 
             const explosionDuration = 120;
-
             if (age < 15) {
-                // PHASE 1: EXPLOSION (Start)
                 const grow = age / 15;
-                // Radius reduziert auf ca 18 (x2 = 36 = 75% von 48)
                 drawFlame(ctx, cx, cy, 18 * grow, '#ffffff', '#ffff00', 0.1);
             } 
             else if (age < explosionDuration) {
-                // PHASE 2: LODERN
                 const pulse = Math.sin(Date.now() / 30) * 2;
-                // Basisgröße reduziert: war 22, jetzt 16 (32px Durchmesser)
                 const baseSize = 16; 
-                const inner = p.isNapalm ? '#ffaa00' : '#ffff44';
-                const outer = p.isNapalm ? '#ff2200' : '#ff6600';
+                // --- CHECK FÜR ÖL-FEUER ---
+                const isOil = p.isOilFire;
+                const inner = isOil ? '#ff5500' : (p.isNapalm ? '#ffaa00' : '#ffff44');
+                const outer = isOil ? '#000000' : (p.isNapalm ? '#ff2200' : '#ff6600');
 
                 if (p.type === 'center') {
                     drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.2);
@@ -352,42 +366,29 @@ export function draw(ctx, canvas) {
                     }
                     ctx.translate(cx, cy);
                     ctx.rotate(angle);
-                    
-                    // Strahlbreite reduziert: war 40, jetzt 36 (75%)
                     const beamWidth = 36 + Math.sin(Date.now()/40)*3; 
                     drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
                 }
             } 
             else {
-                // PHASE 3: GLUT (Ende) - Sizzling Napalm
-                
-                // Fortschritt der Glut-Phase
+                // PHASE 3: GLUT (Napalm oder Öl)
                 const emberDuration = max - explosionDuration;
                 let emberProgress = 0;
                 if (emberDuration > 0) emberProgress = (age - explosionDuration) / emberDuration;
                 
-                // Brutzel-Effekt: Zufälliges Wackeln
                 const jitter = (Math.random() - 0.5) * 3; 
-                
-                // Pulsierendes Glühen
                 const pulse = Math.sin(Date.now() / 50) * 2; 
+                
+                const isOil = p.isOilFire;
+                const inner = isOil ? '#aa3300' : '#ffcc00'; 
+                const outer = isOil ? '#111111' : '#cc2200';
 
-                // Farben: Heißes Gelb/Orange innen, Rot außen
-                const inner = '#ffcc00'; 
-                const outer = '#cc2200';
-
-                // Erst ganz am Ende ausblenden (letzte 10%)
-                if (emberProgress > 0.9) {
-                    ctx.globalAlpha = 1 - ((emberProgress - 0.9) * 10);
-                } else {
-                    ctx.globalAlpha = 1.0;
-                }
+                if (emberProgress > 0.9) ctx.globalAlpha = 1 - ((emberProgress - 0.9) * 10);
+                else ctx.globalAlpha = 1.0;
 
                 if (p.type === 'center') {
-                    // Zentrum: Ein pulsierender Feuerball
                     drawFlame(ctx, cx, cy, 18 + pulse + jitter, inner, outer, 0.3);
                 } else {
-                    // Strahl: Auch als "lodernde Masse" darstellen
                     let angle = 0;
                     if (p.dir) {
                         if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2;
@@ -397,12 +398,8 @@ export function draw(ctx, canvas) {
                     }
                     ctx.translate(cx, cy);
                     ctx.rotate(angle);
-                    
-                    // Breite variiert stark für den "Brutzel"-Look
                     const beamWidth = 32 + pulse + jitter;
                     drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
-
-                    // Extra Hitze-Partikel (kleine gelbe Punkte)
                     if (Math.random() < 0.4) {
                          ctx.fillStyle = '#ffffaa';
                          const px = (Math.random() - 0.5) * 40;
@@ -412,14 +409,12 @@ export function draw(ctx, canvas) {
                 }
             }
             ctx.restore();
-
         } else if (p.text) {
             ctx.fillStyle = p.color; ctx.font = '10px "Press Start 2P"'; ctx.fillText(p.text, p.x, p.y);
         } else {
             ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size || 4, p.size || 4);
         }
     });
-    // -----------------------------------------------------------
 
     state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
 }
