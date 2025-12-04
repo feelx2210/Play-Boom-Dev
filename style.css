@@ -91,7 +91,8 @@ h2 { font-size: 20px; color: #ffffff; margin-top: 20px; margin-bottom: 10px; }
 
 /* Active Menu Row */
 .selection-grid.active-group {
-    border: 2px dashed #ffff00;
+    /* ÄNDERUNG: Farbe von Gelb auf Weiß gesetzt */
+    border: 2px dashed #ffffff;
     background: rgba(50, 50, 0, 0.3);
     opacity: 1;
 }
