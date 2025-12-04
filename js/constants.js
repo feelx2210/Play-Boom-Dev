@@ -19,12 +19,12 @@ export const BOOST_PADS = [
     {x: 5, y: 5}, {x: 9, y: 5}, {x: 5, y: 9}, {x: 9, y: 9}
 ];
 
-// NEU: Koordinaten der Ölfelder im Hell-Level
+// --- NEU: ÖLFELDER KOORDINATEN ---
 export const OIL_PADS = [
-    {x:3,y:5}, {x:3,y:6}, {x:3,y:7}, {x:3,y:8}, {x:3,y:9}, 
-    {x:4,y:9}, {x:6,y:9}, {x:7,y:9}, {x:8,y:9}, 
-    {x:11,y:9}, {x:11,y:8}, {x:11,y:7}, {x:11,y:6}, {x:11,y:5}, 
-    {x:10,y:5}, {x:8,y:5}, {x:7,y:5}, {x:6,y:5}, {x:4,y:5}
+    {x: 3, y: 5}, {x: 3, y: 6}, {x: 3, y: 7}, {x: 3, y: 8}, {x: 3, y: 9},
+    {x: 4, y: 9}, {x: 6, y: 9}, {x: 7, y: 9}, {x: 8, y: 9},
+    {x: 11, y: 9}, {x: 11, y: 8}, {x: 11, y: 7}, {x: 11, y: 6}, {x: 11, y: 5},
+    {x: 10, y: 5}, {x: 8, y: 5}, {x: 7, y: 5}, {x: 6, y: 5}, {x: 4, y: 5}
 ];
 
 export const HELL_CENTER = { x: 7, y: 7 };
@@ -43,7 +43,7 @@ export const LEVELS = {
     stone: { id: 'stone', name: 'Stone', bg: '#1a1a1a', wallHard: '#444444', wallSoft: '#888888', wallSoftLight: '#aaaaaa', grid: '#222222', glow: '#aaaaaa', border: '#666666' }
 };
 
-// NEU: TYPES.OIL hinzugefügt (Wert 7)
+// TYPES.OIL (7) HINZUGEFÜGT
 export const TYPES = { EMPTY: 0, WALL_HARD: 1, WALL_SOFT: 2, BOMB: 3, WATER: 5, BRIDGE: 6, OIL: 7 };
 export const ITEMS = { NONE: 0, BOMB_UP: 1, RANGE_UP: 2, SPEED_UP: 3, SKULL: 4, NAPALM: 5, ROLLING: 6 };
 export const BOMB_MODES = { STANDARD: 0, NAPALM: 1, ROLLING: 2 };
