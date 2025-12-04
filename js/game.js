@@ -11,7 +11,7 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// --- MENU LOGIC V2---
+// --- MENU LOGIC ---
 function initMenu() {
     const charContainer = document.getElementById('char-select');
     charContainer.innerHTML = '';
@@ -176,7 +176,6 @@ function update() {
     if (state.isGameOver) return;
     state.players.forEach(p => p.inFire = false);
 
-    // Hellfire Logic
     if (state.currentLevel.hasCentralFire) {
         if (!state.hellFireActive) {
             if (state.particles.some(p => p.isFire && p.gx === HELL_CENTER.x && p.gy === HELL_CENTER.y)) {
@@ -256,10 +255,8 @@ function update() {
     if (state.players.length > 1 && aliveCount <= 1) { const winner = livingPlayers.length > 0 ? livingPlayers[0] : null; endGame(winner ? winner.name + " WINS!" : "DRAW!"); }
 }
 
-// --- HIER SIND DIE NEUEN TIMER-WERTE ---
 function triggerHellFire() {
-    const duration = 120; // 2 Sekunden (Standard für alle)
-    const range = 5; 
+    const duration = 120; const range = 5; 
     const dirs = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
     dirs.forEach(d => {
         for (let i = 1; i <= range; i++) {
@@ -293,7 +290,6 @@ function explodeBomb(b) {
     const range = isBoostPad ? 15 : b.range; 
     
     let centerNapalm = b.napalm;
-    // TIMER FIX: 120 (2s) für Standard/Wasser, 720 (12s) für Napalm
     let centerDuration = b.napalm ? 720 : 120; 
     if (b.underlyingTile === TYPES.WATER) {
         centerNapalm = false;
@@ -312,7 +308,7 @@ function explodeBomb(b) {
             const tile = state.grid[ty][tx];
             
             let tileNapalm = b.napalm;
-            let tileDuration = b.napalm ? 720 : 120; // 720 Napalm, 120 Standard
+            let tileDuration = b.napalm ? 720 : 120; 
             if (tile === TYPES.WATER) {
                 tileNapalm = false;
                 tileDuration = 120;
@@ -335,10 +331,11 @@ function explodeBomb(b) {
         }
     });
 }
-// ---------------------------------------
 
 function extinguishNapalm(gx, gy) { state.particles.forEach(p => { if (p.isFire && p.isNapalm && p.gx === gx && p.gy === gy) p.life = 0; }); }
 function destroyItem(x, y) { if (state.items[y][x] !== ITEMS.NONE) { state.items[y][x] = ITEMS.NONE; createFloatingText(x * TILE_SIZE, y * TILE_SIZE, "ASHES", "#555555"); for(let i=0; i<5; i++) state.particles.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2, life: 30, color: '#333333', size: Math.random()*3 }); } }
+
+// --- FIX: createFire akzeptiert alle Parameter und speichert maxLife ---
 function createFire(gx, gy, duration, isNapalm = false, type = 'center', dir = null) { 
     state.particles.push({ 
         gx: gx, 
@@ -351,6 +348,7 @@ function createFire(gx, gy, duration, isNapalm = false, type = 'center', dir = n
         dir: dir    
     }); 
 }
+// ---------------------------------------------------------------------
 
 function destroyWall(x, y) { state.grid[y][x] = TYPES.EMPTY; for(let i=0; i<5; i++) state.particles.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 20, color: '#882222', size: Math.random()*5 }); }
 function killPlayer(p) { 
@@ -368,6 +366,7 @@ function killPlayer(p) {
 }
 function endGame(msg) { if (state.isGameOver) return; state.isGameOver = true; setTimeout(() => { document.getElementById('go-message').innerText = msg; document.getElementById('game-over').classList.remove('hidden'); }, 3000); }
 
+// --- FIX: Safe Game Loop mit Try-Catch ---
 function gameLoop() {
     if (!document.getElementById('main-menu').classList.contains('hidden')) { } 
     else if (!state.isPaused) { 
@@ -376,11 +375,14 @@ function gameLoop() {
             draw(ctx, canvas); 
         } catch (error) {
             console.error("Game Crashed:", error);
-            alert("Game Crashed! Check Console for details.\n" + error.message);
+            // Verhindert, dass das Spiel einfriert, aber zeigt den Fehler nicht permanent
             state.isPaused = true;
+            alert("Ein Fehler ist aufgetreten! Bitte lade die Seite neu.\n" + error.message);
         }
     }
     gameLoopId = requestAnimationFrame(gameLoop);
 }
+// -----------------------------------------
 
+// Start
 window.showMenu();
