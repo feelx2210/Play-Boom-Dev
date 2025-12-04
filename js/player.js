@@ -1,10 +1,9 @@
-// FIX: BOOST_PADS hinzugefügt
+// FIX: BOOST_PADS und TYPES importiert
 import { TILE_SIZE, GRID_W, GRID_H, TYPES, BOMB_MODES, ITEMS, keyBindings, BOOST_PADS } from './constants.js';
 import { state } from './state.js';
 import { isSolid, createFloatingText } from './utils.js';
 import { drawCharacterSprite } from './graphics.js';
 
-// Helper für Canvas Access
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -38,9 +37,7 @@ export class Player {
 
     update() {
         if (!this.alive) {
-            if (this.deathTimer > 0) {
-                this.deathTimer--;
-            }
+            if (this.deathTimer > 0) this.deathTimer--;
             return;
         }
 
@@ -52,10 +49,7 @@ export class Player {
             this.rollingTimer--;
             if (this.rollingTimer <= 0) {
                 this.hasRolling = false;
-                if (this.currentBombMode === BOMB_MODES.ROLLING) {
-                    this.currentBombMode = BOMB_MODES.STANDARD;
-                    this.updateHud();
-                }
+                if (this.currentBombMode === BOMB_MODES.ROLLING) this.currentBombMode = BOMB_MODES.STANDARD;
                 createFloatingText(this.x, this.y, "ROLLING LOST", "#cccccc");
             }
         }
@@ -63,10 +57,7 @@ export class Player {
             this.napalmTimer--;
             if (this.napalmTimer <= 0) {
                 this.hasNapalm = false;
-                if (this.currentBombMode === BOMB_MODES.NAPALM) {
-                    this.currentBombMode = BOMB_MODES.STANDARD;
-                    this.updateHud();
-                }
+                if (this.currentBombMode === BOMB_MODES.NAPALM) this.currentBombMode = BOMB_MODES.STANDARD;
                 createFloatingText(this.x, this.y, "NAPALM LOST", "#cccccc");
             }
         }
@@ -211,7 +202,6 @@ export class Player {
         const map = Array(GRID_H).fill().map(() => Array(GRID_W).fill(false));
         state.particles.forEach(p => { if (p.isFire && p.gx >= 0 && p.gx < GRID_W && p.gy >= 0 && p.gy < GRID_H) map[p.gy][p.gx] = true; });
         state.bombs.forEach(b => {
-            // FIX: Hier wird BOOST_PADS verwendet
             const isBoost = state.currentLevel.id !== 'stone' && BOOST_PADS.some(p => p.x === b.gx && p.y === b.gy);
             const range = isBoost ? 15 : b.range;
             map[b.gy][b.gx] = true; 
@@ -291,15 +281,12 @@ export class Player {
             if (bomb && !bomb.walkableIds.includes(this.id)) return true;
             return false;
         };
-
         if (dx !== 0) {
             const nextX = this.x + dx;
             const xEdge = dx > 0 ? nextX + size + offset : nextX + offset;
             const topY = this.y + offset;
             const bottomY = this.y + size + offset;
             if (!check(xEdge, topY) && !check(xEdge, bottomY)) this.x = nextX;
-            else if (check(xEdge, topY) && !check(xEdge, bottomY)) this.y += this.speed;
-            else if (!check(xEdge, topY) && check(xEdge, bottomY)) this.y -= this.speed;
         }
         if (dy !== 0) {
             const nextY = this.y + dy;
@@ -307,8 +294,6 @@ export class Player {
             const leftX = this.x + offset;
             const rightX = this.x + size + offset;
             if (!check(leftX, yEdge) && !check(rightX, yEdge)) this.y = nextY;
-            else if (check(leftX, yEdge) && !check(rightX, yEdge)) this.x += this.speed;
-            else if (!check(leftX, yEdge) && check(rightX, yEdge)) this.x -= this.speed;
         }
         this.gridX = Math.round(this.x / TILE_SIZE);
         this.gridY = Math.round(this.y / TILE_SIZE);
@@ -326,13 +311,11 @@ export class Player {
 
     updateHud() {
         if (this.id !== 1) return;
-        const elType = document.getElementById('bomb-type');
-        if (elType) {
-            switch(this.currentBombMode) {
-                case BOMB_MODES.STANDARD: elType.innerText = '⚫'; break;
-                case BOMB_MODES.NAPALM: elType.innerText = '☢️'; break;
-                case BOMB_MODES.ROLLING: elType.innerText = '🎳'; break;
-            }
+        const el = document.getElementById('bomb-type');
+        switch(this.currentBombMode) {
+            case BOMB_MODES.STANDARD: el.innerText = '⚫'; break;
+            case BOMB_MODES.NAPALM: el.innerText = '☢️'; break;
+            case BOMB_MODES.ROLLING: el.innerText = '🎳'; break;
         }
         const elBombs = document.getElementById('hud-bombs');
         if (elBombs) elBombs.innerText = `💣 ${this.maxBombs}`;
@@ -365,6 +348,10 @@ export class Player {
         if (state.currentLevel.id === 'jungle') {
             if (tile === TYPES.WATER || tile === TYPES.BRIDGE) canPlant = true;
         }
+        
+        // --- NEU: Auf Ölfeldern darf auch gelegt werden ---
+        if (tile === TYPES.OIL) canPlant = true;
+        // -------------------------------------------------
 
         if (!canPlant) return; 
 
