@@ -144,7 +144,6 @@ window.showMenu = function() {
     initMenu();
 };
 
-// ... Input Event Listeners ...
 window.addEventListener('keydown', e => {
     if (!document.getElementById('main-menu').classList.contains('hidden')) {
         const levelKeys = Object.keys(LEVELS);
@@ -152,20 +151,17 @@ window.addEventListener('keydown', e => {
         if (state.menuState === 0) {
             if (e.code === 'ArrowLeft') { state.selectedCharIndex = (state.selectedCharIndex - 1 + CHARACTERS.length) % CHARACTERS.length; initMenu(); }
             else if (e.code === 'ArrowRight') { state.selectedCharIndex = (state.selectedCharIndex + 1) % CHARACTERS.length; initMenu(); }
-            
-            // ÄNDERUNG: ArrowDown hinzugefügt für Übergang zu Level Select
             else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'ArrowDown') { state.menuState = 1; initMenu(); }
-            
         } else if (state.menuState === 1) {
             if (e.code === 'ArrowLeft') { state.selectedLevelKey = levelKeys[(currentLevelIndex - 1 + levelKeys.length) % levelKeys.length]; initMenu(); }
             else if (e.code === 'ArrowRight') { state.selectedLevelKey = levelKeys[(currentLevelIndex + 1) % levelKeys.length]; initMenu(); }
-            else if (e.code === 'Enter' || e.code === 'Space') { state.menuState = 2; initMenu(); }
+            
+            // ÄNDERUNG: ArrowDown hinzugefügt!
+            else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'ArrowDown') { state.menuState = 2; initMenu(); }
             
             else if (e.code === 'ArrowUp' || e.code === 'Escape') { state.menuState = 0; initMenu(); }
         } else if (state.menuState === 2) {
             if (e.code === 'Enter' || e.code === 'Space') window.startGame();
-            
-            // ÄNDERUNG: Escape hinzugefügt für Zurück
             else if (e.code === 'ArrowUp' || e.code === 'Escape') { state.menuState = 1; initMenu(); }
         }
         return;
@@ -219,7 +215,7 @@ function update() {
                     let occupied = state.players.some(p => { if (!p.alive) return false; const pGx = Math.round(p.x / TILE_SIZE); const pGy = Math.round(p.y / TILE_SIZE); return pGx === b.gx && pGy === b.gy && !b.walkableIds.includes(p.id); });
                     if (isSolid(b.gx, b.gy) || occupied) { b.gx -= b.rollDir.x; b.gy -= b.rollDir.y; }
                     b.px = b.gx * TILE_SIZE; b.py = b.gy * TILE_SIZE; 
-                    b.underlyingTile = state.grid[b.gy][b.gx]; // Safe underlying tile update
+                    b.underlyingTile = state.grid[b.gy][b.gx]; 
                     state.grid[b.gy][b.gx] = TYPES.BOMB;
                 } else { b.gx = nextGx; b.gy = nextGy; }
             }
