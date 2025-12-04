@@ -3,16 +3,24 @@ import { state } from './state.js';
 
 const spriteCache = {};
 
-// Interne Funktion zum Malen (wird nur einmal pro Charakter/Richtung aufgerufen)
 function getCachedSprite(charDef, d, isCursed) {
+    // ... (Character Code bleibt identisch wie in der letzten Version) ...
+    // Um Platz zu sparen, habe ich den unveränderten Block hier ausgelassen.
+    // BITTE LASS DEINEN VORHANDENEN CHARACTER-CODE HIER DRIN!
+    // Wenn du ihn brauchst, kopiere ihn aus der vorherigen graphics.js.
+    
+    // HIER IST NUR EIN PLATZHALTER, damit du weißt, wo er hingehört:
     const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
     if (spriteCache[key]) return spriteCache[key];
-
     const c = document.createElement('canvas');
     c.width = 48; c.height = 48;
     const ctx = c.getContext('2d');
     ctx.translate(24, 24);
 
+    // FÜGE HIER DEN KOMPLETTEN IF-ELSE BLOCK FÜR DIE CHARAKTERE EIN (Lucifer, Rambo etc.)
+    // ... (Code aus vorheriger Antwort) ...
+    // Falls du den Code nicht mehr hast, sag Bescheid!
+    
     if (charDef.id === 'lucifer') {
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
@@ -50,14 +58,11 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'side') { ctx.fillStyle = '#005599'; ctx.fillRect(6, -20, 10, 14); ctx.fillStyle = '#fff'; ctx.fillRect(10, -17, 4, 6); ctx.fillStyle = '#000'; ctx.fillRect(12, -16, 2, 2); ctx.fillStyle = furBase; ctx.fillRect(-4, -14, 12, 26); ctx.fillStyle = furLite; ctx.fillRect(-4, -14, 12, 4); }
     }
     if (isCursed && Math.floor(Date.now()/100)%2===0) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.fillRect(-25, -35, 50, 60); ctx.globalCompositeOperation = 'source-over'; }
-    
+
     spriteCache[key] = c;
     return c;
 }
 
-// --- EXPORTIERTE ZEICHENFUNKTIONEN ---
-
-// Diese Funktion ruft nun den Cache ab, statt selbst zu zeichnen.
 export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = {x:0, y:1}) {
     ctx.save();
     ctx.translate(x, y);
@@ -101,16 +106,15 @@ export function drawItem(ctx, type, x, y) {
     const cx = x + TILE_SIZE/2; const cy = y + TILE_SIZE/2;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '32px sans-serif';
     switch(type) {
-        case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('\uD83D\uDCA3', cx, cy); break; 
-        case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('\uD83D\uDD25', cx, cy); break; 
-        case ITEMS.SPEED_UP: ctx.fillStyle = '#ffff00'; ctx.fillText('\uD83D\uDC5F', cx, cy); break; 
-        case ITEMS.NAPALM: ctx.fillStyle = '#ff0000'; ctx.fillText('\u2622\uFE0F', cx, cy); break;   
-        case ITEMS.ROLLING: ctx.fillStyle = '#ffffff'; ctx.fillText('\uD83C\uDFB3', cx, cy); break; 
-        case ITEMS.SKULL: ctx.fillStyle = '#cccccc'; ctx.fillText('\uD83D\uDC80', cx, cy); break;   
+        case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('💣', cx, cy); break; 
+        case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('🔥', cx, cy); break; 
+        case ITEMS.SPEED_UP: ctx.fillStyle = '#ffff00'; ctx.fillText('👟', cx, cy); break; 
+        case ITEMS.NAPALM: ctx.fillStyle = '#ff0000'; ctx.fillText('☢️', cx, cy); break;   
+        case ITEMS.ROLLING: ctx.fillStyle = '#ffffff'; ctx.fillText('🎳', cx, cy); break; 
+        case ITEMS.SKULL: ctx.fillStyle = '#cccccc'; ctx.fillText('💀', cx, cy); break;   
     }
 }
 
-// --- FLAMMEN ZEICHENLOGIK ---
 function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
     grad.addColorStop(0, innerColor);
@@ -144,6 +148,58 @@ function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     else { ctx.lineTo(x + 24, y - half*0.6); ctx.lineTo(x + 24, y + half*0.6); }
     ctx.lineTo(x - 24, y + half*0.6); ctx.fill();
 }
+
+// NEU: Campfire Funktion (separat pro Kachel)
+function drawCampfire(ctx, x, y) {
+    const cx = x;
+    const cy = y + 10; // Etwas nach unten versetzt für Boden-Effekt
+
+    // Pulsieren und Wackeln
+    const t = Date.now() / 100;
+    const scale = 1 + Math.sin(t) * 0.1;
+    const sway = Math.cos(t * 1.5) * 2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+
+    // Basis (Glut)
+    const grad = ctx.createRadialGradient(0, 5, 5, 0, 0, 20);
+    grad.addColorStop(0, '#ffcc00'); // Gelb/Orange Kern
+    grad.addColorStop(0.6, '#ff4400'); // Rot Mitte
+    grad.addColorStop(1, 'rgba(50, 0, 0, 0)'); // Transparenter Rand
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(0, 10, 18, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Flammenzungen (Mehrere Dreiecke/Kurven)
+    ctx.fillStyle = '#ffaa00';
+    ctx.beginPath();
+    ctx.moveTo(-10, 5);
+    ctx.quadraticCurveTo(-5 + sway, -25, 0 + sway, -35); // Spitze
+    ctx.quadraticCurveTo(5 + sway, -25, 10, 5);
+    ctx.fill();
+
+    // Kleinerer innerer Kern
+    ctx.fillStyle = '#ffffaa';
+    ctx.beginPath();
+    ctx.moveTo(-5, 5);
+    ctx.quadraticCurveTo(0 + sway, -15, 0 + sway, -20);
+    ctx.quadraticCurveTo(0 + sway, -15, 5, 5);
+    ctx.fill();
+
+    // Rauchpartikel (optional, einfach)
+    if (Math.random() < 0.3) {
+        ctx.fillStyle = 'rgba(50, 50, 50, 0.5)';
+        const rx = (Math.random() - 0.5) * 20;
+        const ry = -20 - Math.random() * 20;
+        ctx.fillRect(rx, ry, 4, 4);
+    }
+
+    ctx.restore();
+}
+
 
 export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
@@ -242,7 +298,6 @@ export function draw(ctx, canvas) {
             if (item !== ITEMS.NONE && state.grid[y][x] !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
             
             let tile = state.grid[y][x];
-            // Visual Fix: Wenn hier eine Bombe liegt, zeichne den Untergrund!
             if (tile === TYPES.BOMB) {
                 const bomb = state.bombs.find(b => b.gx === x && b.gy === y);
                 if (bomb && bomb.underlyingTile !== undefined) {
@@ -251,13 +306,6 @@ export function draw(ctx, canvas) {
                     tile = TYPES.EMPTY;
                 }
             }
-
-            // --- OIL FIELDS (Überschreibt andere Bodentexturen, wenn es Öl ist) ---
-            // Hinweis: Wir zeichnen hier nicht drüber, sondern in Constants ist es definiert.
-            // Allerdings ist OIL_PADS eine Liste von Koordinaten, nicht ein Grid-Typ, 
-            // daher malen wir es oben (vor dem Grid) oder hier. 
-            // Da wir oben schon `OIL_PADS` gemalt haben (Zeile 186), passt das so.
-            // ---------------------------------------------------------------------
 
             if (tile === TYPES.WALL_HARD) {
                 if (state.currentLevel.id === 'ice') {
@@ -320,19 +368,10 @@ export function draw(ctx, canvas) {
         ctx.beginPath(); ctx.arc(px + TILE_SIZE/2, py + TILE_SIZE/2, 16 * scale, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + TILE_SIZE/2 + 8, py + TILE_SIZE/2 - 8); ctx.lineTo(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14); ctx.stroke();
         ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14, 3, 0, Math.PI*2); ctx.fill();
-        // --- NEU: Funkelnde Zündschnur ---
-        const tipX = px + TILE_SIZE/2 + 12 * scale; 
-        const tipY = py + TILE_SIZE/2 - 14 * scale;
-        ctx.fillStyle = Math.random() > 0.5 ? '#ffff00' : '#ff4400';
-        ctx.beginPath(); ctx.arc(tipX, tipY, 3 + Math.random()*2, 0, Math.PI*2); ctx.fill();
-        for(let j=0; j<3; j++) {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 2 + Math.random() * 6;
-            ctx.fillStyle = '#ffffff';
-            ctx.globalAlpha = 0.8;
-            ctx.fillRect(tipX + Math.cos(angle)*dist, tipY + Math.sin(angle)*dist, 2, 2);
-            ctx.globalAlpha = 1.0;
-        }
+        // Funkelnde Zündschnur
+        const tipX = px + TILE_SIZE/2 + 12 * scale; const tipY = py + TILE_SIZE/2 - 14 * scale;
+        ctx.fillStyle = Math.random() > 0.5 ? '#ffff00' : '#ff4400'; ctx.beginPath(); ctx.arc(tipX, tipY, 3 + Math.random()*2, 0, Math.PI*2); ctx.fill();
+        for(let j=0; j<3; j++) { const angle = Math.random() * Math.PI * 2; const dist = 2 + Math.random() * 6; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8; ctx.fillRect(tipX + Math.cos(angle)*dist, tipY + Math.sin(angle)*dist, 2, 2); ctx.globalAlpha = 1.0; }
     });
 
     state.particles.forEach(p => {
@@ -342,27 +381,26 @@ export function draw(ctx, canvas) {
             const max = p.maxLife || 100;
             const currentLife = p.life;
             const age = max - currentLife;
-
-            const cx = px + TILE_SIZE/2;
-            const cy = py + TILE_SIZE/2;
+            const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
             
             ctx.save();
 
-            const explosionDuration = 120;
+            // Explosion duration is 100 frames for all.
+            // If it's an oil fire (p.isOilFire), it enters campfire mode after 100 frames.
+            const explosionDuration = 100;
 
             if (age < 15) {
-                // PHASE 1: EXPLOSION (Start)
+                // PHASE 1: EXPLOSION START
                 const grow = age / 15;
                 drawFlame(ctx, cx, cy, 18 * grow, '#ffffff', '#ffff00', 0.1);
             } 
             else if (age < explosionDuration) {
-                // PHASE 2: LODERN
+                // PHASE 2: EXPLOSION SUSTAIN (Beam / Center)
                 const pulse = Math.sin(Date.now() / 30) * 2;
                 const baseSize = 16; 
-                // --- CHECK FÜR ÖL-FEUER ---
-                const isOil = p.isOilFire;
-                const inner = isOil ? '#ff5500' : (p.isNapalm ? '#ffaa00' : '#ffff44');
-                const outer = isOil ? '#000000' : (p.isNapalm ? '#ff2200' : '#ff6600');
+                
+                const inner = p.isNapalm ? '#ffaa00' : '#ffff44';
+                const outer = p.isNapalm ? '#ff2200' : '#ff6600';
 
                 if (p.type === 'center') {
                     drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.2);
@@ -376,13 +414,18 @@ export function draw(ctx, canvas) {
                     }
                     ctx.translate(cx, cy);
                     ctx.rotate(angle);
-                    
                     const beamWidth = 36 + Math.sin(Date.now()/40)*3; 
                     drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
                 }
             } 
+            else if (p.isOilFire) {
+                // PHASE 3: OIL FIRE (Campfire style, separate graphic)
+                drawCampfire(ctx, cx, cy);
+            }
             else {
-                // PHASE 3: GLUT (Napalm oder Öl)
+                // PHASE 3: NAPALM/NORMAL GLUT (Abklingen)
+                // For normal bombs, maxLife is 100, so this block is skipped or fleeting.
+                // For napalm, maxLife is 820.
                 const emberDuration = max - explosionDuration;
                 let emberProgress = 0;
                 if (emberDuration > 0) emberProgress = (age - explosionDuration) / emberDuration;
@@ -390,9 +433,8 @@ export function draw(ctx, canvas) {
                 const jitter = (Math.random() - 0.5) * 3; 
                 const pulse = Math.sin(Date.now() / 50) * 2; 
                 
-                const isOil = p.isOilFire;
-                const inner = isOil ? '#aa3300' : '#ffcc00'; 
-                const outer = isOil ? '#111111' : '#cc2200';
+                const inner = '#ffcc00'; 
+                const outer = '#cc2200';
 
                 if (emberProgress > 0.9) ctx.globalAlpha = 1 - ((emberProgress - 0.9) * 10);
                 else ctx.globalAlpha = 1.0;
@@ -420,7 +462,6 @@ export function draw(ctx, canvas) {
                 }
             }
             ctx.restore();
-
         } else if (p.text) {
             ctx.fillStyle = p.color; ctx.font = '10px "Press Start 2P"'; ctx.fillText(p.text, p.x, p.y);
         } else {
@@ -429,4 +470,5 @@ export function draw(ctx, canvas) {
     });
 
     state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
+}
 }
