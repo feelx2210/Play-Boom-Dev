@@ -9,7 +9,6 @@ function getCachedSprite(charDef, d, isCursed) {
     
     if (spriteCache[key]) return spriteCache[key];
 
-    // Einmalig auf eine unsichtbare Leinwand malen
     const c = document.createElement('canvas');
     c.width = 48; 
     c.height = 48;
@@ -161,14 +160,12 @@ function getCachedSprite(charDef, d, isCursed) {
     if (isCursed && Math.floor(Date.now()/100)%2===0) {
         ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.fillRect(-25, -35, 50, 60); ctx.globalCompositeOperation = 'source-over';
     }
-    // --- ORIGINAL MAL-LOGIK ENDE ---
+    // --- END OF DRAWING CODE ---
 
-    // Speichere das gemalte Bild im Cache
     spriteCache[key] = c;
     return c;
 }
 
-// Dies ist die Funktion, die das Spiel jetzt aufruft. Sie holt das Bild aus dem Cache.
 export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = {x:0, y:1}) {
     ctx.save();
     ctx.translate(x, y);
@@ -176,15 +173,15 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     let d = 'front'; 
     if (dir.y < 0) d = 'back';
     else if (dir.x !== 0) d = 'side';
+    
     if (dir.x < 0) ctx.scale(-1, 1); 
 
-    // Schatten malen
+    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
-    // Cache abrufen und zeichnen!
+    // Use Cache
     const sprite = getCachedSprite(charDef, d, isCursed);
-    // Das Bild zentriert (-24, -24) auf den Kontext stempeln
     ctx.drawImage(sprite, -24, -24);
 
     ctx.restore();
@@ -215,12 +212,12 @@ export function drawItem(ctx, type, x, y) {
     const cx = x + TILE_SIZE/2; const cy = y + TILE_SIZE/2;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '32px sans-serif';
     switch(type) {
-        case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('\uD83D\uDCA3', cx, cy); break;
-        case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('\uD83D\uDD25', cx, cy); break;
-        case ITEMS.SPEED_UP: ctx.fillStyle = '#ffff00'; ctx.fillText('\uD83D\uDC5F', cx, cy); break;
-        case ITEMS.NAPALM: ctx.fillStyle = '#ff0000'; ctx.fillText('\u2622\uFE0F', cx, cy); break;
-        case ITEMS.ROLLING: ctx.fillStyle = '#ffffff'; ctx.fillText('\uD83C\uDFB3', cx, cy); break;
-        case ITEMS.SKULL: ctx.fillStyle = '#cccccc'; ctx.fillText('\uD83D\uDC80', cx, cy); break;
+        case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('\uD83D\uDCA3', cx, cy); break; 
+        case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('\uD83D\uDD25', cx, cy); break; 
+        case ITEMS.SPEED_UP: ctx.fillStyle = '#ffff00'; ctx.fillText('\uD83D\uDC5F', cx, cy); break; 
+        case ITEMS.NAPALM: ctx.fillStyle = '#ff0000'; ctx.fillText('\u2622\uFE0F', cx, cy); break;   
+        case ITEMS.ROLLING: ctx.fillStyle = '#ffffff'; ctx.fillText('\uD83C\uDFB3', cx, cy); break; 
+        case ITEMS.SKULL: ctx.fillStyle = '#cccccc'; ctx.fillText('\uD83D\uDC80', cx, cy); break;   
     }
 }
 
@@ -284,7 +281,23 @@ export function draw(ctx, canvas) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
             const item = state.items[y][x];
             if (item !== ITEMS.NONE && state.grid[y][x] !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
-            const tile = state.grid[y][x];
+            
+            // --- HIER IST DIE WICHTIGE ÄNDERUNG (VISUAL FIX) ---
+            let tile = state.grid[y][x];
+            
+            // Wenn hier eine Bombe liegt, schauen wir nach, was DARUNTER ist
+            if (tile === TYPES.BOMB) {
+                const bomb = state.bombs.find(b => b.gx === x && b.gy === y);
+                // Wenn wir die Bombe finden und sie sich gemerkt hat, was unter ihr war:
+                if (bomb && bomb.underlyingTile !== undefined) {
+                    tile = bomb.underlyingTile;
+                } else {
+                    // Fallback: Tu so, als wäre es leer (damit der Hintergrund durchscheint)
+                    tile = TYPES.EMPTY;
+                }
+            }
+            // ---------------------------------------------------
+
             if (tile === TYPES.WALL_HARD) {
                 if (state.currentLevel.id === 'ice') {
                     ctx.fillStyle = '#4466ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
