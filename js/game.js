@@ -257,7 +257,7 @@ function update() {
 }
 
 function triggerHellFire() {
-    const duration = 60; // 1 Sekunde
+    const duration = 180; // 3 Sekunden
     const range = 5; 
     const dirs = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
     dirs.forEach(d => {
