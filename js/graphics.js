@@ -106,7 +106,6 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
-// --- HIER SIND DIE NEUEN FLAMMEN-FUNKTIONEN ---
 function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
     grad.addColorStop(0, innerColor);
@@ -124,7 +123,6 @@ function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     ctx.closePath(); ctx.fill();
 }
 
-// NEU: Zeichnet einen Strahl für Mitte und Enden
 function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     const half = width / 2;
     ctx.fillStyle = colorOuter;
@@ -141,7 +139,6 @@ function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     else { ctx.lineTo(x + 24, y - half*0.6); ctx.lineTo(x + 24, y + half*0.6); }
     ctx.lineTo(x - 24, y + half*0.6); ctx.fill();
 }
-// ---------------------------------------------------
 
 export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
@@ -308,7 +305,7 @@ export function draw(ctx, canvas) {
         }
     });
 
-    // --- ZEICHNEN DES FEUERS MIT NEUER ZEITBASIERTER LOGIK ---
+    // --- FEUER-ZEICHEN-LOGIK (MIT SCMALEREN EXPLOSIONEN) ---
     state.particles.forEach(p => {
         const px = p.gx * TILE_SIZE;
         const py = p.gy * TILE_SIZE;
@@ -323,29 +320,25 @@ export function draw(ctx, canvas) {
             
             ctx.save();
 
-            // Standard-Dauer für die "Explosion" ist 120 Frames.
-            // Bei normalen Bomben entspricht das maxLife.
-            // Bei Napalm ist maxLife 720, aber die "Explosion" dauert nur die ersten 120 Frames.
             const explosionDuration = 120;
 
-            // 1. Phase: Explosion (die ersten 15 Frames)
             if (age < 15) {
-                // Schnell wachsender, heller Blitz
-                const grow = age / 15; // 0 -> 1
-                drawFlame(ctx, cx, cy, 28 * grow, '#ffffff', '#ffff00', 0.1);
+                // PHASE 1: EXPLOSION (Start)
+                const grow = age / 15;
+                // Radius reduziert auf ca 18 (x2 = 36 = 75% von 48)
+                drawFlame(ctx, cx, cy, 18 * grow, '#ffffff', '#ffff00', 0.1);
             } 
-            // 2. Phase: Lodern (bis Frame 120)
             else if (age < explosionDuration) {
+                // PHASE 2: LODERN
                 const pulse = Math.sin(Date.now() / 30) * 2;
-                const baseSize = 22;
+                // Basisgröße reduziert: war 22, jetzt 16 (32px Durchmesser)
+                const baseSize = 16; 
                 const inner = p.isNapalm ? '#ffaa00' : '#ffff44';
                 const outer = p.isNapalm ? '#ff2200' : '#ff6600';
 
                 if (p.type === 'center') {
-                    // Zentrum: Runder Feuerball
                     drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.2);
                 } else {
-                    // Strahl: Gerichtet, mit Rotation
                     let angle = 0;
                     if (p.dir) {
                         if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2;
@@ -355,32 +348,28 @@ export function draw(ctx, canvas) {
                     }
                     ctx.translate(cx, cy);
                     ctx.rotate(angle);
-                    // Strahl zeichnen
-                    const beamWidth = 40 + Math.sin(Date.now()/40)*4;
+                    
+                    // Strahlbreite reduziert: war 40, jetzt 36 (75%)
+                    const beamWidth = 36 + Math.sin(Date.now()/40)*3; 
                     drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
                 }
             } 
-            // 3. Phase: Glut / Abklingen (nur relevant für Napalm, da normale Bomben hier tot sind)
             else {
-                // Berechne Fortschritt im Glut-Teil (von 0 bis 1)
+                // PHASE 3: GLUT (Ende)
                 const emberDuration = max - explosionDuration;
                 let emberProgress = 0;
                 if (emberDuration > 0) {
-                    emberProgress = (age - explosionDuration) / emberDuration; // 0 -> 1
+                    emberProgress = (age - explosionDuration) / emberDuration;
                 }
-
-                // Dunkelrot/Grau, pulsierend, langsam ausblendend am Ende
-                const shrink = 1 - emberProgress; // 1 -> 0
+                const shrink = 1 - emberProgress;
                 ctx.globalAlpha = shrink;
                 
                 const inner = '#aa4400';
                 const outer = '#333333';
                 
-                // Glut glimmt nur noch am Boden
                 if (p.type === 'center') {
-                    drawFlame(ctx, cx, cy, 15, inner, outer, 0.4);
+                    drawFlame(ctx, cx, cy, 12, inner, outer, 0.4);
                 } else {
-                    // Rotation beibehalten für Glut-Form
                     let angle = 0;
                     if (p.dir) {
                         if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2;
@@ -390,8 +379,8 @@ export function draw(ctx, canvas) {
                     }
                     ctx.translate(cx, cy);
                     ctx.rotate(angle);
-                    // Kleinerer, dunklerer Strahl
-                    drawBeam(ctx, 0, 0, 30, inner, outer, p.type === 'end');
+                    // Glut auch schmaler (war 30, jetzt 24)
+                    drawBeam(ctx, 0, 0, 24, inner, outer, p.type === 'end');
                 }
             }
             ctx.restore();
