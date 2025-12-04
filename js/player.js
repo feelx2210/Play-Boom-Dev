@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { isSolid, createFloatingText } from './utils.js';
 import { drawCharacterSprite } from './graphics.js';
 
-// Helper für Canvas Access nice
+// Helper für Canvas Access
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -21,7 +21,7 @@ export class Player {
         this.alive = true;
         this.invincibleTimer = 0;
         this.fireTimer = 0;
-        this.speed = 2; 
+        this.speed = 3; // SPEED UP: 2 -> 3
         this.maxBombs = 1;
         this.activeBombs = 0;
         this.bombRange = 1;
@@ -64,7 +64,7 @@ export class Player {
         
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        // --- SKULL FIX ---
+        // --- SKULL LOGIC ---
         let currentSpeed = this.speed;
 
         if (this.skullEffect) {
@@ -149,22 +149,16 @@ export class Player {
     }
 
     updateBot(speed) {
-        // Simple Bot Logic reuse
-        // (Für Kürze hier vereinfacht, nutzt gleichen Algorithmus)
-        // Du kannst den Bot-Code 1:1 aus der alten game.js kopieren oder diesen hier nutzen
-        // Da wir modular sind, müssen wir nur 'grid' durch 'state.grid' ersetzen etc.
         const gx = Math.round(this.x / TILE_SIZE);
         const gy = Math.round(this.y / TILE_SIZE);
-        // ... (Der Bot Code ist lang, hier gekürzt für Übersicht, aber wichtig: Ersetze 'grid' durch 'state.grid' im Bot-Code!)
-        // Wenn du den Bot-Code brauchst, sag Bescheid, ich poste ihn auch separat. 
-        // Für jetzt nehme ich an, du kopierst den Bot-Teil und ersetzt 'grid' durch 'state.grid'.
-        // Hier ist ein Platzhalter für den Bot, damit das Spiel läuft:
+        
         if (this.changeDirTimer <= 0) {
             const dirs = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
             this.botDir = dirs[Math.floor(Math.random()*dirs.length)];
             this.changeDirTimer = 30;
         }
         if(!this.botDir) this.botDir = {x:0,y:0};
+        
         this.move(this.botDir.x * speed, this.botDir.y * speed);
         this.changeDirTimer--;
     }
@@ -235,7 +229,7 @@ export class Player {
             owner: this,
             gx: gx, gy: gy,
             px: gx * TILE_SIZE, py: gy * TILE_SIZE,
-            timer: 180, 
+            timer: 160, // TIMER REDUCED: 180 -> 160
             range: this.bombRange, 
             napalm: isNapalm,
             isRolling: isRolling,
@@ -272,7 +266,7 @@ export class Player {
         switch(type) {
             case ITEMS.BOMB_UP: this.maxBombs++; createFloatingText(this.x, this.y, "+1 BOMB"); break;
             case ITEMS.RANGE_UP: this.bombRange++; createFloatingText(this.x, this.y, "FIRE UP"); break;
-            case ITEMS.SPEED_UP: this.speed = Math.min(this.speed+1, 6); createFloatingText(this.x, this.y, "SPEED UP"); break;
+            case ITEMS.SPEED_UP: this.speed = Math.min(this.speed+1, 8); createFloatingText(this.x, this.y, "SPEED UP"); break;
             case ITEMS.NAPALM: this.hasNapalm = true; this.napalmTimer = 3600; createFloatingText(this.x, this.y, "NAPALM!", "#ff0000"); break;
             case ITEMS.ROLLING: this.hasRolling = true; this.rollingTimer = 3600; createFloatingText(this.x, this.y, "ROLLING!", "#ffffff"); break;
             case ITEMS.SKULL: 
