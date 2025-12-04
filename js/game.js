@@ -176,6 +176,7 @@ function update() {
     if (state.isGameOver) return;
     state.players.forEach(p => p.inFire = false);
 
+    // Hellfire Logic
     if (state.currentLevel.hasCentralFire) {
         if (!state.hellFireActive) {
             if (state.particles.some(p => p.isFire && p.gx === HELL_CENTER.x && p.gy === HELL_CENTER.y)) {
@@ -255,21 +256,20 @@ function update() {
     if (state.players.length > 1 && aliveCount <= 1) { const winner = livingPlayers.length > 0 ? livingPlayers[0] : null; endGame(winner ? winner.name + " WINS!" : "DRAW!"); }
 }
 
+// --- HIER SIND DIE NEUEN TIMER-WERTE ---
 function triggerHellFire() {
-    const duration = 60; const range = 5; 
+    const duration = 120; // 2 Sekunden (Standard für alle)
+    const range = 5; 
     const dirs = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
     dirs.forEach(d => {
         for (let i = 1; i <= range; i++) {
             const tx = HELL_CENTER.x + (d.x * i); const ty = HELL_CENTER.y + (d.y * i);
             if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) break;
             const tile = state.grid[ty][tx];
-            
-            // ÄNDERUNG: Auch hier Typ und Richtung übergeben
             let type = (i === range) ? 'end' : 'middle';
-            
             if (tile === TYPES.WALL_HARD) break;
             else if (tile === TYPES.WALL_SOFT) { 
-                type = 'end'; // An der Wand ist immer Ende
+                type = 'end';
                 destroyWall(tx, ty); 
                 createFire(tx, ty, duration, false, type, d); 
                 break; 
@@ -293,16 +293,15 @@ function explodeBomb(b) {
     const range = isBoostPad ? 15 : b.range; 
     
     let centerNapalm = b.napalm;
-    let centerDuration = b.napalm ? 720 : 60;
+    // TIMER FIX: 120 (2s) für Standard/Wasser, 720 (12s) für Napalm
+    let centerDuration = b.napalm ? 720 : 120; 
     if (b.underlyingTile === TYPES.WATER) {
         centerNapalm = false;
-        centerDuration = 60;
+        centerDuration = 120;
     }
 
     destroyItem(b.gx, b.gy); 
     extinguishNapalm(b.gx, b.gy); 
-    
-    // HIER: Center Fire hat Typ 'center'
     createFire(b.gx, b.gy, centerDuration, centerNapalm, 'center');
     
     const dirs = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
@@ -313,18 +312,17 @@ function explodeBomb(b) {
             const tile = state.grid[ty][tx];
             
             let tileNapalm = b.napalm;
-            let tileDuration = b.napalm ? 720 : 60;
+            let tileDuration = b.napalm ? 720 : 120; // 720 Napalm, 120 Standard
             if (tile === TYPES.WATER) {
                 tileNapalm = false;
-                tileDuration = 60;
+                tileDuration = 120;
             }
 
-            // BESTIMMUNG DES TYPS (Mittelstück oder Ende)
             let type = (i === range) ? 'end' : 'middle';
 
             if (tile === TYPES.WALL_HARD) break;
             else if (tile === TYPES.WALL_SOFT) { 
-                type = 'end'; // Wenn es auf eine Mauer trifft, ist es immer ein Endstück
+                type = 'end';
                 destroyWall(tx, ty); 
                 extinguishNapalm(tx, ty); 
                 createFire(tx, ty, tileDuration, tileNapalm, type, d); 
@@ -337,11 +335,10 @@ function explodeBomb(b) {
         }
     });
 }
+// ---------------------------------------
 
 function extinguishNapalm(gx, gy) { state.particles.forEach(p => { if (p.isFire && p.isNapalm && p.gx === gx && p.gy === gy) p.life = 0; }); }
 function destroyItem(x, y) { if (state.items[y][x] !== ITEMS.NONE) { state.items[y][x] = ITEMS.NONE; createFloatingText(x * TILE_SIZE, y * TILE_SIZE, "ASHES", "#555555"); for(let i=0; i<5; i++) state.particles.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2, life: 30, color: '#333333', size: Math.random()*3 }); } }
-
-// --- NEU: CREATE FIRE NIMMT JETZT TYPE UND DIR ENTGEGEN ---
 function createFire(gx, gy, duration, isNapalm = false, type = 'center', dir = null) { 
     state.particles.push({ 
         gx: gx, 
@@ -350,11 +347,10 @@ function createFire(gx, gy, duration, isNapalm = false, type = 'center', dir = n
         isNapalm: isNapalm, 
         life: duration, 
         maxLife: duration,
-        type: type, // 'center', 'middle', 'end'
-        dir: dir    // {x, y} Vector
+        type: type, 
+        dir: dir    
     }); 
 }
-// ----------------------------------------------------------
 
 function destroyWall(x, y) { state.grid[y][x] = TYPES.EMPTY; for(let i=0; i<5; i++) state.particles.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 20, color: '#882222', size: Math.random()*5 }); }
 function killPlayer(p) { 
@@ -362,7 +358,6 @@ function killPlayer(p) {
     p.alive = false; 
     p.deathTimer = 90; 
     createFloatingText(p.x, p.y, "ELIMINATED", "#ff0000"); 
-    
     for(let i=0; i<15; i++) {
         state.particles.push({ 
             x: p.x + 24, y: p.y + 24, 
@@ -388,5 +383,4 @@ function gameLoop() {
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// Start
 window.showMenu();
