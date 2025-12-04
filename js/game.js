@@ -144,6 +144,7 @@ window.showMenu = function() {
     initMenu();
 };
 
+// ... Input Event Listeners ...
 window.addEventListener('keydown', e => {
     if (!document.getElementById('main-menu').classList.contains('hidden')) {
         const levelKeys = Object.keys(LEVELS);
@@ -165,7 +166,10 @@ window.addEventListener('keydown', e => {
     state.keys[e.code] = true;
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
     if (e.code === keyBindings.CHANGE && state.players[0]) state.players[0].cycleBombType();
-    if (e.key.toLowerCase() === 'p') window.togglePause();
+    
+    // --- ÄNDERUNG: ESC TASTE HINZUGEFÜGT ---
+    if (e.key.toLowerCase() === 'p' || e.code === 'Escape') window.togglePause();
+    // ---------------------------------------
 });
 window.addEventListener('keyup', e => { state.keys[e.code] = false; });
 
@@ -184,7 +188,6 @@ function update() {
             }
         } else {
             state.hellFireTimer++;
-            // SLOWER HELLFIRE PHASES
             if (state.hellFirePhase === 'IDLE' && state.hellFireTimer >= 2200) { state.hellFireTimer = 0; state.hellFirePhase = 'WARNING'; createFloatingText(HELL_CENTER.x * TILE_SIZE, HELL_CENTER.y * TILE_SIZE, "!", "#ff0000"); }
             else if (state.hellFirePhase === 'WARNING' && state.hellFireTimer >= 225) { state.hellFireTimer = 0; state.hellFirePhase = 'IDLE'; triggerHellFire(); }
         }
@@ -212,7 +215,7 @@ function update() {
                     let occupied = state.players.some(p => { if (!p.alive) return false; const pGx = Math.round(p.x / TILE_SIZE); const pGy = Math.round(p.y / TILE_SIZE); return pGx === b.gx && pGy === b.gy && !b.walkableIds.includes(p.id); });
                     if (isSolid(b.gx, b.gy) || occupied) { b.gx -= b.rollDir.x; b.gy -= b.rollDir.y; }
                     b.px = b.gx * TILE_SIZE; b.py = b.gy * TILE_SIZE; 
-                    b.underlyingTile = state.grid[b.gy][b.gx]; // Safe underlying tile update
+                    b.underlyingTile = state.grid[b.gy][b.gx]; 
                     state.grid[b.gy][b.gx] = TYPES.BOMB;
                 } else { b.gx = nextGx; b.gy = nextGy; }
             }
@@ -274,7 +277,6 @@ function triggerHellFire() {
 function explodeBomb(b) {
     b.owner.activeBombs--; 
     if (!b.isRolling) {
-        // Safety check for undefined
         const fallbackTile = TYPES.EMPTY;
         state.grid[b.gy][b.gx] = (b.underlyingTile !== undefined) ? b.underlyingTile : fallbackTile;
     }
@@ -283,7 +285,7 @@ function explodeBomb(b) {
     const range = isBoostPad ? 15 : b.range; 
     
     let centerNapalm = b.napalm;
-    let centerDuration = b.napalm ? 750 : 40; // LONGER DURATION (was 600 / 30)
+    let centerDuration = b.napalm ? 750 : 40;
     if (b.underlyingTile === TYPES.WATER) {
         centerNapalm = false;
         centerDuration = 40;
@@ -301,7 +303,7 @@ function explodeBomb(b) {
             const tile = state.grid[ty][tx];
             
             let tileNapalm = b.napalm;
-            let tileDuration = b.napalm ? 750 : 40; // LONGER DURATION
+            let tileDuration = b.napalm ? 750 : 40;
             if (tile === TYPES.WATER) {
                 tileNapalm = false;
                 tileDuration = 40;
