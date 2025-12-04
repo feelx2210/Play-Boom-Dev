@@ -1,22 +1,17 @@
 import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, HELL_CENTER } from './constants.js';
 import { state } from './state.js';
 
-// --- PERFORMANCE CACHE ---
 const spriteCache = {};
 
 function getCachedSprite(charDef, d, isCursed) {
     const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
-    
     if (spriteCache[key]) return spriteCache[key];
 
     const c = document.createElement('canvas');
-    c.width = 48; 
-    c.height = 48;
+    c.width = 48; c.height = 48;
     const ctx = c.getContext('2d');
-    
     ctx.translate(24, 24);
 
-    // --- MAL-LOGIK ---
     if (charDef.id === 'lucifer') {
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
@@ -111,28 +106,48 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
-// --- NEUE HILFSFUNKTION FÜR FLAMMEN ---
-function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
-    const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
-    grad.addColorStop(0, innerColor);
-    grad.addColorStop(1, outerColor);
-    ctx.fillStyle = grad;
+// --- NEUE EXPLOSIONS-GRAFIKEN (Prozedural generiert) ---
 
+// Hilfsfunktion: Zeichnet einen "Strahl" für Middle und End Teile
+function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
+    const half = width / 2;
+    
+    // Äußerer Rand (Orange/Rot)
+    ctx.fillStyle = colorOuter;
+    
+    // Wir zeichnen ein Rechteck, das etwas "wackelt" (Jaggy)
     ctx.beginPath();
-    const points = 16;
-    for (let i = 0; i < points; i++) {
-        const angle = (i / points) * Math.PI * 2;
-        // Zufällige Variation im Radius für den "zackigen" Look
-        const r = radius * (1 - jaggy + Math.random() * jaggy * 2);
-        const px = x + Math.cos(angle) * r;
-        const py = y + Math.sin(angle) * r;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+    
+    // Oben links bis oben rechts
+    ctx.moveTo(x - 24, y - half);
+    for(let i = -24; i <= 24; i+=4) ctx.lineTo(x + i, y - half + (Math.random()-0.5)*4);
+    
+    if (isEnd) {
+        // Runde Spitze am Ende (rechts)
+        ctx.quadraticCurveTo(x + 30, y, x + 24, y + half);
+    } else {
+        ctx.lineTo(x + 24, y + half);
     }
+    
+    // Unten rechts bis unten links
+    for(let i = 24; i >= -24; i-=4) ctx.lineTo(x + i, y + half + (Math.random()-0.5)*4);
     ctx.closePath();
     ctx.fill();
+
+    // Innerer Kern (Gelb/Hell) - etwas schmaler
+    ctx.fillStyle = colorInner;
+    ctx.beginPath();
+    ctx.moveTo(x - 24, y - half*0.6);
+    if (isEnd) {
+        ctx.lineTo(x + 18, y - half*0.6);
+        ctx.quadraticCurveTo(x + 24, y, x + 18, y + half*0.6);
+    } else {
+        ctx.lineTo(x + 24, y - half*0.6);
+        ctx.lineTo(x + 24, y + half*0.6);
+    }
+    ctx.lineTo(x - 24, y + half*0.6);
+    ctx.fill();
 }
-// --------------------------------------
 
 export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
@@ -196,7 +211,6 @@ export function draw(ctx, canvas) {
             if (item !== ITEMS.NONE && state.grid[y][x] !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
             
             let tile = state.grid[y][x];
-            // Visual Fix: Wenn hier eine Bombe liegt, zeichne den Untergrund!
             if (tile === TYPES.BOMB) {
                 const bomb = state.bombs.find(b => b.gx === x && b.gy === y);
                 if (bomb && bomb.underlyingTile !== undefined) {
@@ -300,42 +314,54 @@ export function draw(ctx, canvas) {
         }
     });
 
-    // --- NEUE FEUER-ZEICHEN-LOGIK MIT REALISTISCHEREN FLAMMEN ---
+    // --- NEUE GEZIELTE FEUER-ZEICHEN-LOGIK ---
     state.particles.forEach(p => {
         const px = p.gx * TILE_SIZE;
         const py = p.gy * TILE_SIZE;
 
         if (p.isFire) {
             const max = p.maxLife || 100; 
-            const pct = p.life / max; 
-
+            const pct = p.life / max; // 1.0 -> 0.0
             const cx = px + TILE_SIZE/2;
             const cy = py + TILE_SIZE/2;
             
             ctx.save();
 
-            if (pct > 0.8) { 
-                // PHASE 1: EXPLOSION (Start) - Hell, schnell wachsend
-                const grow = 1 - ((pct - 0.8) * 5); // 0 -> 1
-                // Innen fast Weiß, außen Gelb, wenig zackig
-                drawFlame(ctx, cx, cy, 28 * grow, '#ffffff', '#ffff00', 0.1);
-            } else if (pct > 0.2) {
-                // PHASE 2: LODERN (Hauptteil) - Pulsierend, Flammenfarben
-                const pulse = Math.sin(Date.now() / 30) * 2;
-                const baseSize = 22;
-                const inner = p.isNapalm ? '#ffaa00' : '#ffff44';
-                const outer = p.isNapalm ? '#ff2200' : '#ff6600';
-                // Innen Gelb/Orange, außen Orange/Rot, zackiger
-                drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.25);
+            let inner = p.isNapalm ? '#ffcc00' : '#ffffaa';
+            let outer = p.isNapalm ? '#ff4400' : '#ff8800';
+
+            // Transparenz am Ende
+            if (pct < 0.2) ctx.globalAlpha = pct * 5;
+
+            if (p.type === 'center') {
+                // --- ZENTRUM: Großer, heller Kreis/Explosion ---
+                const size = 22 + Math.sin(Date.now()/40)*2;
+                ctx.fillStyle = outer;
+                ctx.beginPath(); ctx.arc(cx, cy, size, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = inner;
+                ctx.beginPath(); ctx.arc(cx, cy, size*0.7, 0, Math.PI*2); ctx.fill();
+            
             } else {
-                // PHASE 3: ABKLINGEN (Ende) - Schrumpfend, dunkel, rauchig
-                const shrink = pct * 5; // 1 -> 0
-                const inner = p.isNapalm ? '#aa4400' : '#cc6600';
-                const outer = '#333333'; // Rauchiges Dunkelgrau außen
-                ctx.globalAlpha = shrink;
-                // Schrumpft, wird dunkler und transparenter
-                drawFlame(ctx, cx, cy - (1-shrink)*5, 18 * shrink, inner, outer, 0.3);
+                // --- STRAHL oder ENDE ---
+                // Zuerst Rotation bestimmen
+                let angle = 0;
+                if (p.dir) {
+                    if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2; // Oben
+                    if (p.dir.x === 0 && p.dir.y === 1) angle = Math.PI/2;   // Unten
+                    if (p.dir.x === -1 && p.dir.y === 0) angle = Math.PI;    // Links
+                    if (p.dir.x === 1 && p.dir.y === 0) angle = 0;           // Rechts
+                }
+
+                // Canvas zum Zentrum bewegen und rotieren
+                ctx.translate(cx, cy);
+                ctx.rotate(angle);
+
+                const beamWidth = 40 + Math.sin(Date.now()/40)*4; // Pulsieren
+                
+                // Zeichne den Strahl (oder Spitze)
+                drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
             }
+
             ctx.restore();
 
         } else if (p.text) {
