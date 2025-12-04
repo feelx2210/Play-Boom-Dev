@@ -106,6 +106,7 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
+// --- HIER SIND DIE NEUEN FLAMMEN-FUNKTIONEN ---
 function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
     grad.addColorStop(0, innerColor);
@@ -123,6 +124,7 @@ function drawFlame(ctx, x, y, radius, innerColor, outerColor, jaggy = 0.2) {
     ctx.closePath(); ctx.fill();
 }
 
+// NEU: Zeichnet einen Strahl für Mitte und Enden
 function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     const half = width / 2;
     ctx.fillStyle = colorOuter;
@@ -139,6 +141,7 @@ function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     else { ctx.lineTo(x + 24, y - half*0.6); ctx.lineTo(x + 24, y + half*0.6); }
     ctx.lineTo(x - 24, y + half*0.6); ctx.fill();
 }
+// --------------------------------------------------
 
 export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
@@ -202,6 +205,7 @@ export function draw(ctx, canvas) {
             if (item !== ITEMS.NONE && state.grid[y][x] !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
             
             let tile = state.grid[y][x];
+            // Visual Fix: Wenn hier eine Bombe liegt, zeichne den Untergrund!
             if (tile === TYPES.BOMB) {
                 const bomb = state.bombs.find(b => b.gx === x && b.gy === y);
                 if (bomb && bomb.underlyingTile !== undefined) {
@@ -305,7 +309,7 @@ export function draw(ctx, canvas) {
         }
     });
 
-    // --- FEUER-ZEICHEN-LOGIK (MIT SCMALEREN EXPLOSIONEN) ---
+    // --- ZEICHNEN DES FEUERS MIT NEUER ZEITBASIERTER LOGIK ---
     state.particles.forEach(p => {
         const px = p.gx * TILE_SIZE;
         const py = p.gy * TILE_SIZE;
@@ -355,21 +359,35 @@ export function draw(ctx, canvas) {
                 }
             } 
             else {
-                // PHASE 3: GLUT (Ende)
+                // PHASE 3: GLUT (Ende) - Sizzling Napalm
+                
+                // Fortschritt der Glut-Phase
                 const emberDuration = max - explosionDuration;
                 let emberProgress = 0;
-                if (emberDuration > 0) {
-                    emberProgress = (age - explosionDuration) / emberDuration;
-                }
-                const shrink = 1 - emberProgress;
-                ctx.globalAlpha = shrink;
+                if (emberDuration > 0) emberProgress = (age - explosionDuration) / emberDuration;
                 
-                const inner = '#aa4400';
-                const outer = '#333333';
+                // Brutzel-Effekt: Zufälliges Wackeln
+                const jitter = (Math.random() - 0.5) * 3; 
                 
-                if (p.type === 'center') {
-                    drawFlame(ctx, cx, cy, 12, inner, outer, 0.4);
+                // Pulsierendes Glühen
+                const pulse = Math.sin(Date.now() / 50) * 2; 
+
+                // Farben: Heißes Gelb/Orange innen, Rot außen
+                const inner = '#ffcc00'; 
+                const outer = '#cc2200';
+
+                // Erst ganz am Ende ausblenden (letzte 10%)
+                if (emberProgress > 0.9) {
+                    ctx.globalAlpha = 1 - ((emberProgress - 0.9) * 10);
                 } else {
+                    ctx.globalAlpha = 1.0;
+                }
+
+                if (p.type === 'center') {
+                    // Zentrum: Ein pulsierender Feuerball
+                    drawFlame(ctx, cx, cy, 18 + pulse + jitter, inner, outer, 0.3);
+                } else {
+                    // Strahl: Auch als "lodernde Masse" darstellen
                     let angle = 0;
                     if (p.dir) {
                         if (p.dir.x === 0 && p.dir.y === -1) angle = -Math.PI/2;
@@ -379,8 +397,18 @@ export function draw(ctx, canvas) {
                     }
                     ctx.translate(cx, cy);
                     ctx.rotate(angle);
-                    // Glut auch schmaler (war 30, jetzt 24)
-                    drawBeam(ctx, 0, 0, 24, inner, outer, p.type === 'end');
+                    
+                    // Breite variiert stark für den "Brutzel"-Look
+                    const beamWidth = 32 + pulse + jitter;
+                    drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
+
+                    // Extra Hitze-Partikel (kleine gelbe Punkte)
+                    if (Math.random() < 0.4) {
+                         ctx.fillStyle = '#ffffaa';
+                         const px = (Math.random() - 0.5) * 40;
+                         const py = (Math.random() - 0.5) * 10;
+                         ctx.fillRect(px, py, 2, 2);
+                    }
                 }
             }
             ctx.restore();
@@ -391,6 +419,7 @@ export function draw(ctx, canvas) {
             ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size || 4, p.size || 4);
         }
     });
+    // -----------------------------------------------------------
 
     state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
 }
