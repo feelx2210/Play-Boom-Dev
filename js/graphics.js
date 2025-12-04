@@ -141,7 +141,7 @@ function drawBeam(ctx, x, y, width, colorInner, colorOuter, isEnd) {
     else { ctx.lineTo(x + 24, y - half*0.6); ctx.lineTo(x + 24, y + half*0.6); }
     ctx.lineTo(x - 24, y + half*0.6); ctx.fill();
 }
-// --------------------------------------------------
+// ---------------------------------------------------
 
 export function draw(ctx, canvas) {
     ctx.fillStyle = state.currentLevel.bg;
