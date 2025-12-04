@@ -21,7 +21,10 @@ export class Player {
         this.alive = true;
         this.invincibleTimer = 0;
         this.fireTimer = 0;
-        this.speed = 2.5; 
+        
+        // SPEED FIX: 2.0 ist ruckelfrei und ca. 20% langsamer als 2.5
+        this.speed = 2; 
+        
         this.maxBombs = 1;
         this.activeBombs = 0;
         this.bombRange = 1;
@@ -66,6 +69,7 @@ export class Player {
         
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
+        // --- SKULL LOGIC ---
         let currentSpeed = this.speed;
 
         if (this.skullEffect) {
@@ -83,6 +87,7 @@ export class Player {
                 }
             }
         }
+        // -----------------
 
         const gx = Math.round(this.x / TILE_SIZE);
         const gy = Math.round(this.y / TILE_SIZE);
@@ -111,24 +116,16 @@ export class Player {
             const size = TILE_SIZE * 0.85; 
             const offset = (TILE_SIZE - size) / 2;
 
-            // --- VERBESSERTE KOLLISIONSPRÜFUNG ---
             const check = (x, y) => {
                 const gx = Math.floor(x / TILE_SIZE);
                 const gy = Math.floor(y / TILE_SIZE);
                 if (gx < 0 || gx >= GRID_W || gy < 0 || gy >= GRID_H) return true;
-                
-                // 1. Wände prüfen
                 if (state.grid[gy][gx] === TYPES.WALL_HARD || state.grid[gy][gx] === TYPES.WALL_SOFT) return true;
-                
-                // 2. Bomben prüfen (Auch rollende!)
-                // Wir suchen in der Bomben-Liste, ob an dieser Stelle eine Bombe ist.
-                // Das ist sicherer als nur state.grid zu fragen, da rollende Bomben das Grid nicht blockieren.
+                // Kollision mit Bomben (auch rollende)
                 const bomb = state.bombs.find(b => b.gx === gx && b.gy === gy);
                 if (bomb && !bomb.walkableIds.includes(this.id)) return true;
-
                 return false;
             };
-            // -------------------------------------
 
             if (dx !== 0) {
                 const nextX = this.x + dx;
@@ -170,24 +167,15 @@ export class Player {
     move(dx, dy) {
         const size = TILE_SIZE * 0.85; 
         const offset = (TILE_SIZE - size) / 2;
-        
-        // --- VERBESSERTE KOLLISIONSPRÜFUNG (AUCH FÜR BOTS) ---
         const check = (x, y) => {
             const gx = Math.floor(x / TILE_SIZE);
             const gy = Math.floor(y / TILE_SIZE);
             if (gx < 0 || gx >= GRID_W || gy < 0 || gy >= GRID_H) return true;
-            
-            // 1. Wände
             if (state.grid[gy][gx] === TYPES.WALL_HARD || state.grid[gy][gx] === TYPES.WALL_SOFT) return true;
-            
-            // 2. Bomben (alle)
             const bomb = state.bombs.find(b => b.gx === gx && b.gy === gy);
             if (bomb && !bomb.walkableIds.includes(this.id)) return true;
-
             return false;
         };
-        // -----------------------------------------------------
-
         if (dx !== 0) {
             const nextX = this.x + dx;
             const xEdge = dx > 0 ? nextX + size + offset : nextX + offset;
@@ -265,7 +253,7 @@ export class Player {
             owner: this,
             gx: gx, gy: gy,
             px: gx * TILE_SIZE, py: gy * TILE_SIZE,
-            timer: 160, 
+            timer: 200, // SLOWER TIMER (war 160)
             range: this.bombRange, 
             napalm: isNapalm,
             isRolling: isRolling,
