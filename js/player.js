@@ -24,7 +24,7 @@ export class Player {
         
         // HIER: Dezimalwerte sind erlaubt! 
         // 2.5 ist ein guter Mittelweg. Versuch auch 1.5 oder 2.2
-        this.speed = 1; 
+        this.speed = 1.4; 
         
         this.maxBombs = 1;
         this.activeBombs = 0;
