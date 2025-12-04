@@ -11,7 +11,7 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// --- MENU LOGIC ---
+// --- MENU LOGIC V2---
 function initMenu() {
     const charContainer = document.getElementById('char-select');
     charContainer.innerHTML = '';
