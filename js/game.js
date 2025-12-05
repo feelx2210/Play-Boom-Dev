@@ -4,7 +4,6 @@ import { createFloatingText, isSolid } from './utils.js';
 import { draw, drawLevelPreview, drawCharacterSprite } from './graphics.js';
 import { Player } from './player.js';
 import { endGame, showMenu, handleMenuInput, togglePause } from './ui.js';
-// IMPORT spawnRandomIce
 import { explodeBomb, triggerHellFire, killPlayer, spawnRandomIce } from './mechanics.js';
 
 const canvas = document.getElementById('gameCanvas');
@@ -14,7 +13,7 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// --- START LOGIC ---
+// --- SPIEL STARTEN ---
 window.startGame = function() {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
@@ -40,11 +39,11 @@ window.startGame = function() {
     state.hellFirePhase = 'IDLE'; 
     state.hellFireActive = false; 
 
-    // --- NEU: ICE TIMER RESET ---
+    // --- ICE TIMER RESET ---
     state.iceTimer = 0;
-    // Erster Spawn nach 30-45s nachdem die erste Minute rum ist
-    state.iceSpawnCountdown = Math.floor(Math.random() * 900) + 1800; 
-    // ----------------------------
+    // Erster Countdown startet sofort, wird aber erst ab Sekunde 30 runtergezählt
+    state.iceSpawnCountdown = 1800; 
+    // -----------------------
 
     for (let y = 0; y < GRID_H; y++) {
         let row = []; let itemRow = [];
@@ -143,22 +142,22 @@ function update() {
         }
     }
 
-    // --- NEU: ICE SPAWN UPDATE ---
+    // --- ICE SPAWN UPDATE ---
     if (state.currentLevel.id === 'ice') {
         state.iceTimer++;
-        // Erst nach 60 Sekunden (3600 Frames) aktiv werden
-        if (state.iceTimer > 3600) {
+        // Erst ab 30 Sekunden (1800 Frames) aktiv werden
+        if (state.iceTimer > 1800) {
             state.iceSpawnCountdown--;
             if (state.iceSpawnCountdown <= 0) {
                 spawnRandomIce();
-                // Reset für nächsten Spawn (30-45s = 1800-2700 Frames)
-                state.iceSpawnCountdown = Math.floor(Math.random() * 900) + 1800;
+                // Alle 30 Sekunden (1800 Frames) ein neuer Block
+                state.iceSpawnCountdown = 1800;
             }
         }
     }
-    // -----------------------------
+    // ------------------------
 
-    // Bombs
+    // Bombs Update
     for (let i = state.bombs.length - 1; i >= 0; i--) {
         let b = state.bombs[i]; b.timer--;
         if (b.isRolling) {
@@ -207,12 +206,12 @@ function update() {
             if (hitBombIndex !== -1) { const chainedBomb = state.bombs[hitBombIndex]; if (chainedBomb.timer > 1) { if(chainedBomb.isRolling) { chainedBomb.isRolling = false; chainedBomb.px = chainedBomb.gx * TILE_SIZE; chainedBomb.py = chainedBomb.gy * TILE_SIZE; chainedBomb.underlyingTile = state.grid[chainedBomb.gy][chainedBomb.gx]; } chainedBomb.timer = 0; } }
         }
         
-        // --- NEU: WENN FREEZING PARTIKEL STIRBT -> WAND SETZEN ---
+        // --- FREEZING ABGESCHLOSSEN? ---
         if (p.type === 'freezing' && p.life <= 0) {
             state.grid[p.gy][p.gx] = TYPES.WALL_SOFT;
-            createFloatingText(p.gx * TILE_SIZE, p.gy * TILE_SIZE, "FROZEN!", "#ccffff");
+            // Kein Text mehr
         }
-        // ---------------------------------------------------------
+        // -------------------------------
 
         if (p.life <= 0) state.particles.splice(i, 1);
     }
