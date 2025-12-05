@@ -4,7 +4,8 @@ import { createFloatingText, isSolid } from './utils.js';
 import { draw, drawLevelPreview, drawCharacterSprite } from './graphics.js';
 import { Player } from './player.js';
 import { endGame, showMenu, handleMenuInput, togglePause } from './ui.js';
-import { explodeBomb, triggerHellFire, killPlayer } from './mechanics.js';
+// IMPORT spawnRandomIce
+import { explodeBomb, triggerHellFire, killPlayer, spawnRandomIce } from './mechanics.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -13,7 +14,7 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// --- SPIEL STARTEN ---
+// --- START LOGIC ---
 window.startGame = function() {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
@@ -28,7 +29,6 @@ window.startGame = function() {
     container.style.borderColor = state.currentLevel.border;
     document.getElementById('p1-name').innerText = userChar.name.toUpperCase();
 
-    // Reset State
     state.grid = []; 
     state.items = []; 
     state.bombs = []; 
@@ -40,7 +40,12 @@ window.startGame = function() {
     state.hellFirePhase = 'IDLE'; 
     state.hellFireActive = false; 
 
-    // Grid generieren
+    // --- NEU: ICE TIMER RESET ---
+    state.iceTimer = 0;
+    // Erster Spawn nach 30-45s nachdem die erste Minute rum ist
+    state.iceSpawnCountdown = Math.floor(Math.random() * 900) + 1800; 
+    // ----------------------------
+
     for (let y = 0; y < GRID_H; y++) {
         let row = []; let itemRow = [];
         for (let x = 0; x < GRID_W; x++) {
@@ -67,27 +72,20 @@ window.startGame = function() {
         state.items.push(itemRow);
     }
 
-    // --- UPDATE: ÖLFELDER ERZWINGEN (Freiräumen) ---
     if (state.currentLevel.id === 'hell') {
         OIL_PADS.forEach(oil => {
-            // Überschreibe alles, was keine harte Wand ist (also Soft Walls oder Empty)
             if (state.grid[oil.y][oil.x] !== TYPES.WALL_HARD) {
                 state.grid[oil.y][oil.x] = TYPES.OIL;
-                state.items[oil.y][oil.x] = ITEMS.NONE; // Keine Items auf Öl
+                state.items[oil.y][oil.x] = ITEMS.NONE;
             }
         });
     }
-    // -----------------------------------------------
 
     const corners = [{x: 1, y: 1}, {x: 1, y: 2}, {x: 2, y: 1}, {x: GRID_W-2, y: 1}, {x: GRID_W-2, y: 2}, {x: GRID_W-3, y: 1}, {x: 1, y: GRID_H-2}, {x: 1, y: GRID_H-3}, {x: 2, y: GRID_H-2}, {x: GRID_W-2, y: GRID_H-2}, {x: GRID_W-3, y: GRID_H-2}, {x: GRID_W-2, y: GRID_H-3}];
     corners.forEach(p => state.grid[p.y][p.x] = TYPES.EMPTY);
     
     if (state.currentLevel.id === 'jungle') for(let x=1; x<GRID_W-1; x++) state.items[7][x] = ITEMS.NONE; 
-    
-    if (state.currentLevel.hasCentralFire) { 
-        state.grid[HELL_CENTER.y][HELL_CENTER.x] = TYPES.EMPTY; 
-        state.items[HELL_CENTER.y][HELL_CENTER.x] = ITEMS.NONE; 
-    }
+    if (state.currentLevel.hasCentralFire) { state.grid[HELL_CENTER.y][HELL_CENTER.x] = TYPES.EMPTY; state.items[HELL_CENTER.y][HELL_CENTER.x] = ITEMS.NONE; }
 
     distributeItems();
 
@@ -131,6 +129,7 @@ function update() {
     if (state.isGameOver) return;
     state.players.forEach(p => p.inFire = false);
 
+    // Hellfire Update
     if (state.currentLevel.hasCentralFire) {
         if (!state.hellFireActive) {
             if (state.particles.some(p => p.isFire && p.gx === HELL_CENTER.x && p.gy === HELL_CENTER.y)) {
@@ -144,6 +143,22 @@ function update() {
         }
     }
 
+    // --- NEU: ICE SPAWN UPDATE ---
+    if (state.currentLevel.id === 'ice') {
+        state.iceTimer++;
+        // Erst nach 60 Sekunden (3600 Frames) aktiv werden
+        if (state.iceTimer > 3600) {
+            state.iceSpawnCountdown--;
+            if (state.iceSpawnCountdown <= 0) {
+                spawnRandomIce();
+                // Reset für nächsten Spawn (30-45s = 1800-2700 Frames)
+                state.iceSpawnCountdown = Math.floor(Math.random() * 900) + 1800;
+            }
+        }
+    }
+    // -----------------------------
+
+    // Bombs
     for (let i = state.bombs.length - 1; i >= 0; i--) {
         let b = state.bombs[i]; b.timer--;
         if (b.isRolling) {
@@ -191,6 +206,14 @@ function update() {
             const hitBombIndex = state.bombs.findIndex(b => b.gx === p.gx && b.gy === p.gy);
             if (hitBombIndex !== -1) { const chainedBomb = state.bombs[hitBombIndex]; if (chainedBomb.timer > 1) { if(chainedBomb.isRolling) { chainedBomb.isRolling = false; chainedBomb.px = chainedBomb.gx * TILE_SIZE; chainedBomb.py = chainedBomb.gy * TILE_SIZE; chainedBomb.underlyingTile = state.grid[chainedBomb.gy][chainedBomb.gx]; } chainedBomb.timer = 0; } }
         }
+        
+        // --- NEU: WENN FREEZING PARTIKEL STIRBT -> WAND SETZEN ---
+        if (p.type === 'freezing' && p.life <= 0) {
+            state.grid[p.gy][p.gx] = TYPES.WALL_SOFT;
+            createFloatingText(p.gx * TILE_SIZE, p.gy * TILE_SIZE, "FROZEN!", "#ccffff");
+        }
+        // ---------------------------------------------------------
+
         if (p.life <= 0) state.particles.splice(i, 1);
     }
 
