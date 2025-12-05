@@ -1,52 +1,62 @@
 import { TILE_SIZE } from './constants.js';
 import { state } from './state.js';
-// OPTIMIERUNG: Importiere Funktionen aus effects.js statt sie hier zu duplizieren
+// OPTIMIERUNG: Importiere Funktionen aus effects.js
 import { drawFlame, drawBeam } from './effects.js';
 
-// Lokale Hilfsfunktion nur für Öl-Feuer
-function drawCampfire(ctx, x, y) {
+// NEU: "Kochendes Öl" Effekt (Top-Down Perspektive)
+function drawOilFire(ctx, x, y) {
     const cx = x;
-    const cy = y + 10; 
-    const t = Date.now() / 100;
-    const scale = 1 + Math.sin(t) * 0.1;
-    const sway = Math.cos(t * 1.5) * 2;
+    const cy = y;
+    // Langsamerer Zeitfaktor für zähes Blubbern
+    const t = Date.now() / 200; 
 
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.scale(scale, scale);
+
+    // 1. Die Öl-Masse (Dunkler, zäher Untergrund)
+    ctx.fillStyle = 'rgba(10, 5, 5, 0.85)'; // Fast Schwarz, leicht transparent
+    ctx.beginPath();
+    // Die Pfütze pulsiert ganz leicht in der Größe
+    const baseSize = 20 + Math.sin(t) * 1;
+    ctx.arc(0, 0, baseSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Blubbernde Hitze-Blasen
+    // Wir definieren feste Positionen für Blasen, die zyklisch erscheinen
+    // Farben: Hitze (Gelb/Weiß/Rot) + Giftiges Gas (Grün/Blau)
+    const bubbles = [
+        { ox: -8, oy: -8, offset: 0, color: '#ffaa00', maxR: 8 },   // Orange
+        { ox: 10, oy: 4, offset: 1.5, color: '#ffcc00', maxR: 6 },  // Gelb
+        { ox: -4, oy: 10, offset: 3.0, color: '#ff4444', maxR: 7 }, // Rot
+        { ox: 6, oy: -6, offset: 4.5, color: '#ffffff', maxR: 4 },  // Weiß (Hotspot)
+        { ox: 0, oy: 0, offset: 2.2, color: '#44ffaa', maxR: 5 },   // Giftgrün (Gas)
+        { ox: -10, oy: 5, offset: 5.1, color: '#4488ff', maxR: 5 }  // Blau (Gas)
+    ];
+
+    bubbles.forEach(b => {
+        // Zyklisches Aufblähen (Sinus-Welle verschoben durch offset)
+        const cycle = (t + b.offset) % (Math.PI * 2);
+        // Nur im positiven Sinus-Bereich sichtbar machen (Blubbern)
+        if (Math.sin(cycle) > 0) {
+            const size = Math.sin(cycle) * b.maxR; 
+            const alpha = Math.sin(cycle); // Ein/Ausblenden
+
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = b.color;
+            
+            ctx.beginPath();
+            ctx.arc(b.ox, b.oy, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Kleiner Glanzpunkt auf der Blase für "flüssigen" Look
+            ctx.globalAlpha = alpha * 0.8;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(b.ox - size*0.3, b.oy - size*0.3, size*0.2, 0, Math.PI*2);
+            ctx.fill();
+        }
+    });
     
-    // Basis (Glut)
-    const grad = ctx.createRadialGradient(0, 5, 5, 0, 0, 20);
-    grad.addColorStop(0, '#ffcc00'); 
-    grad.addColorStop(0.6, '#ff4400'); 
-    grad.addColorStop(1, 'rgba(50, 0, 0, 0)'); 
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.ellipse(0, 10, 18, 8, 0, 0, Math.PI * 2); ctx.fill();
-
-    // Flammenzunge
-    ctx.fillStyle = '#ffaa00';
-    ctx.beginPath();
-    ctx.moveTo(-10, 5);
-    ctx.quadraticCurveTo(-5 + sway, -25, 0 + sway, -35);
-    ctx.quadraticCurveTo(5 + sway, -25, 10, 5);
-    ctx.fill();
-
-    // Innerer Kern
-    ctx.fillStyle = '#ffffaa';
-    ctx.beginPath();
-    ctx.moveTo(-5, 5);
-    ctx.quadraticCurveTo(0 + sway, -15, 0 + sway, -20);
-    ctx.quadraticCurveTo(0 + sway, -15, 5, 5);
-    ctx.fill();
-
-    // Rauchpartikel
-    if (Math.random() < 0.3) {
-        ctx.fillStyle = 'rgba(50, 50, 50, 0.5)';
-        const rx = (Math.random() - 0.5) * 20;
-        const ry = -20 - Math.random() * 20;
-        ctx.fillRect(rx, ry, 4, 4);
-    }
-
     ctx.restore();
 }
 
@@ -74,13 +84,14 @@ export function drawAllParticles(ctx) {
                 drawFlame(ctx, cx, cy, 18 * grow, '#ffffff', '#ffff00', 0.1);
             } 
             else if (age < explosionDuration) {
-                // PHASE 2: EXPLOSION SUSTAIN (Beam / Center)
+                // PHASE 2: EXPLOSION SUSTAIN
                 const pulse = Math.sin(Date.now() / 30) * 2;
                 const baseSize = 16; 
                 
                 const isOil = p.isOilFire;
-                const inner = isOil ? '#ff5500' : (p.isNapalm ? '#ffaa00' : '#ffff44');
-                const outer = isOil ? '#000000' : (p.isNapalm ? '#ff2200' : '#ff6600');
+                // Öl-Explosion: Heller, aggressiver Kern
+                const inner = isOil ? '#ffaa88' : (p.isNapalm ? '#ffaa00' : '#ffff44');
+                const outer = isOil ? '#440000' : (p.isNapalm ? '#ff2200' : '#ff6600');
 
                 if (p.type === 'center') {
                     drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.2);
@@ -99,18 +110,17 @@ export function drawAllParticles(ctx) {
                 }
             } 
             else if (p.isOilFire) {
-                // PHASE 3: OIL FIRE (Lagerfeuer-Stil)
-                drawCampfire(ctx, cx, cy);
+                // PHASE 3: OIL FIRE (Neuer "Kochende Pfütze" Effekt)
+                drawOilFire(ctx, cx, cy);
             }
             else {
-                // PHASE 3: NAPALM (Glut)
+                // PHASE 3: NAPALM GLUT
                 const emberDuration = max - explosionDuration;
                 let emberProgress = 0;
                 if (emberDuration > 0) emberProgress = (age - explosionDuration) / emberDuration;
                 
                 const jitter = (Math.random() - 0.5) * 3; 
                 const pulse = Math.sin(Date.now() / 50) * 2; 
-                
                 const inner = '#ffcc00'; 
                 const outer = '#cc2200';
 
