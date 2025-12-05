@@ -15,7 +15,9 @@ export const state = {
     hellFireTimer: 0,
     hellFirePhase: 'IDLE', 
     hellFireActive: false,
-    // NEU: Timer für das Zufrieren im Eis-Level
-    iceRespawnTimer: 0,
-    keys: {}
+    keys: {},
+    
+    // --- NEU: ICE LEVEL LOGIK ---
+    iceTimer: 0,            // Zählt hoch, wie lange wir schon spielen
+    iceSpawnCountdown: 0    // Zählt runter bis zum nächsten "Freeze"
 };
