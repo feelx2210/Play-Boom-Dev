@@ -240,9 +240,9 @@ function update() {
    state.players.forEach(p => { 
         if (p.inFire) { 
             p.fireTimer++; 
-            // ÄNDERUNG: Von 12 auf 30 Frames erhöht (0.5s)
+            // ÄNDERUNG: Von 12 auf 20 Frames erhöht (0.3s)
             // Erlaubt das Durchrennen durch eine Flamme, besonders mit Speed-Ups
-            if (p.fireTimer >= 30) { 
+            if (p.fireTimer >= 20) { 
                 killPlayer(p); 
                 p.fireTimer = 0; 
             } 
