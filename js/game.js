@@ -237,7 +237,19 @@ function update() {
         if (p.life <= 0) state.particles.splice(i, 1);
     }
 
-    state.players.forEach(p => { if (p.inFire) { p.fireTimer++; if (p.fireTimer >= 12) { killPlayer(p); p.fireTimer = 0; } } else p.fireTimer = 0; });
+   state.players.forEach(p => { 
+        if (p.inFire) { 
+            p.fireTimer++; 
+            // ÄNDERUNG: Von 12 auf 30 Frames erhöht (0.5s)
+            // Erlaubt das Durchrennen durch eine Flamme, besonders mit Speed-Ups
+            if (p.fireTimer >= 30) { 
+                killPlayer(p); 
+                p.fireTimer = 0; 
+            } 
+        } else {
+            p.fireTimer = 0;
+        }
+    });
     let aliveCount = 0; let livingPlayers = [];
     state.players.forEach(p => { p.update(); if (p.alive) { aliveCount++; livingPlayers.push(p); } });
 
