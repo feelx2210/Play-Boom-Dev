@@ -233,7 +233,11 @@ function update() {
             }
         }
     }
-    if (state.players.length > 1 && aliveCount <= 1) { const winner = livingPlayers.length > 0 ? livingPlayers[0] : null; endGame(winner ? winner.name + " WINS!" : "DRAW!"); }
+// ANPASSUNG: Wir übergeben 'winner' als zweites Argument an endGame
+    if (state.players.length > 1 && aliveCount <= 1) { 
+        const winner = livingPlayers.length > 0 ? livingPlayers[0] : null; 
+        endGame(winner ? winner.name + " WINS!" : "DRAW!", winner); 
+    }
 }
 
 function gameLoop() {
