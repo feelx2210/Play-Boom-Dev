@@ -122,15 +122,26 @@ export function drawAllParticles(ctx) {
             } else if (p.isOilFire) {
                 drawCampfire(ctx, cx, cy);
             } else {
+                // --- START ÄNDERUNG: GLUT-LOGIK ---
                 const emberDuration = max - explosionDuration;
                 let emberProgress = 0;
                 if (emberDuration > 0) emberProgress = (age - explosionDuration) / emberDuration;
                 const jitter = (Math.random() - 0.5) * 3; 
                 const pulse = Math.sin(Date.now() / 50) * 2; 
-                const inner = '#ffcc00'; 
-                const outer = '#cc2200';
+                
+                // Standardfarben (normales Feuer)
+                let inner = '#ffcc00'; 
+                let outer = '#cc2200';
+
+                // Wenn Napalm: Ändere Farben zu "Glut" (dunkles Rot/Orange, verkohlt)
+                if (p.isNapalm) {
+                    inner = '#ff5500'; // Glühendes Orange/Rot
+                    outer = '#2a0505'; // Sehr dunkles, fast schwarzes Rot (Kohle)
+                }
+
                 if (emberProgress > 0.9) ctx.globalAlpha = 1 - ((emberProgress - 0.9) * 10);
                 else ctx.globalAlpha = 1.0;
+
                 if (p.type === 'center') {
                     drawFlame(ctx, cx, cy, 18 + pulse + jitter, inner, outer, 0.3);
                 } else {
@@ -146,12 +157,14 @@ export function drawAllParticles(ctx) {
                     const beamWidth = 32 + pulse + jitter;
                     drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
                     if (Math.random() < 0.4) {
-                         ctx.fillStyle = '#ffffaa';
+                         // Funkenfarbe ebenfalls anpassen für Napalm
+                         ctx.fillStyle = p.isNapalm ? '#ff6600' : '#ffffaa';
                          const px = (Math.random() - 0.5) * 40;
                          const py = (Math.random() - 0.5) * 10;
                          ctx.fillRect(px, py, 2, 2);
                     }
                 }
+                // --- ENDE ÄNDERUNG ---
             }
             ctx.restore();
         } 
