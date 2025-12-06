@@ -128,10 +128,25 @@ export function quitGame() {
     showMenu();
 }
 
-export function endGame(msg) {
+// ANPASSUNG: Neuer Parameter 'winner' hinzugefügt
+export function endGame(msg, winner) {
     if (state.isGameOver) return; 
     state.isGameOver = true; 
     setTimeout(() => {
+        const titleEl = document.getElementById('go-title');
+        
+        // Prüfen, ob es einen Gewinner gibt und ob dieser die ID 1 (Spieler 1) hat
+        if (winner && winner.id === 1) {
+            titleEl.innerText = "YOU WON";
+            titleEl.style.color = "#00ff00"; // Grün
+            titleEl.style.textShadow = "4px 4px 0 #005500"; // Passender Schatten
+        } else {
+            // Standard wiederherstellen (wichtig für Neustarts)
+            titleEl.innerText = "GAME OVER";
+            titleEl.style.color = "#ff0000"; // Rot
+            titleEl.style.textShadow = "4px 4px 0 #550000";
+        }
+
         document.getElementById('go-message').innerText = msg;
         document.getElementById('game-over').classList.remove('hidden');
     }, 3000);
