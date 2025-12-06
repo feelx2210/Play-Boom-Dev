@@ -2,48 +2,81 @@ import { TILE_SIZE } from './constants.js';
 import { state } from './state.js';
 import { drawFlame, drawBeam } from './effects.js';
 
-function drawCampfire(ctx, x, y) {
-    const cx = x;
-    const cy = y + 10; 
-    const t = Date.now() / 100;
-    const scale = 1 + Math.sin(t) * 0.1;
-    const sway = Math.cos(t * 1.5) * 2;
-
+// NEU: Realistischerer Ölbrand (Top-Down, Glut + Gift)
+function drawOilFire(ctx, x, y) {
+    const t = Date.now();
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(scale, scale);
+    ctx.translate(x, y);
+
+    // 1. Pulsierende Glut-Basis (Rot-Orange)
+    // Flacher Verlauf, kein "Turm" nach oben für Top-Down-Look
+    const pulse = Math.sin(t / 150) * 0.1 + 1; // Pulsieren zwischen 0.9 und 1.1
+    const radius = 22 * pulse;
     
-    const grad = ctx.createRadialGradient(0, 5, 5, 0, 0, 20);
-    grad.addColorStop(0, '#ffcc00'); 
-    grad.addColorStop(0.6, '#ff4400'); 
-    grad.addColorStop(1, 'rgba(50, 0, 0, 0)'); 
+    const grad = ctx.createRadialGradient(0, 0, 5, 0, 0, radius);
+    grad.addColorStop(0, '#ffaa00');      // Kern: Hellorange/Gelb
+    grad.addColorStop(0.5, '#cc2200');    // Mitte: Rot
+    grad.addColorStop(0.8, '#440505');    // Rand: Dunkelstes Rot/Schwarz (Verkohlung)
+    grad.addColorStop(1, 'rgba(0,0,0,0)'); // Transparent am Rand
+    
     ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.ellipse(0, 10, 18, 8, 0, 0, Math.PI * 2); ctx.fill();
-
-    ctx.fillStyle = '#ffaa00';
     ctx.beginPath();
-    ctx.moveTo(-10, 5);
-    ctx.quadraticCurveTo(-5 + sway, -25, 0 + sway, -35);
-    ctx.quadraticCurveTo(5 + sway, -25, 10, 5);
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#ffffaa';
-    ctx.beginPath();
-    ctx.moveTo(-5, 5);
-    ctx.quadraticCurveTo(0 + sway, -15, 0 + sway, -20);
-    ctx.quadraticCurveTo(0 + sway, -15, 5, 5);
-    ctx.fill();
-
-    if (Math.random() < 0.3) {
-        ctx.fillStyle = 'rgba(50, 50, 50, 0.5)';
-        const rx = (Math.random() - 0.5) * 20;
-        const ry = -20 - Math.random() * 20;
-        ctx.fillRect(rx, ry, 4, 4);
+    // 2. "Brutzelnde" Öl-Blasen
+    // Wir simulieren dunkle Blasen, die auf der heißen Oberfläche erscheinen und platzen
+    for(let i=0; i<3; i++) {
+        const offset = i * 850;
+        const progress = ((t + offset) % 800) / 800; // 0 bis 1 Loop
+        
+        if (progress < 0.9) { // Blase sichtbar
+            // Zufällige Position auf der heißen Scheibe (kreisförmig verteilt)
+            const angle = (t / 600) + i * (Math.PI * 2 / 3);
+            const dist = 6 + Math.sin(t/200 + i)*8;
+            const bx = Math.cos(angle) * dist;
+            const by = Math.sin(angle) * dist;
+            
+            // Blase wächst und platzt (sinus-kurve für Größe)
+            const size = 5 * Math.sin(progress * Math.PI); 
+            
+            ctx.fillStyle = '#2a0000'; // Fast schwarzes Öl
+            ctx.beginPath();
+            ctx.arc(bx, by, size, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Kleiner Glanzpunkt auf der Blase (Reflexion der Glut)
+            ctx.fillStyle = '#ff6600';
+            ctx.beginPath();
+            ctx.arc(bx - 1, by - 1, size * 0.3, 0, Math.PI*2);
+            ctx.fill();
+        }
     }
+
+    // 3. Giftige grüne Partikel (wenige)
+    // Schweben langsam nach oben und verblassen
+    const particleCount = 2; 
+    for(let j=0; j<particleCount; j++) {
+        const cycle = 2200;
+        const offset = j * (cycle / particleCount);
+        const pProg = ((t + offset) % cycle) / cycle; // 0 -> 1
+        
+        // Spiralbewegung leicht nach oben
+        const px = Math.sin(t/400 + j)*10; 
+        const py = 4 - (pProg * 18); // Startet mittig, schwebt etwas nach "Norden"
+        
+        ctx.globalAlpha = Math.max(0, 1 - pProg * 1.5); // Schnelles Verblassen
+        ctx.fillStyle = '#33ff33'; // Giftgrün
+        ctx.beginPath();
+        // Kleine Rechtecke oder Kreise für Pixel-Look
+        ctx.rect(px, py, 3, 3);
+        ctx.fill();
+    }
+
     ctx.restore();
 }
 
-// NEU: Einfrier-Animation
+// Einfrier-Animation
 function drawFreezing(ctx, x, y, life, maxLife) {
     const cx = x;
     const cy = y;
@@ -87,7 +120,6 @@ export function drawAllParticles(ctx) {
         const py = p.gy * TILE_SIZE;
 
         if (p.isFire) {
-            // ... (Feuer-Code bleibt unverändert) ...
             const max = p.maxLife || 100;
             const currentLife = p.life;
             const age = max - currentLife;
@@ -95,15 +127,20 @@ export function drawAllParticles(ctx) {
             const cy = py + TILE_SIZE/2;
             ctx.save();
             const explosionDuration = 100;
+            
+            // 1. Wachstumsphase (Explosion start)
             if (age < 15) {
                 const grow = age / 15;
                 drawFlame(ctx, cx, cy, 18 * grow, '#ffffff', '#ffff00', 0.1);
-            } else if (age < explosionDuration) {
+            } 
+            // 2. Volle Explosion (Strahlen & Feuerbälle)
+            else if (age < explosionDuration) {
                 const pulse = Math.sin(Date.now() / 30) * 2;
                 const baseSize = 16; 
                 const isOil = p.isOilFire;
                 const inner = isOil ? '#ff5500' : (p.isNapalm ? '#ffaa00' : '#ffff44');
                 const outer = isOil ? '#000000' : (p.isNapalm ? '#ff2200' : '#ff6600');
+                
                 if (p.type === 'center') {
                     drawFlame(ctx, cx, cy, baseSize + pulse, inner, outer, 0.2);
                 } else {
@@ -119,29 +156,30 @@ export function drawAllParticles(ctx) {
                     const beamWidth = 36 + Math.sin(Date.now()/40)*3; 
                     drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
                 }
-            } else if (p.isOilFire) {
-                drawCampfire(ctx, cx, cy);
-            } else {
-                // --- START ÄNDERUNG: GLUT-LOGIK ---
+            } 
+            // 3. Nachbrennen (Ölfelder) -> HIER NEUE FUNKTION
+            else if (p.isOilFire) {
+                drawOilFire(ctx, cx, cy);
+            } 
+            // 4. Ausglühen (Normale Explosion / Napalm Glut)
+            else {
                 const emberDuration = max - explosionDuration;
                 let emberProgress = 0;
                 if (emberDuration > 0) emberProgress = (age - explosionDuration) / emberDuration;
                 const jitter = (Math.random() - 0.5) * 3; 
                 const pulse = Math.sin(Date.now() / 50) * 2; 
                 
-                // Standardfarben (normales Feuer)
+                // Farben je nach Typ (Napalm = dunklere Glut)
                 let inner = '#ffcc00'; 
                 let outer = '#cc2200';
-
-                // Wenn Napalm: Ändere Farben zu "Glut" (dunkles Rot/Orange, verkohlt)
                 if (p.isNapalm) {
-                    inner = '#ff5500'; // Glühendes Orange/Rot
-                    outer = '#2a0505'; // Sehr dunkles, fast schwarzes Rot (Kohle)
+                    inner = '#ff5500';
+                    outer = '#2a0505';
                 }
 
                 if (emberProgress > 0.9) ctx.globalAlpha = 1 - ((emberProgress - 0.9) * 10);
                 else ctx.globalAlpha = 1.0;
-
+                
                 if (p.type === 'center') {
                     drawFlame(ctx, cx, cy, 18 + pulse + jitter, inner, outer, 0.3);
                 } else {
@@ -157,22 +195,18 @@ export function drawAllParticles(ctx) {
                     const beamWidth = 32 + pulse + jitter;
                     drawBeam(ctx, 0, 0, beamWidth, inner, outer, p.type === 'end');
                     if (Math.random() < 0.4) {
-                         // Funkenfarbe ebenfalls anpassen für Napalm
                          ctx.fillStyle = p.isNapalm ? '#ff6600' : '#ffffaa';
                          const px = (Math.random() - 0.5) * 40;
                          const py = (Math.random() - 0.5) * 10;
                          ctx.fillRect(px, py, 2, 2);
                     }
                 }
-                // --- ENDE ÄNDERUNG ---
             }
             ctx.restore();
         } 
-        // --- NEU: CHECK FÜR FREEZING PARTIKEL ---
         else if (p.type === 'freezing') {
             drawFreezing(ctx, px + TILE_SIZE/2, py + TILE_SIZE/2, p.life, p.maxLife);
         }
-        // ----------------------------------------
         else if (p.text) {
             ctx.fillStyle = p.color; ctx.font = '10px "Press Start 2P"'; ctx.fillText(p.text, p.x, p.y);
         } else {
