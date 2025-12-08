@@ -151,32 +151,31 @@ function distributeItems() {
 }
 
 window.addEventListener('keydown', e => {
-    // --- NEU: Input Blockieren im Mobile-Portrait-Modus ---
-    // Prüft, ob das Fenster schmal (Handy-Breite) UND im Hochformat ist.
-    // Falls ja: Breche ab, damit keine Desktop-Steuerung möglich ist.
+    // NEU: Mobile Portrait Check
+    // Verhindert Eingaben, wenn das Gerät ein Handy im Hochformat ist
     const isMobilePortrait = window.matchMedia("(max-width: 768px) and (orientation: portrait)").matches;
     if (isMobilePortrait) {
         return; 
     }
-    // -----------------------------------------------------
 
+    // Menü-Steuerung (wenn Menü sichtbar)
     if (!document.getElementById('main-menu').classList.contains('hidden')) {
         handleMenuInput(e.code);
         return;
     }
+
+    // Spiel-Steuerung
     state.keys[e.code] = true;
+    
+    // Verhindern, dass Pfeiltasten die Webseite scrollen
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-    if (e.code === keyBindings.CHANGE && state.players[0]) state.players[0].cycleBombType();
-    if (e.key.toLowerCase() === 'p' || e.code === 'Escape') togglePause();
-});
-    state.keys[e.code] = true;
-    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+    
+    // Spezielle Aktionen
     if (e.code === keyBindings.CHANGE && state.players[0]) state.players[0].cycleBombType();
     if (e.key.toLowerCase() === 'p' || e.code === 'Escape') togglePause();
 });
 
 window.addEventListener('keyup', e => { state.keys[e.code] = false; });
-
 function update() {
     if (state.isGameOver) return;
     state.players.forEach(p => p.inFire = false);
