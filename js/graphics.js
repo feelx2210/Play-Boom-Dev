@@ -1,4 +1,4 @@
-import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER } from './constants.js';
+import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER, DIRECTION_PADS } from './constants.js';
 import { state } from './state.js';
 import { drawAllParticles } from './render_particles.js';
 
@@ -145,6 +145,40 @@ export function draw(ctx, canvas) {
         });
     }
 
+    // NEU: Richtungsfelder zeichnen
+    DIRECTION_PADS.forEach(pad => {
+        const cx = pad.x * TILE_SIZE + TILE_SIZE/2;
+        const cy = pad.y * TILE_SIZE + TILE_SIZE/2;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(pad.x * TILE_SIZE, pad.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+        ctx.fillStyle = '#aaaaaa'; 
+        ctx.beginPath();
+        
+        const size = 8; 
+        
+        if (pad.dir.y === -1) { // Oben 
+            ctx.moveTo(cx, cy - size - 2); 
+            ctx.lineTo(cx - size, cy + size - 2); 
+            ctx.lineTo(cx + size, cy + size - 2);
+        } else if (pad.dir.x === 1) { // Rechts 
+            ctx.moveTo(cx + size + 2, cy); 
+            ctx.lineTo(cx - size + 2, cy - size); 
+            ctx.lineTo(cx - size + 2, cy + size);
+        } else if (pad.dir.y === 1) { // Unten 
+            ctx.moveTo(cx, cy + size + 2); 
+            ctx.lineTo(cx - size, cy - size + 2); 
+            ctx.lineTo(cx + size, cy - size + 2);
+        } else if (pad.dir.x === -1) { // Links 
+            ctx.moveTo(cx - size - 2, cy); 
+            ctx.lineTo(cx + size - 2, cy - size); 
+            ctx.lineTo(cx + size - 2, cy + size);
+        }
+        
+        ctx.fill();
+    });
+
     // --- OIL PADS (Hell only) ---
     if (state.currentLevel.id === 'hell') {
         OIL_PADS.forEach(oil => {
@@ -290,7 +324,11 @@ export function draw(ctx, canvas) {
     state.bombs.forEach(b => {
         const px = b.px; const py = b.py; const scale = 1 + Math.sin(Date.now() / 100) * 0.1;
         let baseColor = '#444444'; if (state.currentLevel.id === 'jungle') baseColor = '#000000';
-        ctx.fillStyle = b.napalm ? '#dd0000' : baseColor; if (b.isBlue) ctx.fillStyle = '#000080';
+        ctx.fillStyle = b.napalm ? '#dd0000' : baseColor; 
+        
+        // ÄNDERUNG: Blaues Bomben-Design
+        if (b.isBlue) ctx.fillStyle = '#000080';
+
         ctx.beginPath(); ctx.arc(px + TILE_SIZE/2, py + TILE_SIZE/2, 16 * scale, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + TILE_SIZE/2 + 8, py + TILE_SIZE/2 - 8); ctx.lineTo(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14); ctx.stroke();
         ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14, 3, 0, Math.PI*2); ctx.fill();
