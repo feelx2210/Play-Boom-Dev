@@ -43,35 +43,47 @@ export function initMenu() {
     charContainer.innerHTML = '';
     levelContainer.innerHTML = '';
     
-    // --- HELPER ZUM RENDERN EINER KARTE ---
+    // State Visualisierung
+    if (state.menuState === 0) {
+        document.getElementById('start-game-btn').classList.remove('focused');
+    } else if (state.menuState === 2) {
+        document.getElementById('start-game-btn').classList.add('focused');
+    }
+
+    // --- HELPER ZUM RENDERN EINER KARTE MIT DATA-POS ---
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
         
-        // DATA-POS LOGIK FÜR CSS CAROUSEL
-        // Berechne Distanz im Ring-Buffer
+        // --- KEY LOGIC: POSITION BERECHNEN ---
         let total = (type === 'char') ? CHARACTERS.length : Object.keys(LEVELS).length;
         let selectedIdx = (type === 'char') ? state.selectedCharIndex : Object.keys(LEVELS).indexOf(state.selectedLevelKey);
         
-        // Position bestimmen
+        // Ring-Buffer Logik für Nachbarn
         let pos = 'hidden';
         if (index === selectedIdx) pos = 'center';
         else if (index === (selectedIdx - 1 + total) % total) pos = 'left';
         else if (index === (selectedIdx + 1) % total) pos = 'right';
         
+        // Attribut setzen für CSS Selektor
         div.setAttribute('data-pos', pos);
 
-        // Click Handler (auch für seitliche Items zum Auswählen)
+        // Click Handler (Ermöglicht Klick auf Nachbarn zum Wechseln)
         div.onclick = (e) => {
             e.stopPropagation();
             if (pos === 'left') changeSelection(type, -1);
             else if (pos === 'right') changeSelection(type, 1);
-            // Center Klick macht nichts oder Bestätigung
+            else if (pos === 'center') {
+                // Focus State update
+                state.menuState = (type === 'char') ? 0 : 1;
+                initMenu();
+            }
         };
 
-        const canvas = document.createElement('canvas'); 
-        canvas.width=48; canvas.height=48; canvas.className='preview-canvas';
-        const ctx = canvas.getContext('2d');
+        const pCanvas = document.createElement('canvas'); 
+        pCanvas.width=48; pCanvas.height=48; 
+        pCanvas.className='preview-canvas';
+        const ctx = pCanvas.getContext('2d');
         
         let name = "";
         if (type === 'char') {
@@ -81,8 +93,8 @@ export function initMenu() {
             drawLevelPreview(ctx, 48, 48, data);
             name = data.name;
         }
-        div.appendChild(canvas);
         
+        div.appendChild(pCanvas);
         const label = document.createElement('div');
         label.className = 'card-label';
         label.innerText = name;
@@ -121,10 +133,10 @@ function addSwipeSupport(element, type) {
     function handleSwipe() {
         const threshold = 30; // Mindestens 30px wischen
         if (endX < startX - threshold) {
-            // Swipe Left -> Nächstes Item (rechts reinholen)
+            // Swipe Left (Finger nach links) -> Wir wollen nach rechts weiterblättern
             changeSelection(type, 1);
         } else if (endX > startX + threshold) {
-            // Swipe Right -> Vorheriges Item (links reinholen)
+            // Swipe Right -> Wir wollen zurückblättern
             changeSelection(type, -1);
         }
     }
@@ -155,6 +167,7 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
+    // FIX: Controls ausblenden
     const mobControls = document.getElementById('mobile-controls');
     if (mobControls) mobControls.classList.add('hidden');
     

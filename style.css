@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
+/* --- GLOBAL SETTINGS --- */
 body {
     background-color: #050505;
     color: #ff3333;
@@ -8,14 +9,11 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    
     width: 100vw;
     height: 100vh;
-    height: 100dvh; 
-    
+    height: 100dvh;
     margin: 0;
     overflow: hidden;
-    overscroll-behavior: none;
     touch-action: none;
 }
 
@@ -23,178 +21,179 @@ body {
     position: relative;
     width: 720px; 
     height: 720px;
-    
     box-shadow: 0 0 20px #ff0000;
     border: 4px solid #550000;
     background-color: #000;
-    
     transform-origin: center center;
     flex-shrink: 0; 
     transition: transform 0.2s; 
 }
 
-canvas {
-    display: block;
-    background: #110000;
-    image-rendering: pixelated; 
-    width: 100%;
-    height: 100%;
-}
+canvas { display: block; background: #110000; image-rendering: pixelated; width: 100%; height: 100%; }
 
-/* --- MENU STYLES (Desktop Standard) --- */
+/* --- MENU DESKTOP STANDARD (Querformat/PC) --- */
+h1 { font-size: 40px; color: #ff0000; text-shadow: 4px 4px 0 #550000; margin-bottom: 20px; text-align: center; }
+h2 { font-size: 18px; color: #ffffff; margin-top: 15px; margin-bottom: 10px; text-align: center; }
 
-h1 { font-size: 40px; color: #ff0000; text-shadow: 4px 4px 0 #550000; margin-bottom: 40px; text-align: center; }
-h2 { font-size: 20px; color: #ffffff; margin-top: 20px; margin-bottom: 10px; text-align: center; }
-
-/* Desktop: Pfeile ausblenden */
-.nav-arrow {
-    display: none; 
-}
-
-/* Desktop: Alles in einer Reihe anzeigen */
+/* Desktop: Einfache Reihe nebeneinander */
 .selection-grid {
     display: flex;
-    flex-direction: row; /* WICHTIG: Nebeneinander */
+    flex-direction: row;
     justify-content: center;
-    align-items: center;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 20px;
     padding: 10px;
-    border-radius: 8px;
-    transition: 0.3s;
     width: 100%;
-    box-sizing: border-box;
 }
-
-/* Desktop: Aktive Reihe hervorheben */
-.selection-grid.active-group { border: 2px dashed #ffffff; background: rgba(50, 50, 0, 0.3); opacity: 1; }
-.selection-grid.inactive-group { border: 2px solid transparent; opacity: 0.4; }
 
 .option-card {
     border: 2px solid #555; padding: 10px; cursor: pointer; text-align: center;
-    transition: 0.2s; width: 100px; display: flex; flex-direction: column; align-items: center;
-    /* Desktop: Immer anzeigen */
-    display: flex !important; 
+    transition: all 0.3s ease; /* Weiche Animation für Position und Scale */
+    width: 100px; 
+    display: flex; flex-direction: column; align-items: center;
+    background: #000;
+    z-index: 1;
 }
-.option-card.selected { border-color: #ff0000; background: #220000; box-shadow: 0 0 10px #ff0000; }
-.option-card:hover { border-color: #fff; transform: scale(1.05); }
 
-.preview-canvas { margin-bottom: 10px; border: 2px solid #333; background: #000; }
-.card-label { font-size: 12px; color: #ddd; }
+.option-card.selected { border-color: #ff0000; background: #220000; box-shadow: 0 0 10px #ff0000; z-index: 10; }
+.preview-canvas { margin-bottom: 5px; border: 2px solid #333; background: #000; }
+.card-label { font-size: 10px; color: #ddd; margin-top: 5px; text-transform: uppercase; }
+
+/* Mobile Elemente im Desktop verstecken */
+.nav-arrow { display: none; }
+.mobile-label { display: none; }
 
 /* Buttons */
 button.main-btn {
     background: #ff0000; color: white; border: none; padding: 15px 30px;
-    font-family: inherit; font-size: 20px; cursor: pointer; margin-top: 30px;
+    font-family: inherit; font-size: 20px; cursor: pointer; margin-top: 20px;
     box-shadow: 4px 4px 0 #550000; border: 4px solid transparent; display: block; margin-left: auto; margin-right: auto;
 }
-button.main-btn.focused { background: #fff; color: #ff0000; border-color: #ff0000; animation: pulse 1s infinite; }
-
 .btn-secondary {
-    background: #444; color: white; border: none; padding: 15px 30px;
-    font-family: inherit; font-size: 16px; cursor: pointer; margin-top: 15px;
+    background: #444; color: white; border: none; padding: 10px 20px;
+    font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 15px;
     box-shadow: 4px 4px 0 #222; display: block; margin-left: auto; margin-right: auto;
 }
 
-/* --- UI --- */
-#ui-layer { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; pointer-events: none; text-shadow: 2px 2px 0 #000; font-size: 14px; z-index: 10; }
+/* UI Overlays */
+#ui-layer { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; pointer-events: none; z-index: 10; }
 #pause-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: rgba(50, 0, 0, 0.8); border: 2px solid #ff0000; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; pointer-events: auto; }
 .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; pointer-events: auto; }
-.hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; display: flex; align-items: center; gap: 15px; }
+.hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; color: #fff; font-size: 14px; display: flex; gap: 15px; }
 .hidden { display: none !important; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
 /* Controls Menu */
-.controls-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; width: 80%; max-width: 400px; }
-.control-row { display: flex; justify-content: space-between; align-items: center; font-size: 16px; color: #ddd; }
-.key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; cursor: pointer; width: 180px; text-align: center; font-family: inherit; font-size: 12px; margin-top: 0; box-shadow: none; }
-.key-btn:hover { background: #555; transform: none; }
-.key-btn.active { background: #aa0000; border-color: #ff0000; color: #fff; animation: pulse 0.5s infinite; }
+.controls-list { display: flex; flex-direction: column; gap: 10px; width: 80%; max-width: 400px; }
+.control-row { display: flex; justify-content: space-between; color: #ddd; }
+.key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; width: 180px; }
 
-
-/* --- MOBILE CONTROLS (Standard) --- */
-#mobile-controls {
-    display: none; /* Desktop: Weg damit */
-    position: fixed;
-    z-index: 1000;
-    pointer-events: none; 
-    left: 0; right: 0; bottom: 20px;
-    height: 150px;
-    padding: 0 40px;
-    justify-content: space-between;
-    align-items: center;
-}
-
+/* Mobile Controls Default */
+#mobile-controls { display: none; position: fixed; z-index: 1000; pointer-events: none; left: 0; right: 0; bottom: 20px; height: 150px; padding: 0 40px; justify-content: space-between; align-items: center; }
 #joystick-area { pointer-events: auto; width: 140px; height: 140px; position: relative; }
 #joystick-base { width: 100px; height: 100px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; position: absolute; top: 20px; left: 20px; }
-#joystick-stick { width: 50px; height: 50px; background: rgba(255, 0, 0, 0.5); border-radius: 50%; position: absolute; top: 25px; left: 25px; box-shadow: 0 0 10px rgba(255,0,0,0.5); transition: transform 0.1s; }
+#joystick-stick { width: 50px; height: 50px; background: rgba(255, 0, 0, 0.5); border-radius: 50%; position: absolute; top: 25px; left: 25px; }
 #action-area { pointer-events: auto; display: flex; gap: 15px; align-items: flex-end; padding-bottom: 10px; }
-.control-btn { background: rgba(255, 0, 0, 0.2); border: 2px solid rgba(255, 0, 0, 0.5); border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center; font-size: 24px; user-select: none; backdrop-filter: blur(4px); }
-.control-btn:active { background: rgba(255, 0, 0, 0.6); transform: scale(0.95); }
+.control-btn { background: rgba(255, 0, 0, 0.2); border: 2px solid rgba(255, 0, 0, 0.5); border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center; font-size: 24px; backdrop-filter: blur(4px); }
 #btn-bomb { width: 100px; height: 100px; font-size: 40px; background: rgba(200, 0, 0, 0.3); }
-#btn-change { width: 60px; height: 60px; margin-bottom: 10px; background: rgba(0, 100, 255, 0.3); border-color: rgba(0, 100, 255, 0.5); }
+#btn-change { width: 60px; height: 60px; margin-bottom: 10px; background: rgba(0, 100, 255, 0.3); }
 
-
-/* --- MOBILE / TOUCH OVERRIDES --- */
-
-/* 1. Generell Touch: Controls anzeigen (außer sie haben .hidden) */
+/* --- OVERRIDES --- */
 @media (pointer: coarse) {
     #mobile-controls { display: flex; }
-    /* WICHTIG: Der hidden-Zwang muss stärker sein als display:flex */
     #mobile-controls.hidden { display: none !important; }
 }
 
-/* 2. PORTRAIT MODE FIX (Carousel & Layout) */
-/* ÄNDERUNG: Nutze (orientation: portrait) für zuverlässigere Erkennung */
+/* === MOBILE PORTRAIT LAYOUT (THE FIX) === */
 @media (orientation: portrait) {
     body {
-        justify-content: flex-start; /* Oben andocken */
+        justify-content: flex-start;
     }
 
     #game-container {
-        /* ÄNDERUNG: Margin drastisch reduziert, damit es ganz oben ist */
-        margin-top: 0px !important;
+        margin-top: 10px !important;
         transform-origin: top center !important;
     }
 
-    /* MENÜ ANPASSUNG FÜR PORTRAIT (Carousel) */
-    .nav-arrow {
-        display: block; /* Pfeile anzeigen */
-        font-size: 30px; color: #ff0000; cursor: pointer; padding: 10px; user-select: none; animation: pulse 1s infinite;
-    }
+    h1 { margin-top: 40px; margin-bottom: 10px; font-size: 36px; }
+    h2 { font-size: 16px; margin-top: 10px; margin-bottom: 5px; }
 
+    /* Container muss RELATIV sein, aber KEIN Flexbox Layout für die Kinder */
     .selection-grid {
-        justify-content: space-between; /* Pfeile links/rechts, Item mitte */
+        position: relative;
+        height: 140px; /* Fester Platz für das Carousel */
         width: 100%;
-        padding: 0 5px; /* ÄNDERUNG: Weniger Padding an den Seiten */
-        /* ÄNDERUNG: Weniger Abstand nach unten */
-        margin-bottom: 15px;
+        display: block; /* Flexbox ausschalten! */
+        overflow: visible;
+        margin-bottom: 0;
     }
 
-    /* Verstecke alle Cards, die NICHT die Klasse 'selected' haben */
-    /* Wir überschreiben das 'display: flex !important' von oben */
-    .option-card.hidden-option {
-        display: none !important; 
+    /* Die Karten werden ABSOLUT positioniert und übereinander gelegt */
+    .option-card {
+        position: absolute;
+        top: 10px;
+        left: 50%; /* Startpunkt Mitte */
+        /* Standardmäßig versteckt oder klein */
+        transform: translateX(-50%) scale(0.5); 
+        opacity: 0; 
+        pointer-events: none; 
     }
 
-    .option-card.selected {
-        transform: scale(1.3);
-        margin: 0;
-        border-width: 3px;
+    /* --- CAROUSEL LOGIK VIA ATTRIBUTE (JS setzt diese) --- */
+    
+    /* Center Item (Ausgewählt) */
+    .option-card[data-pos="center"] {
+        opacity: 1;
+        z-index: 10;
+        transform: translateX(-50%) scale(1.3);
+        border-color: #ff0000;
+        box-shadow: 0 0 15px #ff0000;
+        pointer-events: auto;
+    }
+
+    /* Left Item (Vorheriges) - Verdunkelt links */
+    .option-card[data-pos="left"] {
+        opacity: 0.4;
+        z-index: 5;
+        transform: translateX(-160%) scale(0.9); /* Nach links schieben */
+        border-color: #555;
+        filter: grayscale(100%);
+        pointer-events: auto; /* Klickbar zum Wechseln */
+    }
+
+    /* Right Item (Nächstes) - Verdunkelt rechts */
+    .option-card[data-pos="right"] {
+        opacity: 0.4;
+        z-index: 5;
+        transform: translateX(60%) scale(0.9); /* Nach rechts schieben */
+        border-color: #555;
+        filter: grayscale(100%);
+        pointer-events: auto; /* Klickbar zum Wechseln */
+    }
+
+    /* Name nur beim Center Item anzeigen */
+    .option-card[data-pos="center"] .card-label {
+        font-size: 12px; font-weight: bold; color: #fff; display: block;
+    }
+    .option-card[data-pos="left"] .card-label,
+    .option-card[data-pos="right"] .card-label {
+        display: none; 
+    }
+
+    /* Start Button fetter */
+    button.main-btn {
+        margin-top: 10px;
+        width: 80%;
+        padding: 20px;
+        font-size: 24px;
+    }
+
+    /* Controls Button ausblenden im Portrait Mode */
+    .btn-secondary {
+        display: none;
     }
     
-    /* ÄNDERUNG: Alle Abstände (Margins) drastisch reduziert */
-    h1 { font-size: 36px; margin-top: 15px; margin-bottom: 15px; }
-    h2 { font-size: 18px; margin-top: 15px; margin-bottom: 10px; }
-    
-    /* ÄNDERUNG: Buttons kompakter */
-    button.main-btn { margin-top: 20px; padding: 12px 24px; font-size: 18px; }
-    .btn-secondary { margin-top: 10px; padding: 10px 20px; font-size: 14px; }
-    
-    /* Controls weiter unten */
+    /* Controls Overlay weiter unten */
     #mobile-controls {
-        bottom: 30px; /* ÄNDERUNG: Etwas mehr Platz nach unten */
-        padding: 0 20px;
-        align-items: flex-end; 
+        bottom: 30px; padding: 0 20px; align-items: flex-end;
     }
 }
