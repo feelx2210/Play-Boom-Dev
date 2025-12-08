@@ -31,13 +31,40 @@ export class Player {
         this.hasRolling = false; this.rollingTimer = 0;
         this.currentBombMode = BOMB_MODES.STANDARD;
         this.lastDir = {x: 0, y: 1}; 
-        this.skullEffect = null; this.skullTimer = 0;
+        
+        // NEU: Array für aktive Flüche statt einzelner Variable
+        this.activeCurses = []; 
+        
         this.targetX = x; this.targetY = y; this.changeDirTimer = 0; 
         this.bobTimer = 0;
         this.deathTimer = 0;
         
         // Bot-spezifische Eigenschaften
         this.botDir = {x:0, y:0};
+    }
+
+    // NEU: Methode zum Hinzufügen von Flüchen/Skills
+    addCurse(type) {
+        // Konfliktlösung: Schnell vs. Langsam
+        if (type === 'speed_rush') {
+            // Wenn man schnell wird, Langsamkeit entfernen
+            this.activeCurses = this.activeCurses.filter(c => c.type !== 'slow');
+        } else if (type === 'slow') {
+            // Wenn man langsam wird, Schnelligkeit entfernen
+            this.activeCurses = this.activeCurses.filter(c => c.type !== 'speed_rush');
+        }
+
+        // Prüfen, ob Fluch schon existiert
+        const existing = this.activeCurses.find(c => c.type === type);
+        if (existing) {
+            existing.timer = 600; // Timer resetten
+        } else {
+            this.activeCurses.push({ type: type, timer: 600 });
+        }
+    }
+
+    hasCurse(type) {
+        return this.activeCurses.some(c => c.type === type);
     }
 
     update() {
@@ -71,22 +98,34 @@ export class Player {
         
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        // Skull Effekte & Geschwindigkeit
+        // Skull Effekte Management
         let currentSpeed = this.speed;
-
-        if (this.skullEffect) {
-            this.skullTimer--;
-            if (this.skullTimer <= 0) {
-                this.skullEffect = null;
+        
+        // Timer aktualisieren und abgelaufene entfernen
+        if (this.activeCurses.length > 0) {
+            this.activeCurses.forEach(c => c.timer--);
+            const prevCount = this.activeCurses.length;
+            this.activeCurses = this.activeCurses.filter(c => c.timer > 0);
+            
+            // Wenn der letzte Fluch ausgelaufen ist -> "CURED!"
+            if (prevCount > 0 && this.activeCurses.length === 0) {
                 createFloatingText(this.x, this.y, "CURED!", "#00ff00");
-            } else {
-                if (this.skullEffect === 'sickness') {
-                    if (Math.random() < 0.05) this.plantBomb();
-                } else if (this.skullEffect === 'speed_rush') {
-                    currentSpeed *= 2;
-                } else if (this.skullEffect === 'slow') {
-                    currentSpeed *= 0.5;
-                }
+            }
+        }
+
+        // Effekte anwenden
+        if (this.activeCurses.length > 0) {
+            if (this.hasCurse('sickness')) {
+                if (Math.random() < 0.05) this.plantBomb();
+            }
+            
+            // Geschwindigkeit berechnen
+            // Priorität: Wenn 'speed_rush' da ist, sind wir schnell (weil 'slow' beim Adden entfernt wurde)
+            // Wenn 'slow' da ist, sind wir langsam.
+            if (this.hasCurse('speed_rush')) {
+                currentSpeed *= 2;
+            } else if (this.hasCurse('slow')) {
+                currentSpeed *= 0.5;
             }
         }
 
@@ -101,7 +140,6 @@ export class Player {
 
         // BEWEGUNG: Entweder Bot-Logik oder Tastatur
         if (this.isBot) {
-            // Ruft die ausgelagerte KI-Logik auf
             updateBotLogic(this);
         } else {
             let dx = 0, dy = 0;
@@ -189,7 +227,7 @@ export class Player {
             return;
         }
 
-        if (this.skullEffect === 'cant_plant') return;
+        if (this.hasCurse('cant_plant')) return;
         if (this.activeBombs >= this.maxBombs) return;
         
         const gx = Math.round(this.x / TILE_SIZE);
@@ -256,7 +294,7 @@ export class Player {
             case ITEMS.SKULL: 
                 const effects = ['sickness', 'speed_rush', 'slow', 'cant_plant'];
                 const effect = effects[Math.floor(Math.random()*effects.length)];
-                this.skullEffect = effect; this.skullTimer = 600;
+                this.addCurse(effect);
                 createFloatingText(this.x, this.y, "CURSED: "+effect.toUpperCase(), '#ff00ff'); break;
         }
     }
@@ -274,7 +312,9 @@ export class Player {
         const bob = Math.sin(this.bobTimer) * 2; 
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.beginPath(); ctx.ellipse(this.x + TILE_SIZE/2, this.y + TILE_SIZE - 5, 10, 5, 0, 0, Math.PI*2); ctx.fill();
-        drawCharacterSprite(ctx, this.x + TILE_SIZE/2, this.y + TILE_SIZE/2 + bob, this.charDef, !!this.skullEffect, this.lastDir);
+        
+        // Pass activeCurses state to drawCharacterSprite
+        drawCharacterSprite(ctx, this.x + TILE_SIZE/2, this.y + TILE_SIZE/2 + bob, this.charDef, this.activeCurses.length > 0, this.lastDir);
         ctx.restore();
     }
 }
