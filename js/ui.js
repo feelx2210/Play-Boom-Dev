@@ -19,15 +19,7 @@ export function updateHud(player) {
     if (elFire) elFire.innerText = `🔥 ${player.bombRange}`;
 }
 
-// Update Mobile Labels (Name unter Carousel in small)
-function updateMobileLabels() {
-    const charNameEl = document.getElementById('char-name-display');
-    if (charNameEl) charNameEl.innerText = CHARACTERS[state.selectedCharIndex].name;
-    
-    const levelNameEl = document.getElementById('level-name-display');
-    if (levelNameEl) levelNameEl.innerText = LEVELS[state.selectedLevelKey].name;
-}
-
+// Allgemeine Navigations-Logik
 function changeSelection(type, dir) {
     if (type === 'char') {
         const len = CHARACTERS.length;
@@ -39,108 +31,103 @@ function changeSelection(type, dir) {
         const newIndex = (currentIndex + dir + len) % len;
         state.selectedLevelKey = keys[newIndex];
     }
-    initMenu();
+    initMenu(); // Re-Render
 }
 
-// --- MENÜ STEUERUNG ---
+// --- MENÜ INIT ---
 export function initMenu() {
     const charContainer = document.getElementById('char-select');
     const levelContainer = document.getElementById('level-select');
     
+    // Alte Inhalte löschen
     charContainer.innerHTML = '';
     levelContainer.innerHTML = '';
     
-    // Namen aktualisieren
-    updateMobileLabels();
+    // --- HELPER ZUM RENDERN EINER KARTE ---
+    const renderCard = (container, type, index, data, isSelected) => {
+        const div = document.createElement('div');
+        div.className = `option-card ${isSelected ? 'selected' : ''}`;
+        
+        // DATA-POS LOGIK FÜR CSS CAROUSEL
+        // Berechne Distanz im Ring-Buffer
+        let total = (type === 'char') ? CHARACTERS.length : Object.keys(LEVELS).length;
+        let selectedIdx = (type === 'char') ? state.selectedCharIndex : Object.keys(LEVELS).indexOf(state.selectedLevelKey);
+        
+        // Position bestimmen
+        let pos = 'hidden';
+        if (index === selectedIdx) pos = 'center';
+        else if (index === (selectedIdx - 1 + total) % total) pos = 'left';
+        else if (index === (selectedIdx + 1) % total) pos = 'right';
+        
+        div.setAttribute('data-pos', pos);
 
-    if (state.menuState === 0) {
-        charContainer.classList.add('active-group'); charContainer.classList.remove('inactive-group');
-        levelContainer.classList.add('inactive-group'); levelContainer.classList.remove('active-group');
-        document.getElementById('start-game-btn').classList.remove('focused');
-    } else if (state.menuState === 1) {
-        charContainer.classList.add('inactive-group'); charContainer.classList.remove('active-group');
-        levelContainer.classList.add('active-group'); levelContainer.classList.remove('inactive-group');
-        document.getElementById('start-game-btn').classList.remove('focused');
-    } else if (state.menuState === 2) {
-        charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
-        document.getElementById('start-game-btn').classList.add('focused');
-    }
+        // Click Handler (auch für seitliche Items zum Auswählen)
+        div.onclick = (e) => {
+            e.stopPropagation();
+            if (pos === 'left') changeSelection(type, -1);
+            else if (pos === 'right') changeSelection(type, 1);
+            // Center Klick macht nichts oder Bestätigung
+        };
 
-    const createArrow = (dir, cb) => {
-        const arrow = document.createElement('div');
-        arrow.className = `nav-arrow ${dir === 'left' ? 'left' : 'right'}`;
-        arrow.innerText = dir === 'left' ? '◀' : '▶';
-        arrow.onclick = (e) => { e.stopPropagation(); cb(); };
-        return arrow;
+        const canvas = document.createElement('canvas'); 
+        canvas.width=48; canvas.height=48; canvas.className='preview-canvas';
+        const ctx = canvas.getContext('2d');
+        
+        let name = "";
+        if (type === 'char') {
+            drawCharacterSprite(ctx, 24, 36, data);
+            name = data.name;
+        } else {
+            drawLevelPreview(ctx, 48, 48, data);
+            name = data.name;
+        }
+        div.appendChild(canvas);
+        
+        const label = document.createElement('div');
+        label.className = 'card-label';
+        label.innerText = name;
+        div.appendChild(label);
+
+        container.appendChild(div);
     };
 
-    // --- CHARACTERS ---
-    charContainer.appendChild(createArrow('left', () => {
-        state.selectedCharIndex = (state.selectedCharIndex - 1 + CHARACTERS.length) % CHARACTERS.length; initMenu();
-    }));
-
-    CHARACTERS.forEach((char, index) => {
-        const div = document.createElement('div');
-        const isSelected = index === state.selectedCharIndex;
-        
-        // WICHTIG: Klasse 'hidden-option' vergeben, wenn nicht ausgewählt!
-        div.className = `option-card ${isSelected ? 'selected' : 'hidden-option'}`;
-        
-        div.onclick = () => { state.menuState = 0; state.selectedCharIndex = index; initMenu(); };
-        
-        const pCanvas = document.createElement('canvas'); 
-        pCanvas.width=48; pCanvas.height=48; 
-        pCanvas.className='preview-canvas';
-        drawCharacterSprite(pCanvas.getContext('2d'), 24, 36, char);
-        div.appendChild(pCanvas);
-        
-        const label = document.createElement('div'); 
-        label.className = 'card-label'; label.innerText = char.name;
-        div.appendChild(label);
-        
-        charContainer.appendChild(div);
+    // 1. CHARACTERS RENDERN
+    CHARACTERS.forEach((char, idx) => {
+        renderCard(charContainer, 'char', idx, char, idx === state.selectedCharIndex);
     });
 
-    charContainer.appendChild(createArrow('right', () => {
-        state.selectedCharIndex = (state.selectedCharIndex + 1) % CHARACTERS.length; initMenu();
-    }));
-
-
-    // --- LEVELS ---
-    levelContainer.appendChild(createArrow('left', () => {
-         const levelKeys = Object.keys(LEVELS);
-         const currentLevelIndex = levelKeys.indexOf(state.selectedLevelKey);
-         state.selectedLevelKey = levelKeys[(currentLevelIndex - 1 + levelKeys.length) % levelKeys.length]; initMenu();
-    }));
-
-    Object.keys(LEVELS).forEach((key) => {
-        const lvl = LEVELS[key];
-        const div = document.createElement('div');
-        const isSelected = key === state.selectedLevelKey;
-        
-        // WICHTIG: Klasse 'hidden-option' vergeben
-        div.className = `option-card ${isSelected ? 'selected' : 'hidden-option'}`;
-        
-        div.onclick = () => { state.menuState = 1; state.selectedLevelKey = key; initMenu(); };
-        
-        const lCanvas = document.createElement('canvas'); 
-        lCanvas.width=48; lCanvas.height=48; 
-        lCanvas.className='preview-canvas';
-        drawLevelPreview(lCanvas.getContext('2d'), 48, 48, lvl);
-        div.appendChild(lCanvas);
-        
-        const label = document.createElement('div'); 
-        label.className = 'card-label'; label.innerText = lvl.name;
-        div.appendChild(label);
-        
-        levelContainer.appendChild(div);
+    // 2. LEVELS RENDERN
+    const levelKeys = Object.keys(LEVELS);
+    levelKeys.forEach((key, idx) => {
+        renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey);
     });
 
-    levelContainer.appendChild(createArrow('right', () => {
-        const levelKeys = Object.keys(LEVELS);
-        const currentLevelIndex = levelKeys.indexOf(state.selectedLevelKey);
-        state.selectedLevelKey = levelKeys[(currentLevelIndex + 1) % levelKeys.length]; initMenu();
-   }));
+    // SWIPE LOGIC HINZUFÜGEN
+    addSwipeSupport(charContainer, 'char');
+    addSwipeSupport(levelContainer, 'level');
+}
+
+// SWIPE DETEKTOR
+function addSwipeSupport(element, type) {
+    let startX = 0;
+    let endX = 0;
+
+    element.ontouchstart = (e) => { startX = e.changedTouches[0].screenX; };
+    element.ontouchend = (e) => {
+        endX = e.changedTouches[0].screenX;
+        handleSwipe();
+    };
+
+    function handleSwipe() {
+        const threshold = 30; // Mindestens 30px wischen
+        if (endX < startX - threshold) {
+            // Swipe Left -> Nächstes Item (rechts reinholen)
+            changeSelection(type, 1);
+        } else if (endX > startX + threshold) {
+            // Swipe Right -> Vorheriges Item (links reinholen)
+            changeSelection(type, -1);
+        }
+    }
 }
 
 export function handleMenuInput(code) {
@@ -168,7 +155,6 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
-    // FIX: Controls ausblenden
     const mobControls = document.getElementById('mobile-controls');
     if (mobControls) mobControls.classList.add('hidden');
     
