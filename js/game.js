@@ -22,11 +22,10 @@ function resizeGame() {
     const windowHeight = window.innerHeight;
     const gameSize = 720;
     
-    // Einfache "Contain" Logik mit 20px Rand
+    // Scale Logic
     const scaleX = (windowWidth - 20) / gameSize;
     const scaleY = (windowHeight - 20) / gameSize;
     
-    // Scale immer so, dass es reinpasst
     const scale = Math.min(scaleX, scaleY);
     container.style.transform = `scale(${scale})`;
 }
@@ -41,11 +40,10 @@ window.startGame = function() {
     document.getElementById('ui-layer').classList.remove('hidden');
     document.getElementById('pause-btn').classList.remove('hidden'); 
     
-    // Controls aktivieren
+    // FIX: Jetzt erst Controls einblenden!
     document.getElementById('mobile-controls').classList.remove('hidden');
 
-    // Resize triggern, damit Game Container richtig sitzt
-    resizeGame();
+    resizeGame(); 
 
     const userChar = CHARACTERS[state.selectedCharIndex];
     state.currentLevel = LEVELS[state.selectedLevelKey];
