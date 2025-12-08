@@ -13,7 +13,7 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// --- SPIEL STARTEN ---
+// --- START GAME ---
 window.startGame = function() {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
