@@ -188,6 +188,35 @@ canvas { width: 100%; height: 100%; }
     left: 0; right: 0; bottom: 30px; height: 150px; padding: 0 30px;
     justify-content: space-between; align-items: center;
 }
+/* --- Standard: Desktop / Landscape Mobile --- */
+
+/* Die neue mobile Portrait-Ansicht standardmäßig verstecken */
+.mobile-portrait-menu {
+  display: none;
+}
+
+/* Die alte Desktop-Ansicht standardmäßig anzeigen */
+.desktop-view {
+  display: block; /* oder flex/grid, je nach Layout */
+}
+
+/* --- Override: Nur für Smartphones im Hochformat --- */
+/* max-width: 768px deckt die meisten Handys und kleine Tablets ab */
+@media only screen and (max-width: 768px) and (orientation: portrait) {
+  
+  /* Mobile Ansicht anzeigen */
+  .mobile-portrait-menu {
+    display: flex; /* oder block */
+    width: 100%;
+    height: 100vh;
+    /* Weitere Styles für das Overlay */
+  }
+
+  /* Desktop Ansicht verstecken */
+  .desktop-view {
+    display: none;
+  }
+}
 
 @media (pointer: coarse) { #mobile-controls { display: flex; } }
 @media (max-aspect-ratio: 1/1) { #mobile-controls { bottom: 60px; padding: 0 20px; align-items: flex-end; } }
