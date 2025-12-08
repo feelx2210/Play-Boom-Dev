@@ -19,7 +19,6 @@ export function updateHud(player) {
     if (elFire) elFire.innerText = `🔥 ${player.bombRange}`;
 }
 
-// Helper: Zyklisches Navigieren Desktop
 function changeSelection(type, dir) {
     if (type === 'char') {
         const len = CHARACTERS.length;
@@ -34,137 +33,141 @@ function changeSelection(type, dir) {
     initMenu();
 }
 
-// --- TOUCH SWIPE SUPPORT ---
-function addSwipeSupport(element, type) {
-    let touchStartX = 0;
-    let touchEndX = 0;
-    
-    element.ontouchstart = (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-    };
-    
-    element.ontouchend = (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        handleSwipe();
-    };
-    
-    function handleSwipe() {
-        const threshold = 30;
-        if (touchEndX < touchStartX - threshold) changeSelection(type, 1); // Swipe Left -> Next
-        if (touchEndX > touchStartX + threshold) changeSelection(type, -1); // Swipe Right -> Prev
-    }
-}
-
-// --- MENÜ STEUERUNG (CAROUSEL LOGIC) ---
+// --- MENÜ STEUERUNG ---
 export function initMenu() {
-    renderCarousel('char');
-    renderCarousel('level');
-}
-
-function renderCarousel(type) {
-    const container = document.getElementById(type === 'char' ? 'char-select' : 'level-select');
-    const nameDisplay = document.getElementById(type === 'char' ? 'char-name-display' : 'level-name-display');
-    container.innerHTML = '';
-
-    // Swipe Listener nur einmal hinzufügen (eigentlich müsste man das checken, aber hier ok)
-    container.ontouchstart = null; 
-    addSwipeSupport(container, type);
-
-    // Daten ermitteln
-    let items = [];
-    let selectedIndex = 0;
-
-    if (type === 'char') {
-        items = CHARACTERS;
-        selectedIndex = state.selectedCharIndex;
-        nameDisplay.innerText = items[selectedIndex].name.toUpperCase();
-    } else {
-        const keys = Object.keys(LEVELS);
-        items = keys.map(k => LEVELS[k]);
-        selectedIndex = keys.indexOf(state.selectedLevelKey);
-        nameDisplay.innerText = items[selectedIndex].name.toUpperCase();
+    const charContainer = document.getElementById('char-select');
+    const levelContainer = document.getElementById('level-select');
+    
+    charContainer.innerHTML = '';
+    levelContainer.innerHTML = '';
+    
+    // Focus Styles
+    if (state.menuState === 0) {
+        charContainer.classList.add('active-group'); charContainer.classList.remove('inactive-group');
+        levelContainer.classList.add('inactive-group'); levelContainer.classList.remove('active-group');
+        document.getElementById('start-game-btn').classList.remove('focused');
+    } else if (state.menuState === 1) {
+        charContainer.classList.add('inactive-group'); charContainer.classList.remove('active-group');
+        levelContainer.classList.add('active-group'); levelContainer.classList.remove('inactive-group');
+        document.getElementById('start-game-btn').classList.remove('focused');
+    } else if (state.menuState === 2) {
+        charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
+        document.getElementById('start-game-btn').classList.add('focused');
     }
 
-    const len = items.length;
-    const prevIndex = (selectedIndex - 1 + len) % len;
-    const nextIndex = (selectedIndex + 1) % len;
+    // --- ARROW BUILDER ---
+    const createArrow = (dir, type) => {
+        const btn = document.createElement('div');
+        btn.className = `nav-arrow ${dir > 0 ? 'right' : 'left'}`;
+        btn.innerText = dir > 0 ? '▶' : '◀';
+        // PreventDefault wichtig für Touch, damit kein Double-Tap Zoom passiert
+        btn.onclick = (e) => { 
+            e.preventDefault();
+            e.stopPropagation();
+            state.menuState = (type === 'char') ? 0 : 1;
+            changeSelection(type, dir); 
+        };
+        return btn;
+    };
 
-    // Wir rendern alle Items, aber weisen Klassen basierend auf Position zu
-    items.forEach((item, index) => {
+    // --- CHARACTER LIST ---
+    charContainer.appendChild(createArrow(-1, 'char'));
+
+    CHARACTERS.forEach((char, index) => {
         const div = document.createElement('div');
-        let cssClass = 'option-card hidden-option'; // Default: unsichtbar
-
-        if (index === selectedIndex) cssClass = 'option-card selected';
-        else if (index === prevIndex) cssClass = 'option-card prev';
-        else if (index === nextIndex) cssClass = 'option-card next';
-
-        div.className = cssClass;
+        const isSelected = index === state.selectedCharIndex;
+        // WICHTIG: hidden-option Klasse hinzufügen wenn nicht selected
+        div.className = `option-card ${isSelected ? 'selected' : 'hidden-option'}`;
         
-        // Klick auf Prev/Next wechselt Auswahl
-        if (index === prevIndex) div.onclick = () => changeSelection(type, -1);
-        if (index === nextIndex) div.onclick = () => changeSelection(type, 1);
-
+        div.onclick = () => { state.menuState = 0; state.selectedCharIndex = index; initMenu(); };
+        
         const pCanvas = document.createElement('canvas'); 
-        pCanvas.width = 48; pCanvas.height = 48; 
-        pCanvas.className = 'preview-canvas';
-        const ctx = pCanvas.getContext('2d');
-
-        if (type === 'char') {
-            drawCharacterSprite(ctx, 24, 36, item);
-        } else {
-            drawLevelPreview(ctx, 48, 48, item);
-        }
+        pCanvas.width=48; pCanvas.height=48; 
+        pCanvas.className='preview-canvas';
+        drawCharacterSprite(pCanvas.getContext('2d'), 24, 36, char);
         
         div.appendChild(pCanvas);
-        container.appendChild(div);
+        const label = document.createElement('div'); 
+        label.className = 'card-label'; 
+        label.innerText = char.name;
+        div.appendChild(label);
+        
+        charContainer.appendChild(div);
     });
+
+    charContainer.appendChild(createArrow(1, 'char'));
+
+
+    // --- LEVEL LIST ---
+    levelContainer.appendChild(createArrow(-1, 'level'));
+
+    Object.keys(LEVELS).forEach((key) => {
+        const lvl = LEVELS[key];
+        const div = document.createElement('div');
+        const isSelected = key === state.selectedLevelKey;
+        
+        div.className = `option-card ${isSelected ? 'selected' : 'hidden-option'}`;
+        div.onclick = () => { state.menuState = 1; state.selectedLevelKey = key; initMenu(); };
+        
+        const lCanvas = document.createElement('canvas'); 
+        lCanvas.width=48; lCanvas.height=48; 
+        lCanvas.className='preview-canvas';
+        drawLevelPreview(lCanvas.getContext('2d'), 48, 48, lvl);
+        
+        div.appendChild(lCanvas);
+        const label = document.createElement('div'); 
+        label.className = 'card-label'; 
+        label.innerText = lvl.name;
+        div.appendChild(label);
+        
+        levelContainer.appendChild(div);
+    });
+
+    levelContainer.appendChild(createArrow(1, 'level'));
 }
 
 export function handleMenuInput(code) {
-    if (state.menuState !== 0) { // Einfaches Menü ohne tiefen State für Mobile
-        if (code === 'ArrowLeft') changeSelection('char', -1); // Einfachheitshalber steuert Keyboard Char
-        if (code === 'ArrowRight') changeSelection('char', 1);
-        if (code === 'ArrowUp') changeSelection('level', -1);
-        if (code === 'ArrowDown') changeSelection('level', 1);
+    const levelKeys = Object.keys(LEVELS);
+    
+    if (state.menuState === 0) {
+        if (code === 'ArrowLeft') changeSelection('char', -1);
+        else if (code === 'ArrowRight') changeSelection('char', 1);
+        else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 1; initMenu(); }
+    } else if (state.menuState === 1) {
+        if (code === 'ArrowLeft') changeSelection('level', -1);
+        else if (code === 'ArrowRight') changeSelection('level', 1);
+        else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 2; initMenu(); }
+        else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 0; initMenu(); }
+    } else if (state.menuState === 2) {
         if (code === 'Enter' || code === 'Space') {
             if (window.startGame) window.startGame();
         }
+        else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
     }
 }
 
 export function showMenu() {
-    // Menüs sichtbar machen
     document.getElementById('main-menu').classList.remove('hidden');
     document.getElementById('game-over').classList.add('hidden');
+    document.getElementById('ui-layer').classList.add('hidden');
+    document.getElementById('pause-btn').classList.add('hidden'); 
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
-    // UI Layer und Game Controls verstecken
-    document.getElementById('ui-layer').classList.add('hidden');
-    document.getElementById('pause-btn').classList.add('hidden'); 
-    document.getElementById('mobile-controls').classList.add('hidden');
+    // FIX: Mobile Controls ZWINGEND ausblenden im Menü
+    const mobControls = document.getElementById('mobile-controls');
+    if (mobControls) mobControls.classList.add('hidden');
     
-    // Spiel-Container verstecken (damit Menü vollen Fokus hat und Hintergrund schwarz ist)
-    document.getElementById('game-container').classList.add('hidden');
-
-    state.menuState = 1; // Aktiv
+    state.menuState = 0;
     initMenu();
 }
 
 export function togglePause() {
     if (state.isGameOver) { showMenu(); return; }
-    
-    // Check ob wir im Menü sind
-    const menu = document.getElementById('main-menu');
-    if (menu && !menu.classList.contains('hidden')) return;
+    if (!document.getElementById('main-menu').classList.contains('hidden')) return;
     
     state.isPaused = !state.isPaused;
     document.getElementById('pause-menu').classList.toggle('hidden', !state.isPaused);
-    
-    // Mobile Controls ausblenden bei Pause
-    const controls = document.getElementById('mobile-controls');
-    if (state.isPaused) controls.classList.add('hidden');
-    else controls.classList.remove('hidden');
 }
 
 export function quitGame() {
@@ -188,10 +191,11 @@ export function endGame(msg, winner) {
             titleEl.style.textShadow = "4px 4px 0 #550000";
         }
         document.getElementById('go-message').innerText = msg;
-        
-        // Mobile Controls ausblenden
-        document.getElementById('mobile-controls').classList.add('hidden');
         document.getElementById('game-over').classList.remove('hidden');
+        
+        // Controls bei Game Over ausblenden
+        document.getElementById('mobile-controls').classList.add('hidden');
+        
     }, 3000);
 }
 
@@ -227,7 +231,6 @@ function startRemap(action) {
     initControlsMenu(); 
 }
 
-// Globals
 window.showControls = showControls;
 window.togglePause = togglePause;
 window.quitGame = quitGame;
