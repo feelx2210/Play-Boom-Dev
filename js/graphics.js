@@ -49,7 +49,15 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'back') { ctx.fillStyle = furDark; ctx.fillRect(-10, -14, 20, 24); ctx.fillStyle = furBase; ctx.fillRect(-22, -16, 8, 26); ctx.fillRect(14, -16, 8, 26); } 
         else if (d === 'side') { ctx.fillStyle = '#005599'; ctx.fillRect(6, -20, 10, 14); ctx.fillStyle = '#fff'; ctx.fillRect(10, -17, 4, 6); ctx.fillStyle = '#000'; ctx.fillRect(12, -16, 2, 2); ctx.fillStyle = furBase; ctx.fillRect(-4, -14, 12, 26); ctx.fillStyle = furLite; ctx.fillRect(-4, -14, 12, 4); }
     }
-    if (isCursed && Math.floor(Date.now()/100)%2===0) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; ctx.fillRect(-25, -35, 50, 60); ctx.globalCompositeOperation = 'source-over'; }
+    
+    // FIX: Blink-Logik aus dem Cache entfernt. 
+    // Wenn isCursed hier true ist, wird IMMER der weiße Overlay gezeichnet.
+    if (isCursed) { 
+        ctx.globalCompositeOperation = 'source-atop'; 
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; 
+        ctx.fillRect(-25, -35, 50, 60); 
+        ctx.globalCompositeOperation = 'source-over'; 
+    }
     
     spriteCache[key] = c;
     return c;
@@ -69,7 +77,10 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
-    const sprite = getCachedSprite(charDef, d, isCursed);
+    // FIX: Hier wird entschieden, ob der "blink"-Frame angezeigt werden soll.
+    const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
+    const sprite = getCachedSprite(charDef, d, showCursedEffect);
+    
     ctx.drawImage(sprite, -24, -24);
 
     ctx.restore();
@@ -145,34 +156,32 @@ export function draw(ctx, canvas) {
         });
     }
 
-  // KORRIGIERT: Richtungsfelder zeichnen
+    // NEU: Richtungsfelder zeichnen
     DIRECTION_PADS.forEach(pad => {
         const cx = pad.x * TILE_SIZE + TILE_SIZE/2;
         const cy = pad.y * TILE_SIZE + TILE_SIZE/2;
         
-        // Feld-Hintergrund
         ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.fillRect(pad.x * TILE_SIZE, pad.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
-        // Pfeilspitze zeichnen
         ctx.fillStyle = '#aaaaaa'; 
         ctx.beginPath();
         
         const size = 8; 
         
-        if (pad.dir.y === -1) { // Nach Oben
+        if (pad.dir.y === -1) { // Oben 
             ctx.moveTo(cx, cy - size - 2); 
             ctx.lineTo(cx - size, cy + size - 2); 
             ctx.lineTo(cx + size, cy + size - 2);
-        } else if (pad.dir.x === 1) { // Nach Rechts
+        } else if (pad.dir.x === 1) { // Rechts 
             ctx.moveTo(cx + size + 2, cy); 
             ctx.lineTo(cx - size + 2, cy - size); 
             ctx.lineTo(cx - size + 2, cy + size);
-        } else if (pad.dir.y === 1) { // Nach Unten
+        } else if (pad.dir.y === 1) { // Unten 
             ctx.moveTo(cx, cy + size + 2); 
             ctx.lineTo(cx - size, cy - size + 2); 
             ctx.lineTo(cx + size, cy - size + 2);
-        } else if (pad.dir.x === -1) { // Nach Links
+        } else if (pad.dir.x === -1) { // Links 
             ctx.moveTo(cx - size - 2, cy); 
             ctx.lineTo(cx + size - 2, cy - size); 
             ctx.lineTo(cx + size - 2, cy + size);
@@ -327,10 +336,7 @@ export function draw(ctx, canvas) {
         const px = b.px; const py = b.py; const scale = 1 + Math.sin(Date.now() / 100) * 0.1;
         let baseColor = '#444444'; if (state.currentLevel.id === 'jungle') baseColor = '#000000';
         ctx.fillStyle = b.napalm ? '#dd0000' : baseColor; 
-        
-        // ÄNDERUNG: Blaues Bomben-Design
         if (b.isBlue) ctx.fillStyle = '#000080';
-
         ctx.beginPath(); ctx.arc(px + TILE_SIZE/2, py + TILE_SIZE/2, 16 * scale, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + TILE_SIZE/2 + 8, py + TILE_SIZE/2 - 8); ctx.lineTo(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14); ctx.stroke();
         ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14, 3, 0, Math.PI*2); ctx.fill();
