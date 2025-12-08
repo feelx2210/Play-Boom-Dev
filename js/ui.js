@@ -33,7 +33,7 @@ function changeSelection(type, dir) {
     initMenu();
 }
 
-// --- MENÜ STEUERUNG ---
+// --- MENU CONTROLS ---
 export function initMenu() {
     const charContainer = document.getElementById('char-select');
     const levelContainer = document.getElementById('level-select');
