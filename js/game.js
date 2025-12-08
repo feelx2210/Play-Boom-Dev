@@ -1,4 +1,4 @@
-import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, LEVELS, CHARACTERS, BOOST_PADS, OIL_PADS, HELL_CENTER, keyBindings } from './constants.js';
+import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, LEVELS, CHARACTERS, BOOST_PADS, OIL_PADS, HELL_CENTER, DIRECTION_PADS, keyBindings } from './constants.js';
 import { state } from './state.js';
 import { createFloatingText, isSolid } from './utils.js';
 import { draw, drawLevelPreview, drawCharacterSprite } from './graphics.js';
@@ -58,6 +58,10 @@ window.startGame = function() {
                 else row.push(TYPES.WATER);
             }
             else if ((state.currentLevel.id === 'hell' || state.currentLevel.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
+                row.push(TYPES.EMPTY);
+            }
+            // NEU: Richtungsfelder müssen leer sein
+            else if (DIRECTION_PADS.some(p => p.x === x && p.y === y)) {
                 row.push(TYPES.EMPTY);
             }
             else if (Math.random() < 0.7) {
@@ -145,16 +149,11 @@ function update() {
     // --- ICE SPAWN UPDATE (Harder!) ---
     if (state.currentLevel.id === 'ice') {
         state.iceTimer++;
-        
-        // Schon ab 20 Sekunden (1200 Frames) aktiv werden
         if (state.iceTimer > 1200) {
             state.iceSpawnCountdown--;
             if (state.iceSpawnCountdown <= 0) {
-                // ZWEI Blöcke gleichzeitig spawnen!
                 spawnRandomIce();
                 spawnRandomIce();
-                
-                // Alle 20 Sekunden (1200 Frames) wiederholen
                 state.iceSpawnCountdown = 1200;
             }
         }
@@ -165,6 +164,21 @@ function update() {
     for (let i = state.bombs.length - 1; i >= 0; i--) {
         let b = state.bombs[i]; b.timer--;
         if (b.isRolling) {
+            // NEU: Richtungsfelder Check
+            const dirPad = DIRECTION_PADS.find(p => p.x === b.gx && p.y === b.gy);
+            // Wenn Pad gefunden und Bombe rollt noch nicht in diese Richtung
+            if (dirPad && (b.rollDir.x !== dirPad.dir.x || b.rollDir.y !== dirPad.dir.y)) {
+                const centerX = b.gx * TILE_SIZE;
+                const centerY = b.gy * TILE_SIZE;
+                const distSq = (b.px - centerX) ** 2 + (b.py - centerY) ** 2;
+                // Wenn nah genug am Zentrum (< 5px Abweichung ca.), dann einrasten und drehen
+                if (distSq < 25) {
+                    b.px = centerX;
+                    b.py = centerY;
+                    b.rollDir = dirPad.dir;
+                }
+            }
+
             b.px += b.rollDir.x * b.rollSpeed; b.py += b.rollDir.y * b.rollSpeed;
             const nextGx = Math.floor((b.px + TILE_SIZE/2) / TILE_SIZE);
             const nextGy = Math.floor((b.py + TILE_SIZE/2) / TILE_SIZE);
@@ -210,24 +224,20 @@ function update() {
             if (hitBombIndex !== -1) { const chainedBomb = state.bombs[hitBombIndex]; if (chainedBomb.timer > 1) { if(chainedBomb.isRolling) { chainedBomb.isRolling = false; chainedBomb.px = chainedBomb.gx * TILE_SIZE; chainedBomb.py = chainedBomb.gy * TILE_SIZE; chainedBomb.underlyingTile = state.grid[chainedBomb.gy][chainedBomb.gx]; } chainedBomb.timer = 0; } }
         }
         
-     // --- FREEZING ABGESCHLOSSEN? ---
+        // --- FREEZING ABGESCHLOSSEN? ---
         if (p.type === 'freezing' && p.life <= 0) {
             state.grid[p.gy][p.gx] = TYPES.WALL_SOFT;
 
             // NEU: Item-Spawn Wahrscheinlichkeit (ca. 30%)
-            // Simuliert die Verteilung, die auch beim Spielstart passiert
             if (Math.random() < 0.3) {
-                // Ein Pool gewichtet nach Seltenheit
                 const itemPool = [
-                    ITEMS.BOMB_UP, ITEMS.BOMB_UP, ITEMS.BOMB_UP, // Häufig
-                    ITEMS.RANGE_UP, ITEMS.RANGE_UP, ITEMS.RANGE_UP, // Häufig
-                    ITEMS.SPEED_UP, ITEMS.SPEED_UP, // Mittel
-                    ITEMS.SKULL, // Mittel (Gefahr!)
-                    ITEMS.ROLLING, // Selten
-                    ITEMS.NAPALM   // Sehr Selten
+                    ITEMS.BOMB_UP, ITEMS.BOMB_UP, ITEMS.BOMB_UP, 
+                    ITEMS.RANGE_UP, ITEMS.RANGE_UP, ITEMS.RANGE_UP, 
+                    ITEMS.SPEED_UP, ITEMS.SPEED_UP, 
+                    ITEMS.SKULL, 
+                    ITEMS.ROLLING, 
+                    ITEMS.NAPALM   
                 ];
-                
-                // Zufälliges Item aus dem Pool wählen und platzieren
                 const randomItem = itemPool[Math.floor(Math.random() * itemPool.length)];
                 state.items[p.gy][p.gx] = randomItem;
             }
@@ -237,19 +247,17 @@ function update() {
         if (p.life <= 0) state.particles.splice(i, 1);
     }
 
-   state.players.forEach(p => { 
+    state.players.forEach(p => { 
         if (p.inFire) { 
             p.fireTimer++; 
-            // ÄNDERUNG: Von 12 auf 20 Frames erhöht (0.3s)
-            // Erlaubt das Durchrennen durch eine Flamme, besonders mit Speed-Ups
-            if (p.fireTimer >= 20) { 
+            // ÄNDERUNG: Toleranz erhöht auf 30 Frames (0.5s)
+            if (p.fireTimer >= 30) { 
                 killPlayer(p); 
                 p.fireTimer = 0; 
             } 
-        } else {
-            p.fireTimer = 0;
-        }
+        } else p.fireTimer = 0; 
     });
+    
     let aliveCount = 0; let livingPlayers = [];
     state.players.forEach(p => { p.update(); if (p.alive) { aliveCount++; livingPlayers.push(p); } });
 
@@ -263,7 +271,7 @@ function update() {
             }
         }
     }
-// ANPASSUNG: Wir übergeben 'winner' als zweites Argument an endGame
+    // ÄNDERUNG: Winner Übergabe
     if (state.players.length > 1 && aliveCount <= 1) { 
         const winner = livingPlayers.length > 0 ? livingPlayers[0] : null; 
         endGame(winner ? winner.name + " WINS!" : "DRAW!", winner); 
