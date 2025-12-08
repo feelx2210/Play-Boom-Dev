@@ -11,6 +11,9 @@ body {
     height: 100vh;
     margin: 0;
     overflow: hidden;
+    /* Verhindert Pull-to-Refresh auf Mobile */
+    overscroll-behavior: none;
+    touch-action: none;
 }
 
 #game-container {
@@ -18,8 +21,13 @@ body {
     box-shadow: 0 0 20px #ff0000;
     border: 4px solid #550000;
     background-color: #000;
-    width: 720px; 
-    height: 720px;
+    
+    /* ÄNDERUNG: Responsive Größe statt fester Pixel */
+    width: 100vmin; /* Nimmt maximalen Platz ein (quadratisch) */
+    height: 100vmin;
+    max-width: 720px;
+    max-height: 720px;
+    
     transition: box-shadow 0.5s, border-color 0.5s; 
 }
 
@@ -27,9 +35,113 @@ canvas {
     display: block;
     background: #110000;
     image-rendering: pixelated; 
+    /* Canvas füllt den Container responsive aus */
+    width: 100%;
+    height: 100%;
 }
 
-/* --- UI LAYER --- */
+/* --- MOBILE CONTROLS --- */
+#mobile-controls {
+    display: none; /* Standardmäßig ausblenden (Desktop) */
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    height: 150px;
+    pointer-events: none; /* Klicks durchlassen wo keine Buttons sind */
+    z-index: 1000;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Joystick */
+#joystick-area {
+    pointer-events: auto;
+    width: 120px;
+    height: 120px;
+    position: relative;
+}
+
+#joystick-base {
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    position: absolute;
+    top: 10px; left: 10px;
+}
+
+#joystick-stick {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 0, 0, 0.5);
+    border-radius: 50%;
+    position: absolute;
+    top: 25px; left: 25px;
+    box-shadow: 0 0 10px rgba(255,0,0,0.5);
+    transition: transform 0.1s;
+}
+
+/* Buttons */
+#action-area {
+    pointer-events: auto;
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+.control-btn {
+    background: rgba(255, 0, 0, 0.2);
+    border: 2px solid rgba(255, 0, 0, 0.5);
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    user-select: none;
+}
+
+.control-btn:active {
+    background: rgba(255, 0, 0, 0.6);
+    transform: scale(0.95);
+}
+
+#btn-bomb {
+    width: 90px;
+    height: 90px;
+    font-size: 40px;
+    background: rgba(200, 0, 0, 0.3);
+}
+
+#btn-change {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 10px; /* Leicht versetzt */
+    background: rgba(0, 100, 255, 0.3);
+    border-color: rgba(0, 100, 255, 0.5);
+}
+
+/* --- MEDIA QUERIES FÜR TOUCH GERÄTE --- */
+@media (pointer: coarse) {
+    #mobile-controls {
+        display: flex;
+    }
+    
+    /* Layout Anpassungen für Landscape Modus */
+    @media (orientation: landscape) {
+        #mobile-controls {
+            bottom: 20px;
+            /* Buttons weiter an den Rand */
+            left: 40px; 
+            right: 40px;
+        }
+    }
+}
+
+/* --- UI LAYER & REST --- */
+/* (Bestehende Styles für UI, Pause, Screens bleiben hier drunter erhalten...) */
 #ui-layer {
     position: absolute;
     top: 10px;
@@ -91,7 +203,6 @@ h2 { font-size: 20px; color: #ffffff; margin-top: 20px; margin-bottom: 10px; }
 
 /* Active Menu Row */
 .selection-grid.active-group {
-    /* ÄNDERUNG: Farbe von Gelb auf Weiß gesetzt */
     border: 2px dashed #ffffff;
     background: rgba(50, 50, 0, 0.3);
     opacity: 1;
