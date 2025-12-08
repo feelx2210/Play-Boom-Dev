@@ -1,3 +1,5 @@
+// js/constants.js
+
 export const TILE_SIZE = 48; 
 export const GRID_W = 15;
 export const GRID_H = 15;
@@ -19,6 +21,14 @@ export const BOOST_PADS = [
     {x: 5, y: 5}, {x: 9, y: 5}, {x: 5, y: 9}, {x: 9, y: 9}
 ];
 
+// NEU: Richtungsfelder für rollende Bomben
+export const DIRECTION_PADS = [
+    { x: 3, y: 3, dir: {x: 0, y: -1} },   // Pfeil oben
+    { x: 3, y: 11, dir: {x: 1, y: 0} },   // Pfeil rechts
+    { x: 11, y: 11, dir: {x: 0, y: 1} },  // Pfeil unten
+    { x: 11, y: 3, dir: {x: -1, y: 0} }   // Pfeil links
+];
+
 export const OIL_PADS = [
     {x: 3, y: 5}, {x: 3, y: 6}, {x: 3, y: 7}, {x: 3, y: 8}, {x: 3, y: 9},
     {x: 4, y: 9}, {x: 6, y: 9}, {x: 7, y: 9}, {x: 8, y: 9},
@@ -36,7 +46,6 @@ export const CHARACTERS = [
 ];
 
 export const LEVELS = {
-    // ÄNDERUNG: Hellerer Hintergrund (#3b1e1e) für besseren Kontrast zu Ölfeldern
     hell: { id: 'hell', name: 'Hell', bg: '#3b1e1e', wallHard: '#333333', wallSoft: '#aa0000', wallSoftLight: '#cc3333', grid: '#220a0a', glow: '#ff0000', border: '#550000', hasCentralFire: true },
     ice: { id: 'ice', name: 'Ice', bg: '#000044', wallHard: '#4466ff', wallSoft: '#88ccff', wallSoftLight: '#ccffff', grid: '#000066', glow: '#00ccff', border: '#004488' },
     jungle: { id: 'jungle', name: 'Jungle', bg: '#4a3b2a', wallHard: '#666666', wallSoft: '#228822', wallSoftLight: '#44aa44', grid: '#3a2b1a', glow: '#22aa22', border: '#114411', hasRiver: true },
