@@ -9,7 +9,6 @@ import { explodeBomb, triggerHellFire, killPlayer, spawnRandomIce } from './mech
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Interne Auflösung fest auf 720px (15 Tiles * 48px)
 canvas.width = GRID_W * TILE_SIZE;
 canvas.height = GRID_H * TILE_SIZE;
 
@@ -23,23 +22,23 @@ function resizeGame() {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const gameSize = 720;
-    const isPortrait = windowHeight > windowWidth;
-
-    // Berechne Skalierungsfaktor
+    
+    // Wir wollen 20px Platz insgesamt lassen (10px links, 10px rechts)
+    // Das passt exakt zu unserem "margin-top: 10px" im CSS
     const scaleX = (windowWidth - 20) / gameSize;
     const scaleY = (windowHeight - 20) / gameSize;
-    let scale = Math.min(scaleX, scaleY);
     
-    // Im Portrait-Modus begrenzen, damit unten Platz für Buttons bleibt
-    if (isPortrait && scale * gameSize > windowHeight * 0.65) {
-       scale = (windowHeight * 0.65) / gameSize;
-    }
-
+    const scale = Math.min(scaleX, scaleY);
     container.style.transform = `scale(${scale})`;
+    
+    // Wichtig: Im Portrait-Modus müssen wir dem Container sagen, 
+    // dass er von OBEN skalieren soll, sonst zentriert er sich vertikal
+    // und rutscht in die Controls. Das machen wir via CSS Media Query (transform-origin: top center),
+    // aber wir loggen es hier zur Sicherheit.
 }
 
 window.addEventListener('resize', resizeGame);
-resizeGame(); // Initialer Aufruf
+resizeGame();
 
 // --- SPIEL STARTEN ---
 window.startGame = function() {
@@ -47,17 +46,10 @@ window.startGame = function() {
     document.getElementById('game-over').classList.add('hidden');
     document.getElementById('ui-layer').classList.remove('hidden');
     document.getElementById('pause-btn').classList.remove('hidden'); 
-    
-    // Mobile Controls einblenden
-    const mobControls = document.getElementById('mobile-controls');
-    if (mobControls) mobControls.classList.remove('hidden');
-    // NEU: Spielcontainer wieder sichtbar machen!
-    document.getElementById('game-container').classList.remove('hidden');
+    document.getElementById('mobile-controls').classList.remove('hidden');
 
-    // Skalierung aktualisieren
-    resizeGame();
+    resizeGame(); // Sicherstellen dass es beim Start passt
 
-    // HIER WAR DER FEHLER: userChar darf nur 1x definiert werden
     const userChar = CHARACTERS[state.selectedCharIndex];
     state.currentLevel = LEVELS[state.selectedLevelKey];
     
@@ -77,7 +69,6 @@ window.startGame = function() {
     state.hellFirePhase = 'IDLE'; 
     state.hellFireActive = false; 
 
-    // --- ICE TIMER SETUP ---
     state.iceTimer = 0;
     state.iceSpawnCountdown = 1200; 
 
@@ -151,36 +142,22 @@ function distributeItems() {
 }
 
 window.addEventListener('keydown', e => {
-    // NEU: Mobile Portrait Check
-    // Verhindert Eingaben, wenn das Gerät ein Handy im Hochformat ist
-    const isMobilePortrait = window.matchMedia("(max-width: 768px) and (orientation: portrait)").matches;
-    if (isMobilePortrait) {
-        return; 
-    }
-
-    // Menü-Steuerung (wenn Menü sichtbar)
     if (!document.getElementById('main-menu').classList.contains('hidden')) {
         handleMenuInput(e.code);
         return;
     }
-
-    // Spiel-Steuerung
     state.keys[e.code] = true;
-    
-    // Verhindern, dass Pfeiltasten die Webseite scrollen
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-    
-    // Spezielle Aktionen
     if (e.code === keyBindings.CHANGE && state.players[0]) state.players[0].cycleBombType();
     if (e.key.toLowerCase() === 'p' || e.code === 'Escape') togglePause();
 });
 
 window.addEventListener('keyup', e => { state.keys[e.code] = false; });
+
 function update() {
     if (state.isGameOver) return;
     state.players.forEach(p => p.inFire = false);
 
-    // Hellfire Update
     if (state.currentLevel.hasCentralFire) {
         if (!state.hellFireActive) {
             if (state.particles.some(p => p.isFire && p.gx === HELL_CENTER.x && p.gy === HELL_CENTER.y)) {
@@ -194,7 +171,6 @@ function update() {
         }
     }
 
-    // --- ICE SPAWN UPDATE ---
     if (state.currentLevel.id === 'ice') {
         state.iceTimer++;
         if (state.iceTimer > 1200) {
@@ -207,7 +183,6 @@ function update() {
         }
     }
 
-    // Bombs Update
     for (let i = state.bombs.length - 1; i >= 0; i--) {
         let b = state.bombs[i]; b.timer--;
         if (b.isRolling) {
@@ -289,7 +264,6 @@ function update() {
     let aliveCount = 0; let livingPlayers = [];
     state.players.forEach(p => { p.update(); if (p.alive) { aliveCount++; livingPlayers.push(p); } });
 
-    // Ansteckungs-Check
     for (let i = 0; i < livingPlayers.length; i++) {
         for (let j = i + 1; j < livingPlayers.length; j++) {
             const p1 = livingPlayers[i]; const p2 = livingPlayers[j];
