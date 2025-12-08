@@ -145,32 +145,34 @@ export function draw(ctx, canvas) {
         });
     }
 
-    // NEU: Richtungsfelder zeichnen
+  // KORRIGIERT: Richtungsfelder zeichnen
     DIRECTION_PADS.forEach(pad => {
         const cx = pad.x * TILE_SIZE + TILE_SIZE/2;
         const cy = pad.y * TILE_SIZE + TILE_SIZE/2;
         
+        // Feld-Hintergrund
         ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.fillRect(pad.x * TILE_SIZE, pad.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
+        // Pfeilspitze zeichnen
         ctx.fillStyle = '#aaaaaa'; 
         ctx.beginPath();
         
         const size = 8; 
         
-        if (pad.dir.y === -1) { // Oben 
+        if (pad.dir.y === -1) { // Nach Oben
             ctx.moveTo(cx, cy - size - 2); 
             ctx.lineTo(cx - size, cy + size - 2); 
             ctx.lineTo(cx + size, cy + size - 2);
-        } else if (pad.dir.x === 1) { // Rechts 
+        } else if (pad.dir.x === 1) { // Nach Rechts
             ctx.moveTo(cx + size + 2, cy); 
             ctx.lineTo(cx - size + 2, cy - size); 
             ctx.lineTo(cx - size + 2, cy + size);
-        } else if (pad.dir.y === 1) { // Unten 
+        } else if (pad.dir.y === 1) { // Nach Unten
             ctx.moveTo(cx, cy + size + 2); 
             ctx.lineTo(cx - size, cy - size + 2); 
             ctx.lineTo(cx + size, cy - size + 2);
-        } else if (pad.dir.x === -1) { // Links 
+        } else if (pad.dir.x === -1) { // Nach Links
             ctx.moveTo(cx - size - 2, cy); 
             ctx.lineTo(cx + size - 2, cy - size); 
             ctx.lineTo(cx + size - 2, cy + size);
