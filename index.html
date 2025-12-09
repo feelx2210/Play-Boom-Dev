@@ -63,12 +63,19 @@
         <button class="main-btn" onclick="showMenu()">MAIN MENU</button>
     </div>
 
-    <div id="mobile-controls" class="hidden">
-        <div id="joystick-area">
-            <div id="joystick-base">
-                <div id="joystick-stick"></div>
-            </div>
+   <div id="mobile-controls" class="hidden">
+        <div id="dpad-area">
+            <div class="dpad-cross-bg"></div> <button id="dpad-up" class="dpad-btn">▲</button>
+            <button id="dpad-left" class="dpad-btn">◀</button>
+            <div class="dpad-center"></div> <button id="dpad-right" class="dpad-btn">▶</button>
+            <button id="dpad-down" class="dpad-btn">▼</button>
         </div>
+
+        <div id="action-area">
+            <div id="btn-change" class="control-btn subtle-btn">🔄</div>
+            <div id="btn-bomb" class="control-btn main-action-btn">💣</div>
+        </div>
+    </div>
         <div id="action-area">
             <div id="btn-change" class="control-btn">🔄</div>
             <div id="btn-bomb" class="control-btn">💣</div>

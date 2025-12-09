@@ -288,84 +288,55 @@ function gameLoop() {
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// --- MOBILE CONTROLS SETUP ---
+// --- MOBILE CONTROLS SETUP (Game Boy Style) ---
 (function setupMobileControls() {
-    const joystickArea = document.getElementById('joystick-area');
-    const stick = document.getElementById('joystick-stick');
-    const btnBomb = document.getElementById('btn-bomb');
-    const btnChange = document.getElementById('btn-change');
-    let startX, startY;
-    let joystickActive = false;
+    // Helper Funktion um D-Pad Buttons zu binden
+    const bindDPadButton = (elementId, keyName) => {
+        const btn = document.getElementById(elementId);
+        if (!btn) return;
 
-    joystickArea.addEventListener('touchstart', e => {
-        e.preventDefault();
-        const touch = e.changedTouches[0];
-        startX = touch.clientX;
-        startY = touch.clientY;
-        joystickActive = true;
-    }, {passive: false});
+        const press = (e) => {
+            if (e.cancelable) e.preventDefault(); // Verhindert Scrollen
+            state.keys[keyBindings[keyName]] = true;
+            btn.classList.add('pressed'); // Für CSS Feedback
+        };
 
-    joystickArea.addEventListener('touchmove', e => {
-        e.preventDefault();
-        if (!joystickActive) return;
-        const touch = e.changedTouches[0];
+        const release = (e) => {
+            if (e.cancelable) e.preventDefault();
+            state.keys[keyBindings[keyName]] = false;
+            btn.classList.remove('pressed');
+        };
+
+        btn.addEventListener('touchstart', press, {passive: false});
+        btn.addEventListener('mousedown', press); // Für Desktop-Tests
         
-        let dx = touch.clientX - startX;
-        let dy = touch.clientY - startY;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        const maxDist = 35; 
-
-        if (dist > maxDist) {
-            const ratio = maxDist / dist;
-            dx *= ratio;
-            dy *= ratio;
-        }
-        stick.style.transform = `translate(${dx}px, ${dy}px)`;
-
-        state.keys[keyBindings.UP] = false;
-        state.keys[keyBindings.DOWN] = false;
-        state.keys[keyBindings.LEFT] = false;
-        state.keys[keyBindings.RIGHT] = false;
-
-        if (dist > 10) {
-            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            if (angle > -45 && angle <= 45) state.keys[keyBindings.RIGHT] = true;
-            else if (angle > 45 && angle <= 135) state.keys[keyBindings.DOWN] = true;
-            else if (angle > 135 || angle <= -135) state.keys[keyBindings.LEFT] = true;
-            else if (angle > -135 && angle <= -45) state.keys[keyBindings.UP] = true;
-        }
-    }, {passive: false});
-
-    const resetJoystick = () => {
-        joystickActive = false;
-        stick.style.transform = `translate(0px, 0px)`;
-        state.keys[keyBindings.UP] = false;
-        state.keys[keyBindings.DOWN] = false;
-        state.keys[keyBindings.LEFT] = false;
-        state.keys[keyBindings.RIGHT] = false;
+        btn.addEventListener('touchend', release, {passive: false});
+        btn.addEventListener('touchcancel', release, {passive: false});
+        btn.addEventListener('mouseup', release);
+        btn.addEventListener('mouseleave', release);
     };
 
-    joystickArea.addEventListener('touchend', resetJoystick);
-    joystickArea.addEventListener('touchcancel', resetJoystick);
+    // D-Pad binden
+    bindDPadButton('dpad-up', 'UP');
+    bindDPadButton('dpad-down', 'DOWN');
+    bindDPadButton('dpad-left', 'LEFT');
+    bindDPadButton('dpad-right', 'RIGHT');
 
+
+    // --- Action Buttons (Rechts) ---
+    const btnBomb = document.getElementById('btn-bomb');
+    const btnChange = document.getElementById('btn-change');
+
+    // Bombe legen
     btnBomb.addEventListener('touchstart', e => {
         e.preventDefault();
         if (state.players[0] && state.players[0].alive) state.players[0].plantBomb();
-        btnBomb.style.transform = "scale(0.9)";
-    });
-    btnBomb.addEventListener('touchend', e => {
-        e.preventDefault();
-        btnBomb.style.transform = "scale(1)";
     });
 
+    // Typ wechseln
     btnChange.addEventListener('touchstart', e => {
         e.preventDefault();
         if (state.players[0] && state.players[0].alive) state.players[0].cycleBombType();
-        btnChange.style.transform = "scale(0.9)";
-    });
-    btnChange.addEventListener('touchend', e => {
-        e.preventDefault();
-        btnChange.style.transform = "scale(1)";
     });
 
 })();
