@@ -75,7 +75,7 @@ h2 { font-size: 18px; color: #ffffff; margin-top: 15px; margin-bottom: 10px; tex
 .option-card {
     border: 2px solid #555; padding: 10px; cursor: pointer; text-align: center;
     transition: all 0.3s ease; 
-    width: 100px; 
+    width: 100px; /* Feste Breite für Desktop */
     display: flex; flex-direction: column; align-items: center;
     background: #000;
     z-index: 1;
@@ -148,13 +148,12 @@ button.main-btn.focused {
     #mobile-controls.hidden { display: none !important; }
 }
 
-/* === MOBILE PORTRAIT LAYOUT (SIMPLE STACK) === */
+/* === MOBILE PORTRAIT LAYOUT (SIMPLE STACK & FIX ASPECT RATIO) === */
 @media (orientation: portrait) {
     body { justify-content: flex-start; }
     #game-container { margin-top: 0 !important; transform-origin: top center !important; }
     .screen { padding: 40px 0; box-sizing: border-box; }
 
-    /* WICHTIG: Das Flex-Layout verteilt die Sektionen untereinander */
     .menu-content {
         display: flex;
         flex-direction: column;
@@ -163,61 +162,62 @@ button.main-btn.focused {
         width: 100%;
         height: 100%;
         padding-top: 20px; 
-        gap: 20px; /* Abstand zwischen BOOM, Player, Level, Button */
+        gap: 20px; 
     }
 
-    .menu-section { 
-        width: 100%; 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        margin: 0;
-        /* Kein relatives Positioning nötig, da wir im Flow bleiben */
-    }
-
+    .menu-section { width: 100%; display: flex; flex-direction: column; align-items: center; margin: 0; }
     h1 { font-size: 32px; margin: 0; flex-shrink: 0; }
     h2 { font-size: 12px; margin: 0 0 10px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* WICHTIG: Container für Pfeil - Item - Pfeil */
+    /* Container für Pfeil - Item - Pfeil */
     .selection-grid { 
         position: relative; 
-        display: flex; /* Flexbox! Damit Pfeile neben dem Item stehen */
+        display: flex; 
         flex-direction: row;
         justify-content: space-between;
         align-items: center;
-        width: 80%; /* Nicht ganz voll */
-        height: auto; /* Automatische Höhe */
+        width: 80%; 
+        height: auto; 
         margin: 0; 
         padding: 0;
-        border: none !important; /* Rahmen weg */
+        border: none !important; 
     }
 
     /* WICHTIG: Nicht-ausgewählte Items komplett entfernen! */
-    .option-card.hidden-option {
-        display: none !important;
-    }
+    .option-card.hidden-option { display: none !important; }
 
-    /* Das ausgewählte Item */
+    /* WICHTIG: Das ausgewählte Item (Seitenverhältnis Fix) */
     .option-card.selected {
-        transform: scale(1.2); /* Leicht vergrößert */
+        transform: scale(1.1); /* Leicht vergrößert */
         margin: 0;
         border-width: 3px;
         z-index: 10;
-        /* WICHTIG: Relativ positioniert, damit es Platz einnimmt */
         position: relative; 
         left: auto; top: auto;
+        /* FIX: Damit sich die Box dem Canvas anpasst und nicht umgekehrt */
+        width: auto; 
+        height: auto;
+        flex: 0 0 auto; /* Verhindert Stauchen */
     }
 
-    /* Pfeile sichtbar machen */
+    /* WICHTIG: Das Canvas selbst */
+    .preview-canvas {
+        width: auto; /* Native Breite nutzen */
+        height: auto; /* Native Höhe nutzen */
+        max-width: 100%; /* Aber nicht breiter als der Container */
+        max-height: 200px; /* Und nicht zu hoch werden */
+        object-fit: contain; /* Bewahrt Seitenverhältnis! */
+        margin-bottom: 0; /* Kein Abstand nach unten */
+    }
+
     .nav-arrow { 
         display: block; 
         font-size: 30px; color: #ff0000; cursor: pointer; 
         padding: 10px;
         user-select: none; animation: pulse 1s infinite;
-        position: static; /* Im Fluss bleiben */
+        position: static; 
     }
 
-    /* Namen unter dem Item */
     .mobile-label { display: block; color: #ff0000; font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 10px; text-shadow: 1px 1px 0 #000; }
     .card-label { display: none !important; }
 
