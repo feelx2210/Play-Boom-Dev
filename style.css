@@ -11,7 +11,7 @@ body {
     justify-content: center;
     width: 100vw;
     height: 100vh;
-    height: 100dvh;
+    height: 100dvh; /* Wichtig für Mobile Safari */
     margin: 0;
     overflow: hidden;
     touch-action: none;
@@ -32,6 +32,14 @@ body {
 canvas { display: block; background: #110000; image-rendering: pixelated; width: 100%; height: 100%; }
 
 /* --- MENU DESKTOP STANDARD (Querformat/PC) --- */
+/* Dies gilt für den Desktop. Mobile überschreibt das unten. */
+
+.screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95); z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
 h1 { font-size: 40px; color: #ff0000; text-shadow: 4px 4px 0 #550000; margin-bottom: 20px; text-align: center; width: 100%; }
 h2 { font-size: 18px; color: #ffffff; margin-top: 15px; margin-bottom: 10px; text-align: center; width: 100%; }
 
@@ -56,6 +64,8 @@ h2 { font-size: 18px; color: #ffffff; margin-top: 15px; margin-bottom: 10px; tex
 }
 
 .option-card.selected { border-color: #ff0000; background: #220000; box-shadow: 0 0 10px #ff0000; z-index: 10; }
+.option-card:hover { border-color: #fff; transform: scale(1.05); }
+
 .preview-canvas { margin-bottom: 5px; border: 2px solid #333; background: #000; }
 .card-label { font-size: 10px; color: #ddd; margin-top: 5px; text-transform: uppercase; }
 
@@ -63,35 +73,48 @@ h2 { font-size: 18px; color: #ffffff; margin-top: 15px; margin-bottom: 10px; tex
 .nav-arrow { display: none; }
 .mobile-label { display: none; }
 
-/* Buttons */
-button.main-btn {
-    background: #ff0000; color: white; border: none; padding: 15px 30px;
-    font-family: inherit; font-size: 20px; cursor: pointer; margin-top: 20px;
-    box-shadow: 4px 4px 0 #550000; border: 4px solid transparent; display: block; margin-left: auto; margin-right: auto;
+/* Footer / Buttons Desktop */
+.menu-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
 }
+
+button.main-btn {
+    background: #ff0000; color: white; border: none; padding: 15px 40px;
+    font-family: inherit; font-size: 20px; cursor: pointer;
+    box-shadow: 4px 4px 0 #550000; border: 4px solid transparent; 
+    display: block; margin: 0;
+}
+button.main-btn:hover { background: #ff4444; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #550000; }
+button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
+
 .btn-secondary {
     background: #444; color: white; border: none; padding: 10px 20px;
     font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 15px;
-    box-shadow: 4px 4px 0 #222; display: block; margin-left: auto; margin-right: auto;
+    box-shadow: 4px 4px 0 #222; display: block; 
 }
+.btn-secondary:hover { background: #666; box-shadow: 6px 6px 0 #222; }
 
 /* UI Overlays */
 #ui-layer { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; pointer-events: none; z-index: 10; }
 #pause-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: rgba(50, 0, 0, 0.8); border: 2px solid #ff0000; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; pointer-events: auto; }
-.screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; pointer-events: auto; }
 .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; color: #fff; font-size: 14px; display: flex; gap: 15px; }
 .hidden { display: none !important; }
 
 /* Controls Menu */
 .controls-list { display: flex; flex-direction: column; gap: 10px; width: 80%; max-width: 400px; }
 .control-row { display: flex; justify-content: space-between; color: #ddd; }
-.key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; width: 180px; }
+.key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; width: 180px; text-align: center; }
 
 /* Mobile Controls Default */
 #mobile-controls { display: none; position: fixed; z-index: 1000; pointer-events: none; left: 0; right: 0; bottom: 20px; height: 150px; padding: 0 40px; justify-content: space-between; align-items: center; }
 #joystick-area { pointer-events: auto; width: 140px; height: 140px; position: relative; }
 #joystick-base { width: 100px; height: 100px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; position: absolute; top: 20px; left: 20px; }
-#joystick-stick { width: 50px; height: 50px; background: rgba(255, 0, 0, 0.5); border-radius: 50%; position: absolute; top: 25px; left: 25px; }
+#joystick-stick { width: 50px; height: 50px; background: rgba(255, 0, 0, 0.5); border-radius: 50%; position: absolute; top: 25px; left: 25px; box-shadow: 0 0 10px rgba(255,0,0,0.5); transition: transform 0.1s; }
 #action-area { pointer-events: auto; display: flex; gap: 15px; align-items: flex-end; padding-bottom: 10px; }
 .control-btn { background: rgba(255, 0, 0, 0.2); border: 2px solid rgba(255, 0, 0, 0.5); border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center; font-size: 24px; backdrop-filter: blur(4px); }
 #btn-bomb { width: 100px; height: 100px; font-size: 40px; background: rgba(200, 0, 0, 0.3); }
@@ -103,119 +126,128 @@ button.main-btn {
     #mobile-controls.hidden { display: none !important; }
 }
 
-/* === MOBILE PORTRAIT LAYOUT === */
+/* === MOBILE PORTRAIT LAYOUT (SAFARI FIX) === */
 @media (orientation: portrait) {
     body {
         justify-content: flex-start;
     }
 
     #game-container {
-        margin-top: 0px !important;
+        /* Kein Margin mehr hier, wir nutzen das Menü-Overlay */
+        margin-top: 0 !important;
+        /* Wir ziehen das Spiel nach oben, aber das Menü liegt drüber */
         transform-origin: top center !important;
     }
 
+    /* Das Menü Overlay füllt den Screen */
+    .screen {
+        padding-top: 40px; /* Safe Area oben */
+        padding-bottom: 40px; /* Safe Area unten */
+        box-sizing: border-box;
+        justify-content: flex-start; /* Fange oben an */
+    }
+
+    /* Content Wrapper: Verteilt den Platz gleichmäßig */
     .menu-content {
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
+        /* MAGIC FIX: Verteilt den freien Platz gleichmäßig */
+        justify-content: space-evenly; 
         width: 100%;
         height: 100%;
-        padding-top: 40px; 
+        max-height: 800px; /* Verhindert zu weites Auseinanderziehen auf Tablets */
     }
 
-    /* Mehr Abstand zwischen Sektionen */
+    /* Reset Margins, da space-evenly das regelt */
     .menu-section {
         width: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin-bottom: 30px; 
+        margin: 0; 
         position: relative;
     }
 
-    h1 { margin-bottom: 20px; font-size: 40px; margin-top: 0; }
-    h2 { font-size: 16px; margin-bottom: 10px; color: #aaa; }
+    h1 { font-size: 40px; margin: 0; }
+    h2 { font-size: 16px; margin-bottom: 10px; color: #aaa; margin-top: 0; }
 
-    /* CONTAINER KLEINER MACHEN (30% weniger als vorher) */
+    /* CONTAINER HÖHER MACHEN: Damit Karten nicht überlappen */
     .selection-grid {
         position: relative;
         display: block; 
-        height: 100px; /* Reduziert von 130px */
+        height: 160px; /* Mehr Platz für skalierte Karte + Schatten */
         width: 100%;
-        margin-bottom: 5px;
+        margin-bottom: 0;
     }
 
     .option-card {
         position: absolute;
-        top: 5px;
+        top: 20px; /* Etwas tiefer im Container */
         left: 50%;
         transform: translateX(-50%) scale(0.5);
         opacity: 0;
         pointer-events: none;
     }
 
-    /* --- CAROUSEL LOGIC --- */
+    /* --- CAROUSEL LOGIK --- */
     
-    /* Center (Active) - Kleiner skalieren */
+    /* Center (Active) */
     .option-card[data-pos="center"] {
         opacity: 1; z-index: 10;
-        transform: translateX(-50%) scale(1.0); /* Reduziert von 1.3 auf 1.0 (Originalgröße) */
-        border-color: #ff0000; box-shadow: 0 0 10px #ff0000;
+        transform: translateX(-50%) scale(1.4); /* Groß! */
+        border-color: #ff0000; box-shadow: 0 0 15px #ff0000;
         pointer-events: auto;
     }
 
-    /* Left (Dimmed) - Kleiner skalieren */
+    /* Left (Dimmed) */
     .option-card[data-pos="left"] {
         opacity: 0.3; z-index: 5;
-        transform: translateX(-160%) scale(0.6); /* Reduziert von 0.9 */
+        /* Weiter nach außen geschoben */
+        transform: translateX(-200%) scale(0.7); 
         filter: grayscale(100%);
         pointer-events: auto;
     }
 
-    /* Right (Dimmed) - Kleiner skalieren */
+    /* Right (Dimmed) */
     .option-card[data-pos="right"] {
         opacity: 0.3; z-index: 5;
-        transform: translateX(60%) scale(0.6); /* Reduziert von 0.9 */
+        /* Weiter nach außen geschoben */
+        transform: translateX(100%) scale(0.7); 
         filter: grayscale(100%);
         pointer-events: auto;
     }
 
+    /* Mobile Namen */
     .mobile-label {
         display: block;
-        color: #ff0000; font-size: 16px; font-weight: bold;
-        text-transform: uppercase; margin-top: 25px;
+        color: #ff0000; font-size: 20px; font-weight: bold;
+        text-transform: uppercase; margin-top: -10px; /* Etwas näher ran */
         text-shadow: 2px 2px 0 #000;
+        z-index: 15; position: relative;
     }
 
     .card-label { display: none !important; }
 
-    .nav-arrow { 
-        display: block; 
-        font-size: 30px; color: #ff0000; cursor: pointer; padding: 0 15px; 
-        user-select: none; animation: pulse 1s infinite;
-        position: absolute; top: 35%; 
-    }
-    /* Pfeile positionieren */
-    .nav-arrow.left { left: 10px; }
-    .nav-arrow.right { right: 10px; }
+    /* Pfeile WEG */
+    .nav-arrow { display: none !important; }
 
+    /* Footer */
     .menu-footer {
-        margin-top: 20px;
+        margin: 0;
         width: 100%;
-        display: flex;
-        justify-content: center;
     }
 
     button.main-btn {
         width: 80%;
-        padding: 20px;
+        padding: 25px; /* Dicker Button */
         font-size: 24px;
-        margin-top: 0;
+        margin-bottom: 20px; /* Abstand zum Rand unten */
     }
 
     .desktop-only { display: none !important; }
     
+    /* Controls im Game */
     #mobile-controls {
         bottom: 30px; padding: 0 20px; align-items: flex-end;
     }
