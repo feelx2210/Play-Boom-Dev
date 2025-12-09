@@ -19,7 +19,6 @@ export function updateHud(player) {
     if (elFire) elFire.innerText = `🔥 ${player.bombRange}`;
 }
 
-// Update Namen unter dem Karussell
 function updateMobileLabels() {
     const charNameEl = document.getElementById('char-name-display');
     if (charNameEl) charNameEl.innerText = CHARACTERS[state.selectedCharIndex].name;
@@ -54,12 +53,10 @@ export function initMenu() {
     if (state.menuState === 0) document.getElementById('start-game-btn').classList.remove('focused');
     else if (state.menuState === 2) document.getElementById('start-game-btn').classList.add('focused');
 
-    // RENDERING HELPER
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
         
-        // POSITIONSBERECHNUNG FÜR CAROUSEL
         let total = (type === 'char') ? CHARACTERS.length : Object.keys(LEVELS).length;
         let selectedIdx = (type === 'char') ? state.selectedCharIndex : Object.keys(LEVELS).indexOf(state.selectedLevelKey);
         
@@ -113,6 +110,25 @@ export function initMenu() {
 
     addSwipeSupport(charContainer, 'char');
     addSwipeSupport(levelContainer, 'level');
+    
+    // Pfeile hinzufügen (Wichtig: Nach den Cards, damit sie oben liegen z-index technisch)
+    addArrows(charContainer, 'char');
+    addArrows(levelContainer, 'level');
+}
+
+function addArrows(container, type) {
+    const left = document.createElement('div');
+    left.className = 'nav-arrow left';
+    left.innerText = '◀';
+    left.onclick = (e) => { e.stopPropagation(); changeSelection(type, -1); };
+    
+    const right = document.createElement('div');
+    right.className = 'nav-arrow right';
+    right.innerText = '▶';
+    right.onclick = (e) => { e.stopPropagation(); changeSelection(type, 1); };
+    
+    container.appendChild(left);
+    container.appendChild(right);
 }
 
 function addSwipeSupport(element, type) {
@@ -121,8 +137,8 @@ function addSwipeSupport(element, type) {
     element.ontouchstart = (e) => { startX = e.changedTouches[0].screenX; };
     element.ontouchend = (e) => {
         endX = e.changedTouches[0].screenX;
-        if (endX < startX - 30) changeSelection(type, 1); // Swipe Left -> Next
-        else if (endX > startX + 30) changeSelection(type, -1); // Swipe Right -> Prev
+        if (endX < startX - 30) changeSelection(type, 1); 
+        else if (endX > startX + 30) changeSelection(type, -1); 
     };
 }
 
