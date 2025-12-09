@@ -11,7 +11,7 @@ body {
     justify-content: center;
     width: 100vw;
     height: 100vh;
-    height: 100dvh; /* Wichtig für Mobile Browser Adressleiste */
+    height: 100dvh; /* Wichtig für Mobile Browser */
     margin: 0;
     overflow: hidden;
     touch-action: none;
@@ -31,7 +31,7 @@ body {
 
 canvas { display: block; background: #110000; image-rendering: pixelated; width: 100%; height: 100%; }
 
-/* --- MENU DESKTOP STANDARD (Querformat/PC) --- */
+/* --- MENU DESKTOP STANDARD --- */
 .screen {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.95); z-index: 20;
@@ -129,7 +129,7 @@ button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
     #mobile-controls.hidden { display: none !important; }
 }
 
-/* === MOBILE PORTRAIT LAYOUT (SAFARI FIX & CLOSER CAROUSEL) === */
+/* === MOBILE PORTRAIT LAYOUT (KOMPAKT & FIX) === */
 @media (orientation: portrait) {
     body {
         justify-content: flex-start;
@@ -141,19 +141,20 @@ button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
     }
 
     .screen {
-        padding: 40px 0; /* Safe Area */
+        padding: 20px 0; /* Weniger Padding für mehr Platz */
         box-sizing: border-box;
     }
 
-    /* WICHTIG: Verteilt den Platz vertikal, damit nichts überlappt */
+    /* Manuelle Verteilung statt space-evenly (sicherer) */
     .menu-content {
         display: flex;
         flex-direction: column;
-        justify-content: space-evenly; /* Magische Verteilung */
+        justify-content: flex-start; /* Alles nach oben */
         align-items: center;
         width: 100%;
         height: 100%;
-        max-height: 90vh; /* Verhindert Scrolling */
+        padding-top: 30px; /* Sicherer Abstand */
+        gap: 15px; /* Konstanter Abstand zwischen Elementen */
     }
 
     .menu-section {
@@ -162,87 +163,85 @@ button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
         flex-direction: column;
         align-items: center;
         margin: 0;
-        /* Wir entfernen margin, da space-evenly das regelt */
     }
 
-    h1 { font-size: 40px; margin: 0; flex-shrink: 0; }
-    h2 { font-size: 14px; margin-bottom: 10px; color: #aaa; margin-top: 0; text-transform: uppercase; letter-spacing: 2px; }
+    /* Kleinere Schriftarten */
+    h1 { font-size: 32px; margin: 0 0 10px 0; flex-shrink: 0; }
+    h2 { font-size: 12px; margin: 0 0 5px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* FESTE HÖHE FÜR DAS KARUSSELL (Damit Platz reserviert wird!) */
+    /* KLEINERER CONTAINER */
     .selection-grid {
         position: relative;
         display: block; 
-        height: 110px; /* Genug Platz für die Karten */
+        height: 85px; /* Reduziert für 0.8 Scale */
         width: 100%;
         margin: 0;
     }
 
     .option-card {
         position: absolute;
-        top: 0; /* Oben im Container ausrichten */
+        top: 0;
         left: 50%;
-        /* Default: Klein und unsichtbar */
-        transform: translateX(-50%) scale(0.6);
+        transform: translateX(-50%) scale(0.5);
         opacity: 0;
         pointer-events: none;
         margin: 0;
     }
 
-    /* --- CAROUSEL LOGIC --- */
+    /* --- SKALIERUNG REDUZIERT (20% kleiner) --- */
     
-    /* Center (Ausgewählt): Originalgröße 100px */
+    /* Center (Active): Scale 0.8 statt 1.0 */
     .option-card[data-pos="center"] {
         opacity: 1; z-index: 10;
-        transform: translateX(-50%) scale(1.0); 
-        border-color: #ff0000; box-shadow: 0 0 15px #ff0000;
+        transform: translateX(-50%) scale(0.8); 
+        border-color: #ff0000; box-shadow: 0 0 10px #ff0000;
         pointer-events: auto;
     }
 
-    /* Left: 30% NÄHER DRAN (-155% statt -200%) */
+    /* Left: Scale 0.5 statt 0.6 */
     .option-card[data-pos="left"] {
         opacity: 0.3; z-index: 5;
-        transform: translateX(-155%) scale(0.6); 
+        transform: translateX(-155%) scale(0.5); 
         filter: grayscale(100%);
         pointer-events: auto;
     }
 
-    /* Right: 30% NÄHER DRAN (55% statt 100%) */
-    /* Hinweis: Center ist bei -50%. +105% Abstand = +55% */
+    /* Right: Scale 0.5 statt 0.6 */
     .option-card[data-pos="right"] {
         opacity: 0.3; z-index: 5;
-        transform: translateX(55%) scale(0.6); 
+        transform: translateX(55%) scale(0.5); 
         filter: grayscale(100%);
         pointer-events: auto;
     }
 
-    /* Text-Label unter dem Bild (Name des Players/Levels) */
+    /* Namen SICHTBAR MACHEN */
     .mobile-label {
         display: block;
-        color: #ff0000; font-size: 16px; font-weight: bold;
+        color: #ff0000; font-size: 14px; font-weight: bold;
         text-transform: uppercase; 
-        margin-top: 5px; /* Kleiner Abstand zum Grid */
-        text-shadow: 2px 2px 0 #000;
+        margin-top: 2px;
+        text-shadow: 1px 1px 0 #000;
+        position: relative; 
+        z-index: 20; /* Über alles legen */
     }
 
     .card-label { display: none !important; }
     .nav-arrow { display: none !important; }
 
-    /* Footer */
+    /* Footer kompakt */
     .menu-footer {
         width: 100%;
-        margin-top: 0;
+        margin-top: 10px;
     }
 
     button.main-btn {
-        width: 80%;
-        padding: 20px; 
-        font-size: 20px;
+        width: 70%;
+        padding: 15px; 
+        font-size: 18px;
     }
 
-    /* Desktop-only Buttons ausblenden */
     .desktop-only { display: none !important; }
     
-    /* Controls im Spiel */
     #mobile-controls {
         bottom: 30px; padding: 0 20px; align-items: flex-end;
     }
