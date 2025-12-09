@@ -19,14 +19,15 @@ export function updateHud(player) {
     if (elFire) elFire.innerText = `🔥 ${player.bombRange}`;
 }
 
+// Mobile Label Update (nur für Struktur, falls benötigt)
 function updateMobileLabels() {
     const charNameEl = document.getElementById('char-name-display');
     if (charNameEl) charNameEl.innerText = CHARACTERS[state.selectedCharIndex].name;
-    
     const levelNameEl = document.getElementById('level-name-display');
     if (levelNameEl) levelNameEl.innerText = LEVELS[state.selectedLevelKey].name;
 }
 
+// Navigation Helper
 function changeSelection(type, dir) {
     if (type === 'char') {
         const len = CHARACTERS.length;
@@ -51,6 +52,7 @@ export function initMenu() {
     
     updateMobileLabels();
 
+    // Visual Feedback Desktop
     if (state.menuState === 0) { 
         charContainer.classList.add('active-group'); charContainer.classList.remove('inactive-group');
         levelContainer.classList.add('inactive-group'); levelContainer.classList.remove('active-group');
@@ -65,10 +67,10 @@ export function initMenu() {
         startBtn.classList.add('focused');
     }
 
+    // Helper: Karte rendern
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
-        // WICHTIG: Klasse hidden-option hinzufügen, wenn nicht ausgewählt!
-        div.className = `option-card ${isSelected ? 'selected' : 'hidden-option'}`;
+        div.className = `option-card ${isSelected ? 'selected' : ''}`;
         
         div.onclick = (e) => {
             e.stopPropagation();
@@ -76,7 +78,6 @@ export function initMenu() {
             if (type === 'level') state.menuState = 1;
             
             if (index !== (type==='char' ? state.selectedCharIndex : Object.keys(LEVELS).indexOf(state.selectedLevelKey))) {
-                // Klick auf ein anderes Item -> auswählen (Desktop)
                 if (type === 'char') state.selectedCharIndex = index;
                 else state.selectedLevelKey = Object.keys(LEVELS)[index];
                 initMenu();
@@ -105,51 +106,20 @@ export function initMenu() {
         container.appendChild(div);
     };
 
+    // Render Characters
     CHARACTERS.forEach((char, idx) => {
         renderCard(charContainer, 'char', idx, char, idx === state.selectedCharIndex);
     });
 
+    // Render Levels
     const levelKeys = Object.keys(LEVELS);
     levelKeys.forEach((key, idx) => {
         renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey);
     });
-
-    // Pfeile hinzufügen (für Mobile)
-    addArrows(charContainer, 'char');
-    addArrows(levelContainer, 'level');
-
-    addSwipeSupport(charContainer, 'char');
-    addSwipeSupport(levelContainer, 'level');
 }
 
-function addArrows(container, type) {
-    const left = document.createElement('div');
-    left.className = 'nav-arrow left';
-    left.innerText = '◀';
-    left.onclick = (e) => { e.stopPropagation(); changeSelection(type, -1); };
-    
-    const right = document.createElement('div');
-    right.className = 'nav-arrow right';
-    right.innerText = '▶';
-    right.onclick = (e) => { e.stopPropagation(); changeSelection(type, 1); };
-    
-    container.insertBefore(left, container.firstChild); // Links davor
-    container.appendChild(right); // Rechts danach
-}
-
-function addSwipeSupport(element, type) {
-    let startX = 0;
-    let endX = 0;
-    element.ontouchstart = (e) => { startX = e.changedTouches[0].screenX; };
-    element.ontouchend = (e) => {
-        endX = e.changedTouches[0].screenX;
-        if (endX < startX - 30) changeSelection(type, 1);
-        else if (endX > startX + 30) changeSelection(type, -1);
-    };
-}
-
+// Keyboard Input
 export function handleMenuInput(code) {
-    const levelKeys = Object.keys(LEVELS);
     if (state.menuState === 0) {
         if (code === 'ArrowLeft') changeSelection('char', -1);
         else if (code === 'ArrowRight') changeSelection('char', 1);
