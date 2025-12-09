@@ -1,331 +1,181 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-/* --- GLOBAL SETTINGS --- */
+/* --- GLOBAL --- */
 body {
     background-color: #050505;
     color: #ff3333;
     font-family: 'Press Start 2P', cursive;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh; /* Wichtig für Mobile Browser */
-    margin: 0;
-    overflow: hidden;
-    touch-action: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100vw; height: 100vh; height: 100dvh;
+    margin: 0; overflow: hidden; touch-action: none;
 }
 
 #game-container {
-    position: relative;
-    width: 720px; 
-    height: 720px;
-    box-shadow: 0 0 20px #ff0000;
-    border: 4px solid #550000;
-    background-color: #000;
-    transform-origin: center center;
-    flex-shrink: 0; 
-    transition: transform 0.2s; 
+    position: relative; width: 720px; height: 720px;
+    box-shadow: 0 0 20px #ff0000; border: 4px solid #550000; background-color: #000;
+    transform-origin: center center; flex-shrink: 0; transition: transform 0.2s; 
 }
-
 canvas { display: block; background: #110000; image-rendering: pixelated; width: 100%; height: 100%; }
 
-/* --- MENU DESKTOP STANDARD (Querformat/PC) --- */
+/* --- MENU DESKTOP --- */
 .screen {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.95); z-index: 20;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-
-.menu-content {
-    /* Desktop: Standard Block Layout */
-    width: 100%; display: flex; flex-direction: column; align-items: center;
-}
+.menu-content { width: 100%; display: flex; flex-direction: column; align-items: center; }
 
 h1 { font-size: 40px; color: #ff0000; text-shadow: 4px 4px 0 #550000; margin-bottom: 20px; text-align: center; width: 100%; }
 h2 { font-size: 18px; color: #ffffff; margin-top: 15px; margin-bottom: 10px; text-align: center; width: 100%; }
 
-/* Desktop: Einfache Reihe nebeneinander */
 .selection-grid {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 20px;
-    padding: 10px;
-    width: 100%;
-    /* Default Transition */
-    transition: 0.2s;
-    border: 2px solid transparent;
+    display: flex; flex-direction: row; justify-content: center;
+    gap: 15px; margin-bottom: 20px; padding: 10px; width: 100%;
+    transition: 0.2s; border: 2px solid transparent;
 }
-
-/* DESKTOP ACTIVE STATES */
-.selection-grid.active-group {
-    border: 2px dashed #ffffff;
-    background: rgba(50, 50, 0, 0.3);
-    opacity: 1;
-}
-
-.selection-grid.inactive-group {
-    border: 2px solid transparent;
-    opacity: 0.5;
-}
+.selection-grid.active-group { border: 2px dashed #ffffff; background: rgba(50, 50, 0, 0.3); opacity: 1; }
+.selection-grid.inactive-group { border: 2px solid transparent; opacity: 0.5; }
 
 .option-card {
     border: 2px solid #555; padding: 10px; cursor: pointer; text-align: center;
-    transition: all 0.3s ease; 
-    width: 100px; 
-    display: flex; flex-direction: column; align-items: center;
-    background: #000;
-    z-index: 1;
+    transition: all 0.3s ease; width: 100px; display: flex; flex-direction: column; align-items: center;
+    background: #000; z-index: 1;
 }
-
 .option-card.selected { border-color: #ff0000; background: #220000; box-shadow: 0 0 10px #ff0000; z-index: 10; }
 .option-card:hover { border-color: #fff; transform: scale(1.05); }
 
 .preview-canvas { margin-bottom: 5px; border: 2px solid #333; background: #000; }
 .card-label { font-size: 10px; color: #ddd; margin-top: 5px; text-transform: uppercase; }
 
-/* Mobile Elemente im Desktop verstecken */
-.nav-arrow { display: none; }
-.mobile-label { display: none; }
+.nav-arrow, .mobile-label { display: none; }
 
-/* Footer / Buttons Desktop */
-.menu-footer {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-top: 20px;
-}
-
+.menu-footer { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; }
 button.main-btn {
     background: #ff0000; color: white; border: none; padding: 15px 40px;
     font-family: inherit; font-size: 20px; cursor: pointer;
-    box-shadow: 4px 4px 0 #550000; border: 4px solid transparent; 
-    display: block; margin: 0;
+    box-shadow: 4px 4px 0 #550000; border: 4px solid transparent; display: block; margin: 0;
 }
-button.main-btn:hover { background: #ff4444; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #550000; }
 button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
+button.main-btn.focused { background: #fff; color: #ff0000; border-color: #ff0000; animation: pulse 1s infinite; }
+.btn-secondary { background: #444; color: white; border: none; padding: 10px 20px; font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 15px; box-shadow: 4px 4px 0 #222; display: block; }
 
-button.main-btn.focused {
-    background: #fff; color: #ff0000; border-color: #ff0000; animation: pulse 1s infinite;
-}
-
-.btn-secondary {
-    background: #444; color: white; border: none; padding: 10px 20px;
-    font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 15px;
-    box-shadow: 4px 4px 0 #222; display: block; 
-}
-.btn-secondary:hover { background: #666; box-shadow: 6px 6px 0 #222; }
-
-/* UI Overlays */
 #ui-layer { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; pointer-events: none; z-index: 10; }
 #pause-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: rgba(50, 0, 0, 0.8); border: 2px solid #ff0000; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; pointer-events: auto; }
 .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; color: #fff; font-size: 14px; display: flex; gap: 15px; }
-.hidden { display: none !important; }
 
-/* Controls Menu */
 .controls-list { display: flex; flex-direction: column; gap: 10px; width: 80%; max-width: 400px; }
 .control-row { display: flex; justify-content: space-between; color: #ddd; }
 .key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; width: 180px; text-align: center; }
 
 /* --- MOBILE CONTROLS (GAME BOY STYLE) --- */
 #mobile-controls {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    pointer-events: none;
-    left: 0; right: 0; bottom: 10px;
-    height: 180px;
-    padding: 0 20px;
-    justify-content: space-between;
-    align-items: flex-end;
+    display: none; /* Standard Aus */
+    position: fixed; z-index: 1000; pointer-events: none;
+    left: 0; right: 0; bottom: 10px; height: 180px;
+    padding: 0 20px; justify-content: space-between; align-items: flex-end;
 }
 
-/* LINKES D-PAD (Kreuz) */
+/* WICHTIG: Überschreibt ALLES, wenn Klasse 'hidden' da ist */
+#mobile-controls.hidden {
+    display: none !important;
+}
+
+/* D-Pad Container */
 #dpad-area {
-    pointer-events: auto;
-    width: 160px;
-    height: 160px;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    pointer-events: auto; width: 150px; height: 150px; position: relative;
+    display: flex; justify-content: center; align-items: center;
 }
 
-#dpad-cross {
-    width: 140px; height: 140px; position: relative;
-}
+#dpad-cross { width: 140px; height: 140px; position: relative; }
 
-.dpad-arm {
+/* Einheitlicher Stil für ALLE Richtungen */
+.dpad-key {
     position: absolute;
-    background: #444; /* Dunkelgrau */
+    background: #666; /* Game Boy Grau */
     width: 46px; height: 46px;
     display: flex; justify-content: center; align-items: center;
-    color: #222; font-size: 18px;
-    border-radius: 4px;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.5), inset 1px 1px 2px rgba(255,255,255,0.2);
-    cursor: pointer; pointer-events: none; /* Events gehen zum Container */
+    color: #222; font-size: 20px; 
+    box-shadow: 2px 2px 0 #333, inset 1px 1px 2px rgba(255,255,255,0.3);
+    cursor: pointer; pointer-events: none; /* Klicks gehen zum Parent */
 }
 
-/* Positionierung */
+/* Runde Ecken für das Kreuz-Feeling */
 .dpad-up    { top: 0; left: 47px; border-radius: 5px 5px 0 0; }
-.dpad-down  { bottom: 0; left: 47px; border-radius: 0 0 5px 5px; box-shadow: 2px 4px 5px rgba(0,0,0,0.5); }
+.dpad-down  { bottom: 0; left: 47px; border-radius: 0 0 5px 5px; box-shadow: 2px 4px 0 #333; }
 .dpad-left  { left: 0; top: 47px; border-radius: 5px 0 0 5px; }
-.dpad-right { right: 0; top: 47px; border-radius: 0 5px 5px 0; box-shadow: 4px 2px 5px rgba(0,0,0,0.5); }
+.dpad-right { right: 0; top: 47px; border-radius: 0 5px 5px 0; box-shadow: 4px 2px 0 #333; }
 
-/* Feedback Klasse */
-.dpad-arm.active {
-    background: #666;
-    box-shadow: inset 2px 2px 5px rgba(0,0,0,0.8);
-    color: #fff;
-}
-
+/* Mitte */
 .dpad-center {
     position: absolute; width: 46px; height: 46px; top: 47px; left: 47px;
-    background: #444; background-image: radial-gradient(circle, #333 20%, transparent 25%);
-    z-index: 2;
+    background: #666; z-index: 2;
+    background-image: radial-gradient(circle, #555 10%, transparent 20%);
 }
 
-/* RECHTE ACTION BUTTONS */
-#action-area {
-    pointer-events: auto;
-    position: relative;
-    width: 160px;
-    height: 160px;
+/* Active State (Dunkler) */
+.dpad-key.active {
+    background: #444; 
+    box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5);
+    color: #fff;
+    transform: translate(1px, 1px);
 }
 
+/* Action Buttons */
+#action-area { pointer-events: auto; position: relative; width: 160px; height: 160px; }
 .control-btn {
-    position: absolute;
-    border-radius: 50%;
+    position: absolute; border-radius: 50%;
     display: flex; justify-content: center; align-items: center;
     user-select: none; backdrop-filter: blur(4px);
-    box-shadow: 3px 5px 0 #220000;
-    transition: transform 0.05s, box-shadow 0.05s;
+    box-shadow: 3px 5px 0 #220000; transition: transform 0.05s, box-shadow 0.05s;
 }
+.control-btn:active { transform: translate(3px, 5px); box-shadow: 0 0 0; }
 
-.control-btn:active {
-    transform: translate(3px, 5px);
-    box-shadow: 0 0 0;
-}
-
-/* Großer roter Button (Bombe) */
 .main-action-btn {
-    width: 90px; height: 90px;
-    font-size: 40px;
-    background: #cc0000;
-    border: none;
-    color: rgba(255,255,255,0.9);
+    width: 90px; height: 90px; font-size: 40px;
+    background: #cc0000; border: none; color: rgba(255,255,255,0.9);
     top: 10px; right: 0;
 }
-
-/* Kleiner grauer Button (Wechseln) */
 .subtle-btn {
-    width: 60px; height: 60px;
-    font-size: 24px;
-    background: #555;
-    border: none;
-    color: #ccc;
-    bottom: 10px; left: 10px;
-    box-shadow: 2px 4px 0 #111;
+    width: 60px; height: 60px; font-size: 24px;
+    background: #555; border: none; color: #ccc;
+    bottom: 10px; left: 10px; box-shadow: 2px 4px 0 #111;
 }
 
-/* --- OVERRIDES --- */
+/* --- MEDIA QUERIES --- */
 @media (pointer: coarse) {
     #mobile-controls { display: flex; }
-    #mobile-controls.hidden { display: none !important; }
 }
 
-/* === MOBILE PORTRAIT LAYOUT === */
 @media (orientation: portrait) {
     body { justify-content: flex-start; }
-    
-    #game-container {
-        margin-top: 0 !important;
-        transform-origin: top center !important;
-    }
-
+    #game-container { margin-top: 0 !important; transform-origin: top center !important; }
     .screen { padding: 40px 0; box-sizing: border-box; }
 
-    /* WICHTIG: Flex Start verhindert Überlappung */
     .menu-content {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: center;
-        width: 100%;
-        height: 100%;
-        padding-top: 20px; 
-        gap: 20px; 
+        display: flex; flex-direction: column; justify-content: flex-start;
+        align-items: center; width: 100%; height: 100%; max-height: 90vh;
+        padding-top: 30px; gap: 15px;
     }
-
     .menu-section { width: 100%; display: flex; flex-direction: column; align-items: center; margin: 0; }
-    h1 { font-size: 32px; margin: 0; flex-shrink: 0; }
-    h2 { font-size: 12px; margin: 0 0 10px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
+    h1 { font-size: 32px; margin: 0 0 10px 0; flex-shrink: 0; }
+    h2 { font-size: 12px; margin: 0 0 5px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* Rahmen entfernen im Mobile Mode */
-    .selection-grid.active-group, .selection-grid.inactive-group {
-        border: none !important;
-        background: transparent !important;
-    }
+    .selection-grid.active-group, .selection-grid.inactive-group { border: none !important; background: transparent !important; }
+    .selection-grid { position: relative; display: block; height: 85px; width: 100%; margin: 0; border: none !important;}
+    
+    .option-card { position: absolute; top: 0; left: 50%; transform: translateX(-50%) scale(0.5); opacity: 0; pointer-events: none; margin: 0; }
+    .option-card[data-pos="center"] { opacity: 1; z-index: 10; transform: translateX(-50%) scale(0.8); border-color: #ff0000; box-shadow: 0 0 10px #ff0000; pointer-events: auto; }
+    .option-card[data-pos="left"] { opacity: 0.3; z-index: 5; transform: translateX(-155%) scale(0.5); filter: grayscale(100%); pointer-events: auto; }
+    .option-card[data-pos="right"] { opacity: 0.3; z-index: 5; transform: translateX(55%) scale(0.5); filter: grayscale(100%); pointer-events: auto; }
 
-    /* Container für Auswahl */
-    .selection-grid { 
-        position: relative; 
-        display: flex; 
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        width: 80%; 
-        height: auto; 
-        margin: 0; 
-        padding: 0;
-    }
-
-    /* Nicht-ausgewählte Items komplett entfernen! */
-    .option-card.hidden-option { display: none !important; }
-
-    /* WICHTIG: Seitenverhältnis Fix & Skalierung */
-    .option-card.selected {
-        transform: scale(1.1);
-        margin: 0;
-        border-width: 3px;
-        z-index: 10;
-        position: relative; 
-        left: auto; top: auto;
-        /* Box passt sich Inhalt an */
-        width: auto; 
-        height: auto;
-        flex: 0 0 auto;
-    }
-
-    /* Canvas Seitenverhältnis bewahren */
-    .preview-canvas {
-        width: auto; height: auto;
-        max-width: 100%; max-height: 200px;
-        object-fit: contain;
-        margin-bottom: 0;
-    }
-
-    .nav-arrow { 
-        display: block; 
-        font-size: 30px; color: #ff0000; cursor: pointer; 
-        padding: 10px;
-        user-select: none; animation: pulse 1s infinite;
-        position: static; 
-    }
-
-    .mobile-label { display: block; color: #ff0000; font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 10px; text-shadow: 1px 1px 0 #000; }
+    .mobile-label { display: block; color: #ff0000; font-size: 14px; font-weight: bold; text-transform: uppercase; margin-top: 2px; text-shadow: 1px 1px 0 #000; z-index: 20; position: relative; }
     .card-label { display: none !important; }
+    .nav-arrow { display: none !important; }
 
-    .menu-footer { width: 100%; margin-top: 20px; }
+    .menu-footer { width: 100%; margin-top: 10px; }
     button.main-btn { width: 70%; padding: 15px; font-size: 18px; }
     .desktop-only { display: none !important; }
     
-    /* Controls Platzierung */
-    #mobile-controls { bottom: 20px; padding: 0 10px; height: 180px; }
+    #mobile-controls { bottom: 10px; padding: 0 10px; height: 180px; }
 }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
