@@ -39,7 +39,7 @@ export class Player {
         this.speedMultiplier = 1; 
         this.speedTimer = 0;
 
-        // PowerUps & Timer (20s = 1200 frames)
+        // PowerUps & Timer (jetzt 30s = 1800 frames)
         this.hasNapalm = false; this.napalmTimer = 0;
         this.hasRolling = false; this.rollingTimer = 0;
         this.currentBombMode = BOMB_MODES.STANDARD;
@@ -81,9 +81,9 @@ export class Player {
     }
 
     addCurse(type) {
-        // Spezialfall Speed-Fluch (wird jetzt über activateSpeedBoost geregelt)
+        // Spezialfall Speed-Fluch: 2.5x Speed, 15s (900 Frames)
         if (type === 'speed_rush') {
-            this.activateSpeedBoost(3, 600, "SPEED CURSE!"); // 3x Speed, 10s
+            this.activateSpeedBoost(2.5, 900, "SPEED CURSE!"); 
             return;
         }
 
@@ -98,9 +98,9 @@ export class Player {
 
         const existing = this.activeCurses.find(c => c.type === type);
         if (existing) {
-            existing.timer = 600; // 10s Reset
+            existing.timer = 900; // 15s Reset
         } else {
-            this.activeCurses.push({ type: type, timer: 600 }); // 10s Neu
+            this.activeCurses.push({ type: type, timer: 900 }); // 15s Neu
         }
     }
 
@@ -141,7 +141,7 @@ export class Player {
     }
 
     updateTimers() {
-        // Skills: 20 Sekunden (1200 Frames)
+        // Skills: 30 Sekunden (1800 Frames)
         if (this.hasRolling && --this.rollingTimer <= 0) {
             this.hasRolling = false;
             if (this.currentBombMode === BOMB_MODES.ROLLING) this.currentBombMode = BOMB_MODES.STANDARD;
@@ -164,7 +164,7 @@ export class Player {
 
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        // Flüche: 10 Sekunden (600 Frames) - Timer läuft bereits in addCurse Logik
+        // Flüche: 15 Sekunden (900 Frames) - Timer läuft bereits in addCurse Logik
         if (this.activeCurses.length > 0) {
             this.activeCurses.forEach(c => c.timer--);
             const prevCount = this.activeCurses.length;
@@ -336,16 +336,16 @@ export class Player {
         switch(type) {
             case ITEMS.BOMB_UP: this.maxBombs++; createFloatingText(this.x, this.y, "+1 BOMB"); break;
             case ITEMS.RANGE_UP: this.bombRange++; createFloatingText(this.x, this.y, "FIRE UP"); break;
-            // 2x Speed, 20 Sekunden
-            case ITEMS.SPEED_UP: this.activateSpeedBoost(2, 1200, "SPEED UP"); break;
+            // 2x Speed, 30 Sekunden
+            case ITEMS.SPEED_UP: this.activateSpeedBoost(2, 1800, "SPEED UP"); break;
             
-            // Napalm & Rolling: 20 Sekunden
+            // Napalm & Rolling: 30 Sekunden
             case ITEMS.NAPALM: 
-                this.hasNapalm = true; this.napalmTimer = 1200; 
+                this.hasNapalm = true; this.napalmTimer = 1800; 
                 createFloatingText(this.x, this.y, "NAPALM!", "#ff0000"); 
                 break;
             case ITEMS.ROLLING: 
-                this.hasRolling = true; this.rollingTimer = 1200; 
+                this.hasRolling = true; this.rollingTimer = 1800; 
                 createFloatingText(this.x, this.y, "ROLLING!", "#ffffff"); 
                 break;
                 
