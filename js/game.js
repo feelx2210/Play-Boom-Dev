@@ -14,27 +14,55 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
+// --- RESPONSIVE SCALING LOGIC ---
 function resizeGame() {
     const container = document.getElementById('game-container');
     if (!container) return;
+
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    const gameSize = 720;
-    const scaleX = (windowWidth - 20) / gameSize;
-    const scaleY = (windowHeight - 20) / gameSize;
-    const scale = Math.min(scaleX, scaleY);
-    container.style.transform = `scale(${scale})`;
+    const totalGameWidth = GRID_W * TILE_SIZE; // 720px
+    const totalGameHeight = GRID_H * TILE_SIZE; // 720px
+    
+    // Check Portrait Mode
+    if (windowHeight > windowWidth) {
+        // MOBILE ZOOM FIX:
+        // Wir wollen die äußeren Rand-Kacheln (Walls) links und rechts abschneiden,
+        // damit das Spielfeld größer wirkt.
+        // Das Grid ist 15 Tiles breit. Wir wollen, dass 13 Tiles (Inneres) den Screen füllen.
+        const playableTilesX = GRID_W - 2; // 13 Tiles
+        const playableWidth = playableTilesX * TILE_SIZE; // 624px
+        
+        // Scale berechnen: Screen-Breite / Spielbare Breite
+        // Das sorgt dafür, dass der Rand links/rechts aus dem Bild geschoben wird.
+        const scale = windowWidth / playableWidth;
+        
+        container.style.transform = `scale(${scale})`;
+        
+        // Hinweis: CSS transform-origin ist im Portrait Mode auf 'top center' gesetzt,
+        // und der Body zentriert horizontal. Das passt perfekt zum Cropping.
+    } else {
+        // DESKTOP / LANDSCAPE:
+        // Klassisches "Fit Inside" - alles muss sichtbar sein.
+        const scaleX = (windowWidth - 20) / totalGameWidth;
+        const scaleY = (windowHeight - 20) / totalGameHeight;
+        
+        const scale = Math.min(scaleX, scaleY);
+        container.style.transform = `scale(${scale})`;
+    }
 }
+
 window.addEventListener('resize', resizeGame);
 resizeGame();
 
+// --- SPIEL STARTEN ---
 window.startGame = function() {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
     document.getElementById('ui-layer').classList.remove('hidden');
     document.getElementById('pause-btn').classList.remove('hidden'); 
     
-    // Show Controls
+    // Controls sichtbar machen
     document.getElementById('mobile-controls').classList.remove('hidden');
 
     resizeGame(); 
@@ -166,13 +194,13 @@ function gameLoop() {
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// --- SMART D-PAD LOGIC ---
+// --- NEW MOBILE CONTROLS (GAME BOY D-PAD) ---
 (function setupMobileControls() {
     const dpadArea = document.getElementById('dpad-area');
     const btnBomb = document.getElementById('btn-bomb');
     const btnChange = document.getElementById('btn-change');
     
-    // UI Elements for Feedback
+    // Elements for visual feedback
     const armUp = document.querySelector('.dpad-up');
     const armDown = document.querySelector('.dpad-down');
     const armLeft = document.querySelector('.dpad-left');
@@ -188,7 +216,6 @@ function gameLoop() {
         e.preventDefault(); 
         const touch = e.touches[0]; if (!touch) return;
 
-        // Bounding Box des D-Pads
         const rect = dpadArea.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -199,9 +226,8 @@ function gameLoop() {
 
         resetKeys();
 
-        if (dist < 15) return; // Deadzone in der Mitte
+        if (dist < 15) return; // Deadzone
 
-        // Sektoren (45 Grad gedreht)
         if (angle > -135 && angle < -45) {
             state.keys[keyBindings.UP] = true;
             if(armUp) armUp.classList.add('active');
