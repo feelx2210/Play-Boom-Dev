@@ -41,17 +41,19 @@ function resizeGame() {
     if (isMobile) {
         // Auf Mobile erzwingen wir den Crop-Mode für maximalen Zoom
         finalScale = scaleCrop;
-        // Platzfresser entfernen
+        // Platzfresser entfernen und Klasse für CSS-Positionierung setzen
         container.style.border = 'none';
         container.style.boxShadow = 'none';
+        container.classList.add('mobile-zoomed');
     } else {
         // Desktop: Nur Croppen, wenn das Fenster wirklich zu klein ist
         if (scaleFull < 1) finalScale = scaleCrop;
-        // Styles zurücksetzen (falls man am Desktop die Fenstergröße ändert)
+        // Styles zurücksetzen
         if (state.currentLevel) {
              container.style.border = `4px solid ${state.currentLevel.border}`;
              container.style.boxShadow = `0 0 20px ${state.currentLevel.glow}`;
         }
+        container.classList.remove('mobile-zoomed');
     }
 
     container.style.transform = `scale(${finalScale})`;
@@ -68,16 +70,16 @@ window.startGame = function() {
     
     document.getElementById('mobile-controls').classList.remove('hidden');
 
-    // Level laden & Scaling sofort anwenden
+    // Level laden
     const userChar = CHARACTERS[state.selectedCharIndex];
     state.currentLevel = LEVELS[state.selectedLevelKey];
 
-    // Styles setzen (können durch resizeGame auf Mobile wieder entfernt werden)
+    // Styles initial setzen
     const container = document.getElementById('game-container');
     container.style.boxShadow = `0 0 20px ${state.currentLevel.glow}`;
     container.style.borderColor = state.currentLevel.border;
     
-    // ZWINGEND: Erst Level setzen, dann Resizen (wegen Border-Logik)
+    // ZWINGEND: Erst Level setzen, dann Resizen (damit Border-Logik greift)
     resizeGame(); 
 
     clearLevelCache();
