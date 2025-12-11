@@ -14,55 +14,57 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// --- RESPONSIVE SCALING LOGIC ---
+// --- RESPONSIVE SCALING LOGIC (SMART CROP) ---
 function resizeGame() {
     const container = document.getElementById('game-container');
     if (!container) return;
 
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    const totalGameWidth = GRID_W * TILE_SIZE; // 720px
-    const totalGameHeight = GRID_H * TILE_SIZE; // 720px
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
     
-    // Check Portrait Mode
-    if (windowHeight > windowWidth) {
-        // MOBILE ZOOM FIX:
-        // Wir wollen die äußeren Rand-Kacheln (Walls) links und rechts abschneiden,
-        // damit das Spielfeld größer wirkt.
-        // Das Grid ist 15 Tiles breit. Wir wollen, dass 13 Tiles (Inneres) den Screen füllen.
-        const playableTilesX = GRID_W - 2; // 13 Tiles
-        const playableWidth = playableTilesX * TILE_SIZE; // 624px
-        
-        // Scale berechnen: Screen-Breite / Spielbare Breite
-        // Das sorgt dafür, dass der Rand links/rechts aus dem Bild geschoben wird.
-        const scale = windowWidth / playableWidth;
-        
-        container.style.transform = `scale(${scale})`;
-        
-        // Hinweis: CSS transform-origin ist im Portrait Mode auf 'top center' gesetzt,
-        // und der Body zentriert horizontal. Das passt perfekt zum Cropping.
-    } else {
-        // DESKTOP / LANDSCAPE:
-        // Klassisches "Fit Inside" - alles muss sichtbar sein.
-        const scaleX = (windowWidth - 20) / totalGameWidth;
-        const scaleY = (windowHeight - 20) / totalGameHeight;
-        
-        const scale = Math.min(scaleX, scaleY);
-        container.style.transform = `scale(${scale})`;
+    // Das gesamte Spiel ist 15x15 Tiles (720px)
+    const fullSize = GRID_W * TILE_SIZE; 
+    
+    // Der "Active Area" (ohne die unzerstörbaren Randsteine) ist 13x13 Tiles
+    // Wir wollen auf Mobile in diesen Bereich reinzoomen.
+    const playableSize = (GRID_W - 2) * TILE_SIZE; // 624px
+
+    // 1. Scale berechnen, um ALLES anzuzeigen (für Desktop)
+    // Wir lassen 20px Rand zur Sicherheit
+    const scaleFull = Math.min((winW - 20) / fullSize, (winH - 20) / fullSize);
+
+    // 2. Scale berechnen, um NUR DEN SPIELBEREICH anzuzeigen (für Mobile)
+    // Ränder werden hier bewusst abgeschnitten (gecroppt)
+    const scaleCrop = Math.min(winW / playableSize, winH / playableSize);
+
+    // ENTSCHEIDUNG: Mobile oder Desktop?
+    // Wenn der Screen kleiner ist als das Spiel (720px), sind wir wahrscheinlich auf Mobile.
+    // Dann nutzen wir den Crop-Scale, um das Bild zu füllen.
+    // Auf großen Desktops (>720px) nutzen wir den Full-Scale, damit man alles sieht.
+    
+    let finalScale = scaleFull;
+    
+    // Einfache Heuristik: Wenn wir zoomen müssen (<1), dann nehmen wir den aggressiveren Crop-Zoom
+    if (scaleFull < 1) {
+        finalScale = scaleCrop;
     }
+
+    container.style.transform = `scale(${finalScale})`;
+    
+    // Hinweis: Die Ausrichtung (Zentrierung oder Top-Align) wird via CSS geregelt.
+    // Im Portrait Mode erzwingt CSS 'transform-origin: top center', im Landscape 'center center'.
+    // Das sorgt dafür, dass beim Croppen die Mitte (das Spielfeld) sichtbar bleibt.
 }
 
 window.addEventListener('resize', resizeGame);
 resizeGame();
 
-// --- SPIEL STARTEN ---
 window.startGame = function() {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
     document.getElementById('ui-layer').classList.remove('hidden');
     document.getElementById('pause-btn').classList.remove('hidden'); 
     
-    // Controls sichtbar machen
     document.getElementById('mobile-controls').classList.remove('hidden');
 
     resizeGame(); 
