@@ -30,15 +30,20 @@ export class Player {
         this.deathTimer = 0;
         
         // Stats
-        this.speed = 2; 
+        this.speed = 2; // Basis-Geschwindigkeit
         this.maxBombs = 1;
         this.activeBombs = 0;
         this.bombRange = 1;
         
-        // PowerUps
+        // NEU: Speed System
+        this.speedMultiplier = 1; 
+        this.speedTimer = 0;
+
+        // PowerUps & Timer (20s = 1200 frames)
         this.hasNapalm = false; this.napalmTimer = 0;
         this.hasRolling = false; this.rollingTimer = 0;
         this.currentBombMode = BOMB_MODES.STANDARD;
+        
         this.activeCurses = []; 
 
         // Animation / Movement
@@ -46,8 +51,8 @@ export class Player {
         this.bobTimer = 0;
         
         // Input Flags
-        this.bombLock = false;   // Verhindert Dauerfeuer beim Gedrückthalten
-        this.changeLock = false; // Verhindert schnelles Wechseln
+        this.bombLock = false;
+        this.changeLock = false;
 
         // Bot Stuff
         this.targetX = x; this.targetY = y; 
@@ -55,20 +60,54 @@ export class Player {
         this.botDir = {x:0, y:0};
     }
 
+    // NEU: Zentrale Logik für Speed-Boosts (Skill & Fluch)
+    activateSpeedBoost(multiplier, duration, label) {
+        // "Schnell" hebt "Langsam" auf
+        if (this.hasCurse('slow')) {
+            this.activeCurses = this.activeCurses.filter(c => c.type !== 'slow');
+            createFloatingText(this.x, this.y, "NORMALIZED!", "#ffffff");
+        }
+
+        if (this.speedTimer > 0) {
+            // Wenn bereits aktiv: Nur Zeit verlängern, Multiplikator NICHT ändern
+            this.speedTimer += duration;
+            createFloatingText(this.x, this.y, "EXTENDED!", "#ffff00");
+        } else {
+            // Neuer Boost
+            this.speedMultiplier = multiplier;
+            this.speedTimer = duration;
+            createFloatingText(this.x, this.y, label, "#ffff00");
+        }
+    }
+
     addCurse(type) {
-        if (type === 'speed_rush') this.activeCurses = this.activeCurses.filter(c => c.type !== 'slow');
-        else if (type === 'slow') this.activeCurses = this.activeCurses.filter(c => c.type !== 'speed_rush');
+        // Spezialfall Speed-Fluch (wird jetzt über activateSpeedBoost geregelt)
+        if (type === 'speed_rush') {
+            this.activateSpeedBoost(3, 600, "SPEED CURSE!"); // 3x Speed, 10s
+            return;
+        }
+
+        // Konfliktlösung: "Langsam" hebt "Schnell" auf
+        if (type === 'slow') {
+            if (this.speedTimer > 0) {
+                this.speedTimer = 0;
+                this.speedMultiplier = 1;
+                createFloatingText(this.x, this.y, "SLOWED DOWN!", "#cccccc");
+            }
+        }
 
         const existing = this.activeCurses.find(c => c.type === type);
-        if (existing) existing.timer = 600;
-        else this.activeCurses.push({ type: type, timer: 600 });
+        if (existing) {
+            existing.timer = 600; // 10s Reset
+        } else {
+            this.activeCurses.push({ type: type, timer: 600 }); // 10s Neu
+        }
     }
 
     hasCurse(type) {
         return this.activeCurses.some(c => c.type === type);
     }
 
-    // NEU: update() erhält das Input-Objekt aus game.js
     update(input) {
         if (!this.alive) {
             if (this.deathTimer > 0) this.deathTimer--;
@@ -78,17 +117,18 @@ export class Player {
         if (this.id === 1) updateHud(this);
         this.bobTimer += 0.2;
 
-        // --- TIMER UPDATE ---
         this.updateTimers();
 
-        // --- MOVEMENT SPEED ---
-        let currentSpeed = this.speed;
-        if (this.hasCurse('speed_rush')) currentSpeed *= 2;
-        else if (this.hasCurse('slow')) currentSpeed *= 0.5;
-
+        // --- GESCHWINDIGKEIT BERECHNEN ---
+        let currentSpeed = this.speed * this.speedMultiplier;
+        
+        // Wasser verlangsamt immer (multiplikativ)
         const gx = Math.round(this.x / TILE_SIZE);
         const gy = Math.round(this.y / TILE_SIZE);
         if (state.grid[gy] && state.grid[gy][gx] === TYPES.WATER) currentSpeed *= 0.5;
+        
+        // Slow Fluch halbiert
+        if (this.hasCurse('slow')) currentSpeed *= 0.5;
 
         // --- INPUT / AI ---
         if (this.isBot) {
@@ -101,6 +141,7 @@ export class Player {
     }
 
     updateTimers() {
+        // Skills: 20 Sekunden (1200 Frames)
         if (this.hasRolling && --this.rollingTimer <= 0) {
             this.hasRolling = false;
             if (this.currentBombMode === BOMB_MODES.ROLLING) this.currentBombMode = BOMB_MODES.STANDARD;
@@ -111,16 +152,25 @@ export class Player {
             if (this.currentBombMode === BOMB_MODES.NAPALM) this.currentBombMode = BOMB_MODES.STANDARD;
             createFloatingText(this.x, this.y, "NAPALM LOST", "#cccccc");
         }
+        
+        // Speed Timer
+        if (this.speedTimer > 0) {
+            this.speedTimer--;
+            if (this.speedTimer <= 0) {
+                this.speedMultiplier = 1;
+                createFloatingText(this.x, this.y, "SPEED NORMAL", "#cccccc");
+            }
+        }
+
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        // Curses
+        // Flüche: 10 Sekunden (600 Frames) - Timer läuft bereits in addCurse Logik
         if (this.activeCurses.length > 0) {
             this.activeCurses.forEach(c => c.timer--);
             const prevCount = this.activeCurses.length;
             this.activeCurses = this.activeCurses.filter(c => c.timer > 0);
             if (prevCount > 0 && this.activeCurses.length === 0) createFloatingText(this.x, this.y, "CURED!", "#00ff00");
             
-            // Random Bomb Curse
             if (this.hasCurse('sickness') && Math.random() < 0.05) this.plantBomb();
         }
     }
@@ -139,7 +189,6 @@ export class Player {
             this.move(dx, dy);
         }
 
-        // Bombe legen (mit Lock, damit man nicht aus Versehen spammt)
         if (input.isDown('BOMB')) {
             if (!this.bombLock) {
                 this.plantBomb();
@@ -149,7 +198,6 @@ export class Player {
             this.bombLock = false;
         }
 
-        // Bomb Typ wechseln (Taste 'X' oder Button)
         if (input.isDown('CHANGE')) {
              if (!this.changeLock) {
                  this.cycleBombType();
@@ -164,23 +212,19 @@ export class Player {
         const size = TILE_SIZE * 0.85; 
         const offset = (TILE_SIZE - size) / 2;
 
-        // Collision Check Helper
         const isBlocked = (x, y) => {
             const gx = Math.floor(x / TILE_SIZE);
             const gy = Math.floor(y / TILE_SIZE);
             if (gx < 0 || gx >= GRID_W || gy < 0 || gy >= GRID_H) return true;
             
-            // Wände blockieren
             if (state.grid[gy][gx] === TYPES.WALL_HARD || state.grid[gy][gx] === TYPES.WALL_SOFT) return true;
             
-            // Bomben blockieren (außer man steht schon drauf/drin)
             const bomb = state.bombs.find(b => b.gx === gx && b.gy === gy);
             if (bomb && !bomb.walkableIds.includes(this.id)) return true;
             
             return false;
         };
 
-        // X-Achse
         if (dx !== 0) {
             const nextX = this.x + dx;
             const xEdge = dx > 0 ? nextX + size + offset : nextX + offset;
@@ -190,13 +234,11 @@ export class Player {
             if (!isBlocked(xEdge, topY) && !isBlocked(xEdge, bottomY)) {
                 this.x = nextX;
             } else {
-                // Corner Sliding (Ecken-Rutschen)
                 if (isBlocked(xEdge, topY) && !isBlocked(xEdge, bottomY)) this.y += this.speed; 
                 else if (!isBlocked(xEdge, topY) && isBlocked(xEdge, bottomY)) this.y -= this.speed;
             }
         }
 
-        // Y-Achse
         if (dy !== 0) {
             const nextY = this.y + dy;
             const yEdge = dy > 0 ? nextY + size + offset : nextY + offset;
@@ -206,7 +248,6 @@ export class Player {
             if (!isBlocked(leftX, yEdge) && !isBlocked(rightX, yEdge)) {
                 this.y = nextY;
             } else {
-                // Corner Sliding
                 if (isBlocked(leftX, yEdge) && !isBlocked(rightX, yEdge)) this.x += this.speed;
                 else if (!isBlocked(leftX, yEdge) && isBlocked(rightX, yEdge)) this.x -= this.speed;
             }
@@ -226,11 +267,9 @@ export class Player {
     }
 
     plantBomb() {
-        // Rollende Bombe stoppen?
         const rollingBomb = state.bombs.find(b => b.owner === this && b.isRolling);
         if (rollingBomb) {
             rollingBomb.isRolling = false;
-            // Snap to Grid
             rollingBomb.gx = Math.round(rollingBomb.px / TILE_SIZE);
             rollingBomb.gy = Math.round(rollingBomb.py / TILE_SIZE);
             rollingBomb.px = rollingBomb.gx * TILE_SIZE;
@@ -247,7 +286,6 @@ export class Player {
         const gy = Math.round(this.y / TILE_SIZE);
         const tile = state.grid[gy][gx];
 
-        // Validierungs-Check: Darf hier eine Bombe hin?
         let canPlant = (tile === TYPES.EMPTY || tile === TYPES.OIL);
         if (state.currentLevel.id === 'jungle' && (tile === TYPES.WATER || tile === TYPES.BRIDGE)) canPlant = true;
 
@@ -266,7 +304,6 @@ export class Player {
             isBlue: isRolling, 
             underlyingTile: tile,
             walkableIds: state.players.filter(p => {
-                // Wer steht gerade drauf? Der darf noch weggehen.
                 const pGx = Math.round(p.x / TILE_SIZE);
                 const pGy = Math.round(p.y / TILE_SIZE);
                 return pGx === gx && pGy === gy;
@@ -299,9 +336,19 @@ export class Player {
         switch(type) {
             case ITEMS.BOMB_UP: this.maxBombs++; createFloatingText(this.x, this.y, "+1 BOMB"); break;
             case ITEMS.RANGE_UP: this.bombRange++; createFloatingText(this.x, this.y, "FIRE UP"); break;
-            case ITEMS.SPEED_UP: this.speed = Math.min(this.speed+1, 8); createFloatingText(this.x, this.y, "SPEED UP"); break;
-            case ITEMS.NAPALM: this.hasNapalm = true; this.napalmTimer = 3600; createFloatingText(this.x, this.y, "NAPALM!", "#ff0000"); break;
-            case ITEMS.ROLLING: this.hasRolling = true; this.rollingTimer = 3600; createFloatingText(this.x, this.y, "ROLLING!", "#ffffff"); break;
+            // 2x Speed, 20 Sekunden
+            case ITEMS.SPEED_UP: this.activateSpeedBoost(2, 1200, "SPEED UP"); break;
+            
+            // Napalm & Rolling: 20 Sekunden
+            case ITEMS.NAPALM: 
+                this.hasNapalm = true; this.napalmTimer = 1200; 
+                createFloatingText(this.x, this.y, "NAPALM!", "#ff0000"); 
+                break;
+            case ITEMS.ROLLING: 
+                this.hasRolling = true; this.rollingTimer = 1200; 
+                createFloatingText(this.x, this.y, "ROLLING!", "#ffffff"); 
+                break;
+                
             case ITEMS.SKULL: 
                 const effects = ['sickness', 'speed_rush', 'slow', 'cant_plant'];
                 const effect = effects[Math.floor(Math.random()*effects.length)];
@@ -322,12 +369,9 @@ export class Player {
         }
         
         const bob = Math.sin(this.bobTimer) * 2; 
-        
-        // Schatten
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.beginPath(); ctx.ellipse(this.x + TILE_SIZE/2, this.y + TILE_SIZE - 5, 10, 5, 0, 0, Math.PI*2); ctx.fill();
         
-        // Sprite
         drawCharacterSprite(ctx, this.x + TILE_SIZE/2, this.y + TILE_SIZE/2 + bob, this.charDef, this.activeCurses.length > 0, this.lastDir);
         ctx.restore();
     }
