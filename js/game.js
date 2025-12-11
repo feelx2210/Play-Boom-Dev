@@ -15,7 +15,7 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// NEU: Zentrale Input-Instanz
+// Zentrale Input-Instanz
 const input = new InputHandler();
 
 // --- RESPONSIVE SCALING (SMART CROP) ---
@@ -46,12 +46,10 @@ window.startGame = function() {
     document.getElementById('ui-layer').classList.remove('hidden');
     document.getElementById('pause-btn').classList.remove('hidden'); 
     
-    // Controls sichtbar machen (InputHandler bindet Events automatisch)
     document.getElementById('mobile-controls').classList.remove('hidden');
 
     resizeGame(); 
 
-    // NEU: Cache leeren & Inputs resetten
     clearLevelCache();
     input.reset();
 
@@ -63,19 +61,10 @@ window.startGame = function() {
     container.style.borderColor = state.currentLevel.border;
     document.getElementById('p1-name').innerText = userChar.name.toUpperCase();
 
-    // Reset State
-    state.grid = []; 
-    state.items = []; 
-    state.bombs = []; 
-    state.particles = []; 
-    state.players = [];
-    state.isGameOver = false; 
-    state.isPaused = false;
-    state.hellFireTimer = 0; 
-    state.hellFirePhase = 'IDLE'; 
-    state.hellFireActive = false; 
-    state.iceTimer = 0; 
-    state.iceSpawnCountdown = 1200; 
+    state.grid = []; state.items = []; state.bombs = []; state.particles = []; state.players = [];
+    state.isGameOver = false; state.isPaused = false;
+    state.hellFireTimer = 0; state.hellFirePhase = 'IDLE'; state.hellFireActive = false; 
+    state.iceTimer = 0; state.iceSpawnCountdown = 1200; 
 
     // Level Generierung
     for (let y = 0; y < GRID_H; y++) {
@@ -134,8 +123,8 @@ window.addEventListener('keydown', e => {
     // Pause / Globales
     if (e.key.toLowerCase() === 'p' || e.code === 'Escape') togglePause();
     
-    // Fallback: Bomben-Wechsel via Keyboard (Optional, könnte auch in InputHandler)
-    if (e.code === keyBindings.CHANGE && state.players[0]) state.players[0].cycleBombType();
+    // FIX: Redundanter 'CHANGE' Listener entfernt.
+    // Das macht jetzt der Player Loop via InputHandler.
 });
 
 function update() {
@@ -188,13 +177,12 @@ function update() {
         if (p.life <= 0) state.particles.splice(i, 1);
     }
     
-    // Players (mit neuem Input Handler)
+    // Players (Input Update)
     state.players.forEach(p => { 
         if (p.inFire) { p.fireTimer++; if (p.fireTimer >= 30) { killPlayer(p); p.fireTimer = 0; } } else p.fireTimer = 0; 
     });
     
     let aliveCount = 0; let livingPlayers = []; 
-    // NEU: Input durchreichen
     state.players.forEach(p => { p.update(input); if (p.alive) { aliveCount++; livingPlayers.push(p); } });
 
     // Infection
