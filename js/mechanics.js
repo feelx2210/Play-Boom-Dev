@@ -1,28 +1,45 @@
 import { state } from './state.js';
-import { TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER, TILE_SIZE, GRID_W, GRID_H } from './constants.js';
+import { TYPES, ITEMS, BOOST_PADS, HELL_CENTER, TILE_SIZE, GRID_W, GRID_H } from './constants.js';
 import { createFloatingText } from './utils.js';
 
-// ... (Bestehende Imports und Funktionen bleiben erhalten) ...
+const DIRS = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
+
+// Helper: Erzeugt Trümmer-Partikel (für Wände, Items, Spieler)
+function spawnDebris(x, y, count, color, speed = 2, size = 3) {
+    const cx = x * TILE_SIZE + TILE_SIZE/2;
+    const cy = y * TILE_SIZE + TILE_SIZE/2;
+    for(let i=0; i<count; i++) {
+        state.particles.push({ 
+            x: cx, y: cy, 
+            vx: (Math.random()-0.5) * speed, 
+            vy: (Math.random()-0.5) * speed, 
+            life: 30 + Math.random() * 30, 
+            color: color, 
+            size: Math.random() * size 
+        });
+    }
+}
 
 export function triggerHellFire() {
     const duration = 100; 
     const range = 5; 
-    const dirs = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
-    dirs.forEach(d => {
+    
+    DIRS.forEach(d => {
         for (let i = 1; i <= range; i++) {
-            const tx = HELL_CENTER.x + (d.x * i); const ty = HELL_CENTER.y + (d.y * i);
+            const tx = HELL_CENTER.x + (d.x * i); 
+            const ty = HELL_CENTER.y + (d.y * i);
             if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) break;
-            const tile = state.grid[ty][tx];
-            let type = (i === range) ? 'end' : 'middle';
             
+            const tile = state.grid[ty][tx];
             if (tile === TYPES.WALL_HARD) break;
-            else if (tile === TYPES.WALL_SOFT) { 
-                type = 'end';
+            
+            const type = (i === range) ? 'end' : 'middle';
+            
+            if (tile === TYPES.WALL_SOFT) { 
                 destroyWall(tx, ty); 
-                createFire(tx, ty, duration, false, type, d); 
-                break; 
-            } 
-            else { 
+                createFire(tx, ty, duration, false, 'end', d); 
+                break; // Feuer stoppt an Wand
+            } else { 
                 destroyItem(tx, ty); 
                 createFire(tx, ty, duration, false, type, d); 
             }
@@ -32,102 +49,86 @@ export function triggerHellFire() {
 
 export function explodeBomb(b) {
     b.owner.activeBombs--; 
+    
+    // Grid aufräumen (wenn Bombe nicht rollt, Kachel wiederherstellen)
     if (!b.isRolling) {
-        const fallbackTile = TYPES.EMPTY;
-        state.grid[b.gy][b.gx] = (b.underlyingTile !== undefined) ? b.underlyingTile : fallbackTile;
+        state.grid[b.gy][b.gx] = (b.underlyingTile !== undefined) ? b.underlyingTile : TYPES.EMPTY;
     }
     
     const isBoostPad = (state.currentLevel.id === 'hell' || state.currentLevel.id === 'ice') && BOOST_PADS.some(p => p.x === b.gx && p.y === b.gy);
     const isOilSource = (b.underlyingTile === TYPES.OIL);
     const range = (isBoostPad || isOilSource) ? 15 : b.range; 
     
-    let centerNapalm = b.napalm;
-    let centerIsOil = isOilSource;
-    let centerDuration = 60;
-
-    if (isOilSource) centerDuration = 720; 
-    else if (b.napalm) centerDuration = 720; 
-
-    if (b.underlyingTile === TYPES.WATER) {
-        centerNapalm = false;
-        centerIsOil = false;
-        centerDuration = 60; 
-    }
+    // Zentrum-Logik
+    let centerDur = (isOilSource || b.napalm) ? 720 : 60;
+    if (b.underlyingTile === TYPES.WATER) centerDur = 60; // Wasser löscht Napalm
 
     destroyItem(b.gx, b.gy); 
     extinguishNapalm(b.gx, b.gy); 
-    createFire(b.gx, b.gy, centerDuration, centerNapalm, 'center', null, centerIsOil);
+    createFire(b.gx, b.gy, centerDur, b.napalm, 'center', null, isOilSource);
     
-    const dirs = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
-    dirs.forEach(d => {
+    // Strahlen in 4 Richtungen
+    DIRS.forEach(d => {
         for (let i = 1; i <= range; i++) {
-            const tx = b.gx + (d.x * i); const ty = b.gy + (d.y * i);
+            const tx = b.gx + (d.x * i); 
+            const ty = b.gy + (d.y * i);
             if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) break;
+            
             const tile = state.grid[ty][tx];
-            
-            let tileIsOil = (tile === TYPES.OIL);
-            let tileNapalm = b.napalm;
-            let tileIsOilFire = tileIsOil; 
-            
-            let tileDuration = 60; 
-            if (tileIsOil) tileDuration = 720; 
-            else if (tileNapalm) tileDuration = 720; 
-
-            if (tile === TYPES.WATER) {
-                tileNapalm = false;
-                tileIsOilFire = false;
-                tileDuration = 60;
-            }
-
-            let type = (i === range) ? 'end' : 'middle';
-
             if (tile === TYPES.WALL_HARD) break;
-            else if (tile === TYPES.WALL_SOFT) { 
-                type = 'end';
+
+            // Logik für Feuer-Art
+            const isTileOil = (tile === TYPES.OIL);
+            let dur = (isTileOil || b.napalm) ? 720 : 60;
+            let useNapalm = b.napalm;
+            
+            if (tile === TYPES.WATER) { useNapalm = false; dur = 60; }
+
+            const type = (i === range) ? 'end' : 'middle';
+
+            if (tile === TYPES.WALL_SOFT) { 
                 destroyWall(tx, ty); 
                 extinguishNapalm(tx, ty); 
-                createFire(tx, ty, tileDuration, tileNapalm, type, d, tileIsOilFire); 
-                break; 
+                createFire(tx, ty, dur, useNapalm, 'end', d, isTileOil); 
+                break; // Stoppt hier
             } else { 
                 destroyItem(tx, ty); 
                 extinguishNapalm(tx, ty); 
-                createFire(tx, ty, tileDuration, tileNapalm, type, d, tileIsOilFire); 
+                createFire(tx, ty, dur, useNapalm, type, d, isTileOil); 
             }
         }
     });
 }
 
 export function extinguishNapalm(gx, gy) { 
-    state.particles.forEach(p => { 
-        if (p.isFire && p.isNapalm && p.gx === gx && p.gy === gy) p.life = 0; 
-    }); 
+    // Sucht existierendes Napalm an dieser Stelle und löscht es
+    const existing = state.particles.find(p => p.isFire && p.isNapalm && p.gx === gx && p.gy === gy);
+    if (existing) existing.life = 0;
 }
 
 export function destroyItem(x, y) { 
     if (state.items[y][x] !== ITEMS.NONE) { 
         state.items[y][x] = ITEMS.NONE; 
         createFloatingText(x * TILE_SIZE, y * TILE_SIZE, "ASHES", "#555555"); 
-        for(let i=0; i<5; i++) state.particles.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2, life: 30, color: '#333333', size: Math.random()*3 }); 
+        spawnDebris(x, y, 5, '#333333');
     } 
 }
 
 export function createFire(gx, gy, duration, isNapalm = false, type = 'center', dir = null, isOilFire = false) { 
     state.particles.push({ 
-        gx: gx, 
-        gy: gy, 
+        gx, gy, 
         isFire: true, 
-        isNapalm: isNapalm, 
-        isOilFire: isOilFire, 
+        isNapalm, 
+        isOilFire, 
         life: duration, 
         maxLife: duration,
-        type: type, 
-        dir: dir    
+        type, dir    
     }); 
 }
 
 export function destroyWall(x, y) { 
     state.grid[y][x] = TYPES.EMPTY; 
-    for(let i=0; i<5; i++) state.particles.push({ x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, life: 20, color: '#882222', size: Math.random()*5 }); 
+    spawnDebris(x, y, 6, '#882222', 4, 5);
 }
 
 export function killPlayer(p) { 
@@ -135,44 +136,32 @@ export function killPlayer(p) {
     p.alive = false; 
     p.deathTimer = 90; 
     createFloatingText(p.x, p.y, "ELIMINATED", "#ff0000"); 
+    
+    // Pixel-Blut/Trümmer an der genauen Pixel-Position des Spielers
+    const cx = p.x + 24; const cy = p.y + 24;
     for(let i=0; i<15; i++) { 
-        state.particles.push({ x: p.x + 24, y: p.y + 24, vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6, life: 60, color: '#666666', size: 4 }); 
+        state.particles.push({ 
+            x: cx, y: cy, 
+            vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6, 
+            life: 60, color: '#666666', size: 4 
+        }); 
     }
 }
 
-// --- NEU: EIS-SPAWN LOGIK ---
 export function spawnRandomIce() {
-    // Versuche 50x eine freie Stelle zu finden
     for(let i=0; i<50; i++) {
-        // Zufällige Koordinaten (Rand ausschließen)
         let x = Math.floor(Math.random() * (GRID_W - 2)) + 1;
         let y = Math.floor(Math.random() * (GRID_H - 2)) + 1;
 
-        // 1. Muss leer sein
         if (state.grid[y][x] !== TYPES.EMPTY) continue;
         
-        // 2. Darf kein Spieler drauf stehen
-        let blockedByPlayer = state.players.some(p => Math.round(p.x/TILE_SIZE) === x && Math.round(p.y/TILE_SIZE) === y);
-        if (blockedByPlayer) continue;
-
-        // 3. Darf keine Bombe dort sein
-        let blockedByBomb = state.bombs.some(b => b.gx === x && b.gy === y);
-        if (blockedByBomb) continue;
-
-        // 4. Darf kein Feuer dort sein
-        let blockedByFire = state.particles.some(p => p.isFire && p.gx === x && p.gy === y);
-        if (blockedByFire) continue;
+        const blockedByEntity = state.players.some(p => Math.round(p.x/TILE_SIZE) === x && Math.round(p.y/TILE_SIZE) === y) ||
+                                state.bombs.some(b => b.gx === x && b.gy === y) ||
+                                state.particles.some(p => p.isFire && p.gx === x && p.gy === y);
+                                
+        if (blockedByEntity) continue;
         
-        // Valid! Starte Animation
-        // Wir erzeugen einen "Freezing"-Partikel. Wenn dieser stirbt (nach der Animation),
-        // wird die Wand gesetzt (Logik in game.js update loop).
-        state.particles.push({
-            type: 'freezing',
-            gx: x, 
-            gy: y,
-            life: 60, // 1 Sekunde Animation
-            maxLife: 60
-        });
-        return; // Erfolgreich gestartet
+        state.particles.push({ type: 'freezing', gx: x, gy: y, life: 60, maxLife: 60 });
+        return;
     }
 }

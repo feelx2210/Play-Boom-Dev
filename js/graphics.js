@@ -2,6 +2,7 @@ import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CEN
 import { state } from './state.js';
 import { drawAllParticles } from './render_particles.js';
 
+// --- SPRITE CACHING (Characters) ---
 const spriteCache = {};
 
 function getCachedSprite(charDef, d, isCursed) {
@@ -13,6 +14,7 @@ function getCachedSprite(charDef, d, isCursed) {
     const ctx = c.getContext('2d');
     ctx.translate(24, 24);
 
+    // Charakter-Zeichenlogik (Identisch zum Original)
     if (charDef.id === 'lucifer') {
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
@@ -51,7 +53,6 @@ function getCachedSprite(charDef, d, isCursed) {
     }
     
     // FIX: Blink-Logik aus dem Cache entfernt. 
-    // Wenn isCursed hier true ist, wird IMMER der weiße Overlay gezeichnet.
     if (isCursed) { 
         ctx.globalCompositeOperation = 'source-atop'; 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; 
@@ -63,7 +64,134 @@ function getCachedSprite(charDef, d, isCursed) {
     return c;
 }
 
-// --- EXPORTIERTE ZEICHENFUNKTIONEN ---
+// --- LEVEL CACHING ---
+let cachedLevelCanvas = null;
+let lastLevelId = null;
+
+export function clearLevelCache() {
+    cachedLevelCanvas = null;
+    lastLevelId = null;
+}
+
+function bakeStaticLevel(levelDef) {
+    const c = document.createElement('canvas');
+    c.width = GRID_W * TILE_SIZE;
+    c.height = GRID_H * TILE_SIZE;
+    const ctx = c.getContext('2d');
+
+    // 1. Hintergrund
+    ctx.fillStyle = levelDef.bg;
+    ctx.fillRect(0, 0, c.width, c.height);
+
+    // 2. Boden-Details (Hell/Ice)
+    if (levelDef.id === 'hell') {
+         ctx.fillStyle = 'rgba(80, 60, 60, 0.2)';
+         for (let y = 0; y < GRID_H; y++) {
+            for (let x = 0; x < GRID_W; x++) {
+                if (Math.random() < 0.2) ctx.fillRect(x * TILE_SIZE + Math.random()*40, y * TILE_SIZE + Math.random()*40, 3, 3);
+            }
+         }
+    } else if (levelDef.id === 'ice') {
+        for (let i = 0; i < 50; i++) {
+             let sx = (Math.sin(i * 123.45) * 43758.5453) % 1 * c.width;
+             let sy = (Math.cos(i * 678.90) * 12345.6789) % 1 * c.height;
+             if (sx < 0) sx *= -1; if (sy < 0) sy *= -1;
+             ctx.fillStyle = i % 2 === 0 ? '#6688aa' : '#ffffff'; ctx.fillRect(sx, sy, 2, 2);
+        }
+    }
+
+    // 3. Grid Lines
+    ctx.strokeStyle = levelDef.grid; ctx.lineWidth = 1; ctx.beginPath();
+    for(let i=0; i<=GRID_W; i++) { ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, c.height); }
+    for(let i=0; i<=GRID_H; i++) { ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(c.width, i*TILE_SIZE); }
+    ctx.stroke();
+
+    // 4. Statische Elemente (Wände, Boden-Tiles)
+    for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) {
+            const px = x * TILE_SIZE; const py = y * TILE_SIZE;
+            const tile = state.grid[y][x];
+
+            // Hard Walls (Unzerstörbar)
+            if (tile === TYPES.WALL_HARD) {
+                if (levelDef.id === 'ice') {
+                    ctx.fillStyle = '#4466ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#6688ff'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
+                    ctx.fillStyle = '#2244aa'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
+                    ctx.fillStyle = '#ccffff'; ctx.fillRect(px + 8, py + 8, 8, 8);
+                } else if (levelDef.id === 'jungle') {
+                    ctx.fillStyle = '#666'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, TILE_SIZE/2-2, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2-5, py+TILE_SIZE/2-5, 10, 0, Math.PI*2); ctx.fill();
+                } else if (levelDef.id === 'hell') {
+                    ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#222'; ctx.fillRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
+                    ctx.fillStyle = '#111'; ctx.fillRect(px+6, py+6, 4, 4); ctx.fillRect(px+38, py+6, 4, 4); ctx.fillRect(px+6, py+38, 4, 4); ctx.fillRect(px+38, py+38, 4, 4);
+                } else if (levelDef.id === 'stone') {
+                    ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#222'; ctx.lineWidth = 2; ctx.strokeRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
+                    ctx.fillStyle = '#333'; ctx.fillRect(px+10, py+10, TILE_SIZE-20, TILE_SIZE-20);
+                } else {
+                    ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
+                }
+            } 
+            // Boden-Objekte (Wasser, Brücken, Öl, Pads)
+            else if (tile === TYPES.WATER) {
+                ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
+            } else if (tile === TYPES.BRIDGE) {
+                ctx.fillStyle = '#4a3b2a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = '#8b5a2b'; ctx.fillRect(px+2, py, 44, TILE_SIZE);
+                ctx.strokeStyle = '#5c3c1e'; ctx.lineWidth = 2; for(let i=0; i<TILE_SIZE; i+=8) { ctx.beginPath(); ctx.moveTo(px+2, py+i); ctx.lineTo(px+46, py+i); ctx.stroke(); }
+            } else if (tile === TYPES.OIL) {
+                // Öl-Pfütze (Static Part)
+                const cx = px + TILE_SIZE / 2; const cy = py + TILE_SIZE / 2;
+                ctx.fillStyle = '#7a6a6a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = '#050202'; ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE*0.38, TILE_SIZE*0.32, Math.PI*0.1, 0, Math.PI*2); ctx.fill();
+                const varyX = (x % 5 - 2) * 3; const varyY = (y % 5 - 2) * 3;
+                ctx.beginPath(); ctx.arc(cx - 12 + varyX, cy + 8 + varyY, 10, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cx + 10 - varyY, cy - 10 + varyX, 9, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
+                ctx.beginPath(); ctx.ellipse(cx - 8, cy - 12, 10, 5, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(cx + 12, cy + 12, 4, 2, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Spezial-Pads (Boost, Direction)
+            if ((levelDef.id === 'hell' || levelDef.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
+                ctx.fillStyle = '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = '#ff0000'; ctx.fillRect(px + 20, py + 8, 8, 32);
+                ctx.beginPath(); ctx.moveTo(px+24, py+2); ctx.lineTo(px+30, py+10); ctx.lineTo(px+18, py+10); ctx.fill(); 
+                ctx.beginPath(); ctx.moveTo(px+24, py+46); ctx.lineTo(px+30, py+38); ctx.lineTo(px+18, py+38); ctx.fill(); 
+                ctx.fillRect(px + 8, py + 20, 32, 8);
+                ctx.beginPath(); ctx.moveTo(px+2, py+24); ctx.lineTo(px+10, py+18); ctx.lineTo(px+10, py+30); ctx.fill(); 
+                ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
+            }
+            
+            const dirPad = DIRECTION_PADS.find(p => p.x === x && p.y === y);
+            if (dirPad) {
+                const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = '#aaaaaa'; ctx.beginPath(); const size = 8; 
+                if (dirPad.dir.y === -1) { ctx.moveTo(cx, cy - size - 2); ctx.lineTo(cx - size, cy + size - 2); ctx.lineTo(cx + size, cy + size - 2); } 
+                else if (dirPad.dir.x === 1) { ctx.moveTo(cx + size + 2, cy); ctx.lineTo(cx - size + 2, cy - size); ctx.lineTo(cx - size + 2, cy + size); } 
+                else if (dirPad.dir.y === 1) { ctx.moveTo(cx, cy + size + 2); ctx.lineTo(cx - size, cy - size + 2); ctx.lineTo(cx + size, cy - size + 2); } 
+                else if (dirPad.dir.x === -1) { ctx.moveTo(cx - size - 2, cy); ctx.lineTo(cx + size - 2, cy - size); ctx.lineTo(cx + size - 2, cy + size); }
+                ctx.fill();
+            }
+        }
+    }
+
+    // Hell Center Fire Pit (Static Base)
+    if (levelDef.hasCentralFire) {
+        const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
+        ctx.fillStyle = '#0a0505'; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
+    }
+
+    return c;
+}
+
+// --- EXPORTIERTE FUNKTIONEN ---
 
 export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = {x:0, y:1}) {
     ctx.save();
@@ -77,12 +205,10 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
-    // FIX: Hier wird entschieden, ob der "blink"-Frame angezeigt werden soll.
     const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
     const sprite = getCachedSprite(charDef, d, showCursedEffect);
     
     ctx.drawImage(sprite, -24, -24);
-
     ctx.restore();
 }
 
@@ -120,114 +246,23 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
+// --- OPTIMIERTE DRAW LOOP ---
 export function draw(ctx, canvas) {
-    ctx.fillStyle = state.currentLevel.bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // --- HELL-BODEN TEXTUR (ASCHE) ---
-    if (state.currentLevel.id === 'hell') {
-        ctx.fillStyle = 'rgba(80, 60, 60, 0.2)'; // Graue "Asche"-Flecken
-        for (let y = 0; y < GRID_H; y++) {
-            for (let x = 0; x < GRID_W; x++) {
-                // Statisches Rauschen basierend auf Koordinaten
-                let seed = x * 37 + y * 13;
-                for (let i = 0; i < 4; i++) {
-                     seed = (seed * 9301 + 49297) % 233280;
-                     const rx = (seed % TILE_SIZE);
-                     seed = (seed * 9301 + 49297) % 233280;
-                     const ry = (seed % TILE_SIZE);
-                     ctx.fillRect(x * TILE_SIZE + rx, y * TILE_SIZE + ry, 3, 3);
-                }
-            }
-        }
+    // 1. Hintergrund aus Cache (ODER neu erstellen, wenn nötig)
+    if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
+        // Falls Cache fehlt oder Level gewechselt -> Neu baken!
+        // Wichtig: Das passiert NACHDEM game.js das Grid initialisiert hat.
+        cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
+        lastLevelId = state.currentLevel.id;
     }
+    // Zeichne das statische Bild (Hintergrund, Hard Walls, Boden)
+    ctx.drawImage(cachedLevelCanvas, 0, 0);
 
-    // --- BOOST PADS (Hell & Ice) ---
-    if (state.currentLevel.id === 'hell' || state.currentLevel.id === 'ice') {
-        BOOST_PADS.forEach(pad => {
-            const px = pad.x * TILE_SIZE; const py = pad.y * TILE_SIZE;
-            ctx.fillStyle = '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-            ctx.fillStyle = '#ff0000'; ctx.fillRect(px + 20, py + 8, 8, 32);
-            ctx.beginPath(); ctx.moveTo(px+24, py+2); ctx.lineTo(px+30, py+10); ctx.lineTo(px+18, py+10); ctx.fill(); 
-            ctx.beginPath(); ctx.moveTo(px+24, py+46); ctx.lineTo(px+30, py+38); ctx.lineTo(px+18, py+38); ctx.fill(); 
-            ctx.fillRect(px + 8, py + 20, 32, 8);
-            ctx.beginPath(); ctx.moveTo(px+2, py+24); ctx.lineTo(px+10, py+18); ctx.lineTo(px+10, py+30); ctx.fill(); 
-            ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
-        });
-    }
-
-    // NEU: Richtungsfelder zeichnen
-    DIRECTION_PADS.forEach(pad => {
-        const cx = pad.x * TILE_SIZE + TILE_SIZE/2;
-        const cy = pad.y * TILE_SIZE + TILE_SIZE/2;
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(pad.x * TILE_SIZE, pad.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-
-        ctx.fillStyle = '#aaaaaa'; 
-        ctx.beginPath();
-        
-        const size = 8; 
-        
-        if (pad.dir.y === -1) { // Oben 
-            ctx.moveTo(cx, cy - size - 2); 
-            ctx.lineTo(cx - size, cy + size - 2); 
-            ctx.lineTo(cx + size, cy + size - 2);
-        } else if (pad.dir.x === 1) { // Rechts 
-            ctx.moveTo(cx + size + 2, cy); 
-            ctx.lineTo(cx - size + 2, cy - size); 
-            ctx.lineTo(cx - size + 2, cy + size);
-        } else if (pad.dir.y === 1) { // Unten 
-            ctx.moveTo(cx, cy + size + 2); 
-            ctx.lineTo(cx - size, cy - size + 2); 
-            ctx.lineTo(cx + size, cy - size + 2);
-        } else if (pad.dir.x === -1) { // Links 
-            ctx.moveTo(cx - size - 2, cy); 
-            ctx.lineTo(cx + size - 2, cy - size); 
-            ctx.lineTo(cx + size - 2, cy + size);
-        }
-        
-        ctx.fill();
-    });
-
-    // --- OIL PADS (Hell only) ---
-    if (state.currentLevel.id === 'hell') {
-        OIL_PADS.forEach(oil => {
-            const px = oil.x * TILE_SIZE; const py = oil.y * TILE_SIZE;
-            const cx = px + TILE_SIZE / 2;
-            const cy = py + TILE_SIZE / 2;
-
-            // 1. Kachel-Hintergrund
-            ctx.fillStyle = '#7a6a6a';
-            ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-
-            // 2. Die unregelmäßige Pfütze
-            ctx.fillStyle = '#050202'; // Tiefschwarz
-
-            // Hauptkörper
-            ctx.beginPath();
-            ctx.ellipse(cx, cy, TILE_SIZE*0.38, TILE_SIZE*0.32, Math.PI*0.1, 0, Math.PI*2);
-            ctx.fill();
-
-            // Variation
-            const varyX = (oil.x % 5 - 2) * 3; 
-            const varyY = (oil.y % 5 - 2) * 3;
-
-            // Ausbuchtungen
-            ctx.beginPath(); ctx.arc(cx - 12 + varyX, cy + 8 + varyY, 10, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx + 10 - varyY, cy - 10 + varyX, 9, 0, Math.PI*2); ctx.fill();
-
-            // 3. Schimmer
-            ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
-            ctx.beginPath(); ctx.ellipse(cx - 8, cy - 12, 10, 5, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(cx + 12, cy + 12, 4, 2, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
-        });
-    }
-
+    // 2. Dynamische Elemente
+    // Hell Center Fire Pit (Dynamic Part)
     if (state.currentLevel.hasCentralFire) {
         const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
         const centerX = cx + TILE_SIZE/2; const centerY = cy + TILE_SIZE/2;
-        ctx.fillStyle = '#0a0505'; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
         if (!state.hellFireActive) {
             ctx.fillStyle = '#332222'; const w = 16; 
             ctx.fillRect(centerX - w/2, cy, w, TILE_SIZE/2); ctx.fillRect(centerX - w/2, centerY, w, TILE_SIZE/2);
@@ -248,59 +283,18 @@ export function draw(ctx, canvas) {
         }
     }
 
-    if (state.currentLevel.id === 'ice') {
-        for (let i = 0; i < 50; i++) {
-             let sx = (Math.sin(i * 123.45) * 43758.5453) % 1 * canvas.width;
-             let sy = (Math.cos(i * 678.90) * 12345.6789) % 1 * canvas.height;
-             if (sx < 0) sx *= -1; if (sy < 0) sy *= -1;
-             ctx.fillStyle = i % 2 === 0 ? '#6688aa' : '#ffffff'; ctx.fillRect(sx, sy, 2, 2);
-        }
-    }
-
-    ctx.strokeStyle = state.currentLevel.grid; ctx.lineWidth = 1; ctx.beginPath();
-    for(let i=0; i<=GRID_W; i++) { ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, canvas.height); }
-    for(let i=0; i<=GRID_H; i++) { ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(canvas.width, i*TILE_SIZE); }
-    ctx.stroke();
-
+    // Soft Walls & Items & Bombs
     for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
             const item = state.items[y][x];
-            if (item !== ITEMS.NONE && state.grid[y][x] !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
-            
-            let tile = state.grid[y][x];
-            if (tile === TYPES.BOMB) {
-                const bomb = state.bombs.find(b => b.gx === x && b.gy === y);
-                if (bomb && bomb.underlyingTile !== undefined) {
-                    tile = bomb.underlyingTile;
-                } else {
-                    tile = TYPES.EMPTY;
-                }
-            }
+            const tile = state.grid[y][x];
 
-            if (tile === TYPES.WALL_HARD) {
-                if (state.currentLevel.id === 'ice') {
-                    ctx.fillStyle = '#4466ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = '#6688ff'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
-                    ctx.fillStyle = '#2244aa'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
-                    ctx.fillStyle = '#ccffff'; ctx.fillRect(px + 8, py + 8, 8, 8);
-                } else if (state.currentLevel.id === 'jungle') {
-                    ctx.fillStyle = '#666'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, TILE_SIZE/2-2, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2-5, py+TILE_SIZE/2-5, 10, 0, Math.PI*2); ctx.fill();
-                } else if (state.currentLevel.id === 'hell') {
-                    ctx.fillStyle = state.currentLevel.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = '#222'; ctx.fillRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
-                    ctx.fillStyle = '#111'; ctx.fillRect(px+6, py+6, 4, 4); ctx.fillRect(px+38, py+6, 4, 4); ctx.fillRect(px+6, py+38, 4, 4); ctx.fillRect(px+38, py+38, 4, 4);
-                } else if (state.currentLevel.id === 'stone') {
-                    ctx.fillStyle = state.currentLevel.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#222'; ctx.lineWidth = 2; ctx.strokeRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
-                    ctx.fillStyle = '#333'; ctx.fillRect(px+10, py+10, TILE_SIZE-20, TILE_SIZE-20);
-                } else {
-                    ctx.fillStyle = state.currentLevel.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
-                    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
-                }
-            } else if (tile === TYPES.WALL_SOFT) {
+            // Items (nur wenn keine Soft Wall drauf ist)
+            if (item !== ITEMS.NONE && tile !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
+
+            // Soft Walls (Beweglich/Zerstörbar)
+            if (tile === TYPES.WALL_SOFT) {
                 if (state.currentLevel.id === 'ice') {
                     ctx.fillStyle = '#88ccff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = '#4488cc'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + 4, py + 4); ctx.lineTo(px + TILE_SIZE - 4, py + TILE_SIZE - 4); ctx.moveTo(px + TILE_SIZE - 4, py + 4); ctx.lineTo(px + 4, py + TILE_SIZE - 4); ctx.stroke();
@@ -321,17 +315,11 @@ export function draw(ctx, canvas) {
                     ctx.fillStyle = state.currentLevel.wallSoft; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.fillStyle = state.currentLevel.wallSoftLight; ctx.fillRect(px+2, py+2, 20, 10); ctx.fillRect(px+26, py+2, 20, 10); ctx.fillRect(px+2, py+14, 10, 10); ctx.fillRect(px+14, py+14, 20, 10); ctx.fillRect(px+36, py+14, 10, 10); ctx.fillRect(px+2, py+26, 20, 10); ctx.fillRect(px+26, py+26, 20, 10);
                 }
-            } else if (tile === TYPES.WATER) {
-                ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
-            } else if (tile === TYPES.BRIDGE) {
-                ctx.fillStyle = '#4a3b2a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#8b5a2b'; ctx.fillRect(px+2, py, 44, TILE_SIZE);
-                ctx.strokeStyle = '#5c3c1e'; ctx.lineWidth = 2; for(let i=0; i<TILE_SIZE; i+=8) { ctx.beginPath(); ctx.moveTo(px+2, py+i); ctx.lineTo(px+46, py+i); ctx.stroke(); }
             }
         }
     }
 
+    // Bomben (über allem Grid-Kram)
     state.bombs.forEach(b => {
         const px = b.px; const py = b.py; const scale = 1 + Math.sin(Date.now() / 100) * 0.1;
         let baseColor = '#444444'; if (state.currentLevel.id === 'jungle') baseColor = '#000000';

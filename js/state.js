@@ -1,23 +1,30 @@
 import { LEVELS } from './constants.js';
 
 export const state = {
+    // Spielfeld-Daten
     grid: [],
     items: [],
     bombs: [],
     particles: [],
     players: [],
+    
+    // Level-Status
     currentLevel: LEVELS.hell,
     selectedCharIndex: 0,
     selectedLevelKey: 'hell',
-    menuState: 0,
+    
+    // Game-Flow Status
+    menuState: 0,       // 0: Char, 1: Level, 2: Start
     isGameOver: false,
     isPaused: false,
+    
+    // Level-Spezifische Timer
     hellFireTimer: 0,
     hellFirePhase: 'IDLE', 
     hellFireActive: false,
-    keys: {},
     
-    // --- NEU: ICE LEVEL LOGIK ---
-    iceTimer: 0,            // Zählt hoch, wie lange wir schon spielen
-    iceSpawnCountdown: 0    // Zählt runter bis zum nächsten "Freeze"
+    iceTimer: 0,
+    iceSpawnCountdown: 0
+    
+    // HINWEIS: 'keys' wurde entfernt -> Nutzt jetzt InputHandler
 };

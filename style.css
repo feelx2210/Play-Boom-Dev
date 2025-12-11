@@ -1,101 +1,136 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
+/* --- VARIABLEN (THEME CONFIG) --- */
+:root {
+    /* Colors */
+    --bg-body: #050505;
+    --bg-game: #000;
+    --bg-overlay: rgba(0, 0, 0, 0.95);
+    
+    --c-primary: #ff3333;       /* Haupttext */
+    --c-accent: #ff0000;        /* Rahmen, Highlights */
+    --c-border: #550000;        /* Dunkler Rahmen */
+    --c-shadow: #550000;        /* Text Schatten */
+    --c-text: #ffffff;
+    --c-text-dim: #dddddd;
+
+    /* Controls (Game Boy Theme) */
+    --c-dpad-base: #777;
+    --c-dpad-dark: #555;
+    --c-btn-action: #cc0000;
+    --c-btn-subtle: #555;
+
+    /* Spacing */
+    --gap-desktop: 15px;
+    --gap-mobile: 5px;
+}
+
 /* --- GLOBAL SETTINGS --- */
 body {
-    background-color: #050505;
-    color: #ff3333;
+    background-color: var(--bg-body);
+    color: var(--c-primary);
     font-family: 'Press Start 2P', cursive;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    margin: 0;
-    overflow: hidden;
-    touch-action: none;
+    display: flex; flex-direction: column; 
+    align-items: center; justify-content: center;
+    width: 100vw; height: 100vh; height: 100dvh;
+    margin: 0; overflow: hidden; touch-action: none;
 }
 
 #game-container {
     position: relative;
-    width: 720px; 
-    height: 720px;
-    box-shadow: 0 0 20px #ff0000;
-    border: 4px solid #550000;
-    background-color: #000;
+    width: 720px; height: 720px;
+    box-shadow: 0 0 20px var(--c-accent);
+    border: 4px solid var(--c-border);
+    background-color: var(--bg-game);
     transform-origin: center center;
-    flex-shrink: 0; 
-    transition: transform 0.2s; 
+    flex-shrink: 0; transition: transform 0.2s; 
 }
 
 canvas { display: block; background: #110000; image-rendering: pixelated; width: 100%; height: 100%; }
 
-/* --- MENU DESKTOP STANDARD --- */
+/* --- MENUS & SCREENS --- */
 .screen {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.95); z-index: 20;
+    background: var(--bg-overlay); z-index: 20;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 
 .menu-content { width: 100%; display: flex; flex-direction: column; align-items: center; }
 
-h1 { font-size: 40px; color: #ff0000; text-shadow: 4px 4px 0 #550000; margin-bottom: 20px; text-align: center; width: 100%; }
-h2 { font-size: 18px; color: #ffffff; margin-top: 15px; margin-bottom: 10px; text-align: center; width: 100%; }
-
-/* Desktop Grid */
-.selection-grid {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 20px;
-    padding: 10px;
-    width: 100%;
-    transition: 0.2s;
-    border: 2px solid transparent;
+h1 { 
+    font-size: 40px; color: var(--c-accent); 
+    text-shadow: 4px 4px 0 var(--c-shadow); 
+    margin-bottom: 20px; text-align: center; width: 100%; 
+}
+h2 { 
+    font-size: 18px; color: var(--c-text); 
+    margin-top: 15px; margin-bottom: 10px; 
+    text-align: center; width: 100%; 
 }
 
-.selection-grid.active-group { border: 2px dashed #ffffff; background: rgba(50, 50, 0, 0.3); opacity: 1; }
+/* --- OPTION CARDS (Desktop Default) --- */
+.selection-grid {
+    display: flex; flex-direction: row; justify-content: center;
+    gap: var(--gap-desktop); margin-bottom: 20px; padding: 10px; width: 100%;
+    transition: 0.2s; border: 2px solid transparent;
+}
+
+/* Desktop Active States */
+.selection-grid.active-group { border: 2px dashed var(--c-text); background: rgba(50, 50, 0, 0.3); opacity: 1; }
 .selection-grid.inactive-group { border: 2px solid transparent; opacity: 0.5; }
 
 .option-card {
     border: 2px solid #555; padding: 10px; cursor: pointer; text-align: center;
-    transition: all 0.3s ease; 
-    width: 100px; 
+    transition: all 0.2s ease; width: 100px; 
     display: flex; flex-direction: column; align-items: center;
-    background: #000;
-    z-index: 1;
+    background: var(--bg-game); z-index: 1;
 }
 
-.option-card.selected { border-color: #ff0000; background: #220000; box-shadow: 0 0 10px #ff0000; z-index: 10; }
+.option-card.selected { 
+    border-color: var(--c-accent); background: #220000; 
+    box-shadow: 0 0 10px var(--c-accent); z-index: 10; 
+}
 .option-card:hover { border-color: #fff; transform: scale(1.05); }
 
 .preview-canvas { margin-bottom: 5px; border: 2px solid #333; background: #000; }
-.card-label { font-size: 10px; color: #ddd; margin-top: 5px; text-transform: uppercase; }
+.card-label { font-size: 10px; color: var(--c-text-dim); margin-top: 5px; text-transform: uppercase; }
 
-.nav-arrow { display: none; }
-.mobile-label { display: none; }
+/* Hide Mobile Elements on Desktop */
+.nav-arrow, .mobile-label { display: none; }
 
+/* --- BUTTONS --- */
 .menu-footer { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; }
+
 button.main-btn {
-    background: #ff0000; color: white; border: none; padding: 15px 40px;
+    background: var(--c-accent); color: white; border: none; padding: 15px 40px;
     font-family: inherit; font-size: 20px; cursor: pointer;
-    box-shadow: 4px 4px 0 #550000; border: 4px solid transparent; display: block; margin: 0;
+    box-shadow: 4px 4px 0 var(--c-shadow); border: 4px solid transparent; 
+    display: block; margin: 0;
 }
-button.main-btn:hover { background: #ff4444; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #550000; }
+button.main-btn:hover { background: #ff4444; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--c-shadow); }
 button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
-button.main-btn.focused { background: #fff; color: #ff0000; border-color: #ff0000; animation: pulse 1s infinite; }
-.btn-secondary { background: #444; color: white; border: none; padding: 10px 20px; font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 15px; box-shadow: 4px 4px 0 #222; display: block; }
+button.main-btn.focused { background: #fff; color: var(--c-accent); border-color: var(--c-accent); animation: pulse 1s infinite; }
+
+.btn-secondary { 
+    background: #444; color: white; border: none; padding: 10px 20px; 
+    font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 15px; 
+    box-shadow: 4px 4px 0 #222; display: block; 
+}
 .btn-secondary:hover { background: #666; box-shadow: 6px 6px 0 #222; }
 
+/* --- UI OVERLAYS (HUD, PAUSE) --- */
 #ui-layer { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; pointer-events: none; z-index: 10; }
-#pause-btn { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; background: rgba(50, 0, 0, 0.8); border: 2px solid #ff0000; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; pointer-events: auto; }
+#pause-btn { 
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; 
+    background: rgba(50, 0, 0, 0.8); border: 2px solid var(--c-accent); 
+    color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; 
+    cursor: pointer; z-index: 100; pointer-events: auto; 
+}
 .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; color: #fff; font-size: 14px; display: flex; gap: 15px; }
 .hidden { display: none !important; }
 
 .controls-list { display: flex; flex-direction: column; gap: 10px; width: 80%; max-width: 400px; }
-.control-row { display: flex; justify-content: space-between; color: #ddd; }
+.control-row { display: flex; justify-content: space-between; color: var(--c-text-dim); }
 .key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; width: 180px; text-align: center; }
 
 /* --- MOBILE CONTROLS (GAME BOY STYLE) --- */
@@ -110,44 +145,37 @@ button.main-btn.focused { background: #fff; color: #ff0000; border-color: #ff000
 #dpad-area { pointer-events: auto; width: 150px; height: 150px; position: relative; display: flex; justify-content: center; align-items: center; }
 #dpad-cross { width: 140px; height: 140px; position: relative; filter: drop-shadow(2px 4px 0 #222); }
 
-/* Die Tasten-Container */
 .dpad-key {
-    position: absolute; background: #777; width: 46px; height: 46px;
+    position: absolute; background: var(--c-dpad-base); width: 46px; height: 46px;
     display: flex; justify-content: center; align-items: center;
     cursor: pointer; pointer-events: none;
     box-shadow: inset 1px 1px 2px rgba(255,255,255,0.3);
 }
 
-/* CSS Dreiecke für die Pfeile (Garantiert Schwarz) */
-.dpad-key::after {
-    content: ''; display: block; width: 0; height: 0; border-style: solid;
-}
-/* Oben */
+/* CSS Triangles for Arrows */
+.dpad-key::after { content: ''; display: block; width: 0; height: 0; border-style: solid; }
 .dpad-up { top: 0; left: 47px; border-radius: 5px 5px 0 0; }
 .dpad-up::after { border-width: 0 10px 16px 10px; border-color: transparent transparent #000 transparent; margin-bottom: 4px; }
-/* Unten */
 .dpad-down { bottom: 0; left: 47px; border-radius: 0 0 5px 5px; }
 .dpad-down::after { border-width: 16px 10px 0 10px; border-color: #000 transparent transparent transparent; margin-top: 4px; }
-/* Links */
 .dpad-left { left: 0; top: 47px; border-radius: 5px 0 0 5px; }
 .dpad-left::after { border-width: 10px 16px 10px 0; border-color: transparent #000 transparent transparent; margin-right: 4px; }
-/* Rechts */
 .dpad-right { right: 0; top: 47px; border-radius: 0 5px 5px 0; }
 .dpad-right::after { border-width: 10px 0 10px 16px; border-color: transparent transparent transparent #000; margin-left: 4px; }
 
 .dpad-center {
     position: absolute; width: 46px; height: 46px; top: 47px; left: 47px;
-    background: #777; z-index: 2; background-image: radial-gradient(circle, #666 15%, transparent 20%);
+    background: var(--c-dpad-base); z-index: 2; 
+    background-image: radial-gradient(circle, #666 15%, transparent 20%);
 }
-.dpad-key.active { background: #555; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); }
-/* Wenn aktiv, Pfeil weiß machen für besseren Kontrast */
+
+.dpad-key.active { background: var(--c-dpad-dark); box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5); }
 .dpad-key.active::after { border-color: transparent transparent #fff transparent; }
 .dpad-down.active::after { border-color: #fff transparent transparent transparent; }
 .dpad-left.active::after { border-color: transparent #fff transparent transparent; }
 .dpad-right.active::after { border-color: transparent transparent transparent #fff; }
 
-
-/* Buttons */
+/* Action Buttons */
 #action-area { pointer-events: auto; position: relative; width: 160px; height: 160px; }
 .control-btn {
     position: absolute; border-radius: 50%;
@@ -159,57 +187,46 @@ button.main-btn.focused { background: #fff; color: #ff0000; border-color: #ff000
 .control-btn:active { transform: translate(3px, 5px); box-shadow: 0 0 0; }
 
 .main-action-btn {
-    width: 90px; height: 90px;
-    background-color: #cc0000; border: none;
-    top: 10px; right: 0;
-    /* NEU: Dunkelgraue Bombe als SVG Data URI */
+    width: 90px; height: 90px; top: 10px; right: 0;
+    background-color: var(--c-btn-action); border: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='15' y='2' width='2' height='4' fill='%23eda855'/%3E%3Ccircle cx='16' cy='18' r='12' fill='%23333333'/%3E%3Ccircle cx='12' cy='14' r='3' fill='%23666666'/%3E%3C/svg%3E");
     background-size: 50px;
 }
 
 .subtle-btn {
-    width: 60px; height: 60px;
-    background-color: #555; border: none;
-    bottom: 10px; left: 10px; box-shadow: 2px 4px 0 #111;
-    /* Pixel Art Swap Icon (SVG Data URI) */
+    width: 60px; height: 60px; bottom: 10px; left: 10px;
+    background-color: var(--c-btn-subtle); border: none; box-shadow: 2px 4px 0 #111;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='32' height='32'%3E%3Cpath fill='%23cccccc' d='M18 4l4 4-4 4V9H6v6H4V7h14zM6 20l-4-4 4-4v3h12v-6h2v8H6z' shape-rendering='crispEdges'/%3E%3C/svg%3E");
     background-size: 30px;
 }
 
-@media (pointer: coarse) {
-    #mobile-controls { display: flex; }
-}
+@media (pointer: coarse) { #mobile-controls { display: flex; } }
 
-/* === MOBILE PORTRAIT LAYOUT (GRID FIX) === */
+/* === MOBILE PORTRAIT LAYOUT (1x4 GRID) === */
 @media (orientation: portrait) {
     body { justify-content: flex-start; }
     #game-container { margin-top: 0 !important; transform-origin: top center !important; }
-    .screen { padding: 40px 0; box-sizing: border-box; }
+    .screen { padding: 30px 0; box-sizing: border-box; }
 
     .menu-content {
         display: flex; flex-direction: column; justify-content: flex-start;
         align-items: center; width: 100%; height: 100%;
-        padding-top: 20px; gap: 20px;
+        padding-top: 10px; gap: 15px;
     }
     .menu-section { width: 100%; display: flex; flex-direction: column; align-items: center; margin: 0; }
-    h1 { font-size: 32px; margin: 0; flex-shrink: 0; }
-    h2 { font-size: 12px; margin: 0 0 10px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
+    h1 { font-size: 32px; margin: 0 0 10px 0; flex-shrink: 0; }
+    h2 { font-size: 14px; margin: 0 0 5px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* WICHTIG: 1x4 GRID Layout */
+    /* 1x4 GRID Layout */
     .selection-grid { 
         display: grid !important; 
         grid-template-columns: repeat(4, 1fr); 
-        gap: 5px;
-        width: 95%; 
-        margin: 0 auto; 
-        padding: 0;
-        border: none !important;
-        background: transparent !important;
+        gap: var(--gap-mobile); width: 95%; margin: 0 auto; padding: 0;
+        border: none !important; background: transparent !important;
     }
 
     .option-card { 
-        display: flex !important;
-        width: auto; padding: 5px; margin: 0;
+        display: flex !important; width: auto; padding: 5px; margin: 0;
         transform: scale(0.9); transform-origin: center top;
     }
     
@@ -233,4 +250,5 @@ button.main-btn.focused { background: #fff; color: #ff0000; border-color: #ff000
     
     #mobile-controls { bottom: 10px; padding: 0 10px; height: 180px; }
 }
+
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }

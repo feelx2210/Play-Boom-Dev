@@ -1,11 +1,11 @@
-import { TILE_SIZE, GRID_W, GRID_H, TYPES, BOMB_MODES, ITEMS, keyBindings, BOOST_PADS } from './constants.js';
+import { TILE_SIZE, GRID_W, GRID_H, TYPES, BOMB_MODES, ITEMS } from './constants.js';
 import { state } from './state.js';
 import { createFloatingText } from './utils.js';
 import { drawCharacterSprite } from './graphics.js';
 import { updateBotLogic } from './ai.js';
 import { updateHud } from './ui.js';
 
-// Helper für Canvas Access required
+// Globaler Canvas Context für Draw-Calls
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -14,190 +14,204 @@ export class Player {
         this.id = id;
         this.charDef = charDef; 
         this.name = charDef.name;
+        
+        // Position
         this.startX = x * TILE_SIZE;
         this.startY = y * TILE_SIZE;
         this.x = this.startX; 
         this.y = this.startY;
-        this.gridX = x; this.gridY = y;
+        this.gridX = x; 
+        this.gridY = y;
+        
+        // Status
         this.isBot = isBot;
         this.alive = true;
         this.invincibleTimer = 0;
-        this.fireTimer = 0;
+        this.deathTimer = 0;
+        
+        // Stats
         this.speed = 2; 
         this.maxBombs = 1;
         this.activeBombs = 0;
         this.bombRange = 1;
+        
+        // PowerUps
         this.hasNapalm = false; this.napalmTimer = 0;
         this.hasRolling = false; this.rollingTimer = 0;
         this.currentBombMode = BOMB_MODES.STANDARD;
-        this.lastDir = {x: 0, y: 1}; 
-        
-        // NEU: Array für aktive Flüche statt einzelner Variable
         this.activeCurses = []; 
-        
-        this.targetX = x; this.targetY = y; this.changeDirTimer = 0; 
+
+        // Animation / Movement
+        this.lastDir = {x: 0, y: 1}; 
         this.bobTimer = 0;
-        this.deathTimer = 0;
         
-        // Bot-spezifische Eigenschaften
+        // Input Flags
+        this.bombLock = false;   // Verhindert Dauerfeuer beim Gedrückthalten
+        this.changeLock = false; // Verhindert schnelles Wechseln
+
+        // Bot Stuff
+        this.targetX = x; this.targetY = y; 
+        this.changeDirTimer = 0; 
         this.botDir = {x:0, y:0};
     }
 
-    // NEU: Methode zum Hinzufügen von Flüchen/Skills
     addCurse(type) {
-        // Konfliktlösung: Schnell vs. Langsam
-        if (type === 'speed_rush') {
-            // Wenn man schnell wird, Langsamkeit entfernen
-            this.activeCurses = this.activeCurses.filter(c => c.type !== 'slow');
-        } else if (type === 'slow') {
-            // Wenn man langsam wird, Schnelligkeit entfernen
-            this.activeCurses = this.activeCurses.filter(c => c.type !== 'speed_rush');
-        }
+        if (type === 'speed_rush') this.activeCurses = this.activeCurses.filter(c => c.type !== 'slow');
+        else if (type === 'slow') this.activeCurses = this.activeCurses.filter(c => c.type !== 'speed_rush');
 
-        // Prüfen, ob Fluch schon existiert
         const existing = this.activeCurses.find(c => c.type === type);
-        if (existing) {
-            existing.timer = 600; // Timer resetten
-        } else {
-            this.activeCurses.push({ type: type, timer: 600 });
-        }
+        if (existing) existing.timer = 600;
+        else this.activeCurses.push({ type: type, timer: 600 });
     }
 
     hasCurse(type) {
         return this.activeCurses.some(c => c.type === type);
     }
 
-    update() {
+    // NEU: update() erhält das Input-Objekt aus game.js
+    update(input) {
         if (!this.alive) {
             if (this.deathTimer > 0) this.deathTimer--;
             return;
         }
 
-        // HUD nur für Spieler 1 aktualisieren
         if (this.id === 1) updateHud(this);
-
         this.bobTimer += 0.2;
 
-        // Timer für Power-Ups
-        if (this.hasRolling) {
-            this.rollingTimer--;
-            if (this.rollingTimer <= 0) {
-                this.hasRolling = false;
-                if (this.currentBombMode === BOMB_MODES.ROLLING) this.currentBombMode = BOMB_MODES.STANDARD;
-                createFloatingText(this.x, this.y, "ROLLING LOST", "#cccccc");
-            }
+        // --- TIMER UPDATE ---
+        this.updateTimers();
+
+        // --- MOVEMENT SPEED ---
+        let currentSpeed = this.speed;
+        if (this.hasCurse('speed_rush')) currentSpeed *= 2;
+        else if (this.hasCurse('slow')) currentSpeed *= 0.5;
+
+        const gx = Math.round(this.x / TILE_SIZE);
+        const gy = Math.round(this.y / TILE_SIZE);
+        if (state.grid[gy] && state.grid[gy][gx] === TYPES.WATER) currentSpeed *= 0.5;
+
+        // --- INPUT / AI ---
+        if (this.isBot) {
+            updateBotLogic(this);
+        } else if (input) {
+            this.handleInput(input, currentSpeed);
         }
-        if (this.hasNapalm) {
-            this.napalmTimer--;
-            if (this.napalmTimer <= 0) {
-                this.hasNapalm = false;
-                if (this.currentBombMode === BOMB_MODES.NAPALM) this.currentBombMode = BOMB_MODES.STANDARD;
-                createFloatingText(this.x, this.y, "NAPALM LOST", "#cccccc");
-            }
+
+        this.checkItem();
+    }
+
+    updateTimers() {
+        if (this.hasRolling && --this.rollingTimer <= 0) {
+            this.hasRolling = false;
+            if (this.currentBombMode === BOMB_MODES.ROLLING) this.currentBombMode = BOMB_MODES.STANDARD;
+            createFloatingText(this.x, this.y, "ROLLING LOST", "#cccccc");
         }
-        
+        if (this.hasNapalm && --this.napalmTimer <= 0) {
+            this.hasNapalm = false;
+            if (this.currentBombMode === BOMB_MODES.NAPALM) this.currentBombMode = BOMB_MODES.STANDARD;
+            createFloatingText(this.x, this.y, "NAPALM LOST", "#cccccc");
+        }
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        // Skull Effekte Management
-        let currentSpeed = this.speed;
-        
-        // Timer aktualisieren und abgelaufene entfernen
+        // Curses
         if (this.activeCurses.length > 0) {
             this.activeCurses.forEach(c => c.timer--);
             const prevCount = this.activeCurses.length;
             this.activeCurses = this.activeCurses.filter(c => c.timer > 0);
+            if (prevCount > 0 && this.activeCurses.length === 0) createFloatingText(this.x, this.y, "CURED!", "#00ff00");
             
-            // Wenn der letzte Fluch ausgelaufen ist -> "CURED!"
-            if (prevCount > 0 && this.activeCurses.length === 0) {
-                createFloatingText(this.x, this.y, "CURED!", "#00ff00");
-            }
+            // Random Bomb Curse
+            if (this.hasCurse('sickness') && Math.random() < 0.05) this.plantBomb();
         }
+    }
 
-        // Effekte anwenden
-        if (this.activeCurses.length > 0) {
-            if (this.hasCurse('sickness')) {
-                if (Math.random() < 0.05) this.plantBomb();
-            }
-            
-            // Geschwindigkeit berechnen
-            // Priorität: Wenn 'speed_rush' da ist, sind wir schnell (weil 'slow' beim Adden entfernt wurde)
-            // Wenn 'slow' da ist, sind wir langsam.
-            if (this.hasCurse('speed_rush')) {
-                currentSpeed *= 2;
-            } else if (this.hasCurse('slow')) {
-                currentSpeed *= 0.5;
-            }
-        }
+    handleInput(input, speed) {
+        let dx = 0, dy = 0;
 
-        // Wasser verlangsamt
-        const gx = Math.round(this.x / TILE_SIZE);
-        const gy = Math.round(this.y / TILE_SIZE);
-        if (gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H) {
-            if (state.grid[gy][gx] === TYPES.WATER) {
-                currentSpeed *= 0.5; 
-            }
-        }
-
-        // BEWEGUNG: Entweder Bot-Logik oder Tastatur
-        if (this.isBot) {
-            updateBotLogic(this);
-        } else {
-            let dx = 0, dy = 0;
-            if (state.keys[keyBindings.UP]) dy = -currentSpeed;
-            if (state.keys[keyBindings.DOWN]) dy = currentSpeed;
-            if (state.keys[keyBindings.LEFT]) dx = -currentSpeed;
-            if (state.keys[keyBindings.RIGHT]) dx = currentSpeed;
-            
-            if (dx !== 0 || dy !== 0) {
-                if (Math.abs(dx) > Math.abs(dy)) this.lastDir = {x: Math.sign(dx), y: 0};
-                else this.lastDir = {x: 0, y: Math.sign(dy)};
-            }
-            
-            if (state.keys[keyBindings.BOMB]) { this.plantBomb(); state.keys[keyBindings.BOMB] = false; } 
-            
+        if (input.isDown('UP')) dy = -speed;
+        if (input.isDown('DOWN')) dy = speed;
+        if (input.isDown('LEFT')) dx = -speed;
+        if (input.isDown('RIGHT')) dx = speed;
+        
+        if (dx !== 0 || dy !== 0) {
+            if (Math.abs(dx) > Math.abs(dy)) this.lastDir = {x: Math.sign(dx), y: 0};
+            else this.lastDir = {x: 0, y: Math.sign(dy)};
             this.move(dx, dy);
         }
 
-        this.checkItem();
+        // Bombe legen (mit Lock, damit man nicht aus Versehen spammt)
+        if (input.isDown('BOMB')) {
+            if (!this.bombLock) {
+                this.plantBomb();
+                this.bombLock = true;
+            }
+        } else {
+            this.bombLock = false;
+        }
+
+        // Bomb Typ wechseln (Taste 'X' oder Button)
+        if (input.isDown('CHANGE')) {
+             if (!this.changeLock) {
+                 this.cycleBombType();
+                 this.changeLock = true;
+             }
+        } else {
+            this.changeLock = false;
+        }
     }
 
     move(dx, dy) {
         const size = TILE_SIZE * 0.85; 
         const offset = (TILE_SIZE - size) / 2;
 
-        const check = (x, y) => {
+        // Collision Check Helper
+        const isBlocked = (x, y) => {
             const gx = Math.floor(x / TILE_SIZE);
             const gy = Math.floor(y / TILE_SIZE);
             if (gx < 0 || gx >= GRID_W || gy < 0 || gy >= GRID_H) return true;
             
-            // Wände
+            // Wände blockieren
             if (state.grid[gy][gx] === TYPES.WALL_HARD || state.grid[gy][gx] === TYPES.WALL_SOFT) return true;
             
-            // Bomben (statisch und rollend)
+            // Bomben blockieren (außer man steht schon drauf/drin)
             const bomb = state.bombs.find(b => b.gx === gx && b.gy === gy);
             if (bomb && !bomb.walkableIds.includes(this.id)) return true;
             
             return false;
         };
 
+        // X-Achse
         if (dx !== 0) {
             const nextX = this.x + dx;
             const xEdge = dx > 0 ? nextX + size + offset : nextX + offset;
             const topY = this.y + offset;
             const bottomY = this.y + size + offset;
-            if (!check(xEdge, topY) && !check(xEdge, bottomY)) this.x = nextX;
-            else if (check(xEdge, topY) && !check(xEdge, bottomY)) this.y += this.speed; // Slide an Ecken
-            else if (!check(xEdge, topY) && check(xEdge, bottomY)) this.y -= this.speed;
+            
+            if (!isBlocked(xEdge, topY) && !isBlocked(xEdge, bottomY)) {
+                this.x = nextX;
+            } else {
+                // Corner Sliding (Ecken-Rutschen)
+                if (isBlocked(xEdge, topY) && !isBlocked(xEdge, bottomY)) this.y += this.speed; 
+                else if (!isBlocked(xEdge, topY) && isBlocked(xEdge, bottomY)) this.y -= this.speed;
+            }
         }
+
+        // Y-Achse
         if (dy !== 0) {
             const nextY = this.y + dy;
             const yEdge = dy > 0 ? nextY + size + offset : nextY + offset;
             const leftX = this.x + offset;
             const rightX = this.x + size + offset;
-            if (!check(leftX, yEdge) && !check(rightX, yEdge)) this.y = nextY;
-            else if (check(leftX, yEdge) && !check(rightX, yEdge)) this.x += this.speed;
-            else if (!check(leftX, yEdge) && check(rightX, yEdge)) this.x -= this.speed;
+            
+            if (!isBlocked(leftX, yEdge) && !isBlocked(rightX, yEdge)) {
+                this.y = nextY;
+            } else {
+                // Corner Sliding
+                if (isBlocked(leftX, yEdge) && !isBlocked(rightX, yEdge)) this.x += this.speed;
+                else if (!isBlocked(leftX, yEdge) && isBlocked(rightX, yEdge)) this.x -= this.speed;
+            }
         }
+        
         this.gridX = Math.round(this.x / TILE_SIZE);
         this.gridY = Math.round(this.y / TILE_SIZE);
     }
@@ -206,22 +220,21 @@ export class Player {
         const modes = [BOMB_MODES.STANDARD];
         if (this.hasNapalm) modes.push(BOMB_MODES.NAPALM);
         if (this.hasRolling) modes.push(BOMB_MODES.ROLLING);
+        
         let idx = modes.indexOf(this.currentBombMode);
-        if (idx === -1) idx = 0;
         this.currentBombMode = modes[(idx + 1) % modes.length];
     }
 
     plantBomb() {
-        // Manueller Stop rollender Bomben
+        // Rollende Bombe stoppen?
         const rollingBomb = state.bombs.find(b => b.owner === this && b.isRolling);
         if (rollingBomb) {
             rollingBomb.isRolling = false;
+            // Snap to Grid
             rollingBomb.gx = Math.round(rollingBomb.px / TILE_SIZE);
             rollingBomb.gy = Math.round(rollingBomb.py / TILE_SIZE);
             rollingBomb.px = rollingBomb.gx * TILE_SIZE;
             rollingBomb.py = rollingBomb.gy * TILE_SIZE;
-            
-            // Untergrund merken und Bombe setzen
             rollingBomb.underlyingTile = state.grid[rollingBomb.gy][rollingBomb.gx];
             state.grid[rollingBomb.gy][rollingBomb.gx] = TYPES.BOMB;
             return;
@@ -234,29 +247,26 @@ export class Player {
         const gy = Math.round(this.y / TILE_SIZE);
         const tile = state.grid[gy][gx];
 
-        // Prüfung: Darf hier eine Bombe hin? (Leer, oder Wasser/Brücke im Jungle, oder Öl)
-        let canPlant = (tile === TYPES.EMPTY);
-        if (state.currentLevel.id === 'jungle') {
-            if (tile === TYPES.WATER || tile === TYPES.BRIDGE) canPlant = true;
-        }
-        if (tile === TYPES.OIL) canPlant = true;
+        // Validierungs-Check: Darf hier eine Bombe hin?
+        let canPlant = (tile === TYPES.EMPTY || tile === TYPES.OIL);
+        if (state.currentLevel.id === 'jungle' && (tile === TYPES.WATER || tile === TYPES.BRIDGE)) canPlant = true;
 
         if (!canPlant) return; 
 
         let isRolling = (this.currentBombMode === BOMB_MODES.ROLLING);
-        let isNapalm = (this.currentBombMode === BOMB_MODES.NAPALM);
-
+        
         const bomb = {
             owner: this,
             gx: gx, gy: gy,
             px: gx * TILE_SIZE, py: gy * TILE_SIZE,
             timer: 200, 
             range: this.bombRange, 
-            napalm: isNapalm,
+            napalm: (this.currentBombMode === BOMB_MODES.NAPALM),
             isRolling: isRolling,
             isBlue: isRolling, 
             underlyingTile: tile,
             walkableIds: state.players.filter(p => {
+                // Wer steht gerade drauf? Der darf noch weggehen.
                 const pGx = Math.round(p.x / TILE_SIZE);
                 const pGy = Math.round(p.y / TILE_SIZE);
                 return pGx === gx && pGy === gy;
@@ -269,6 +279,7 @@ export class Player {
         } else {
             state.grid[gy][gx] = TYPES.BOMB;
         }
+        
         state.bombs.push(bomb);
         this.activeBombs++;
     }
@@ -276,7 +287,7 @@ export class Player {
     checkItem() {
         const gx = Math.floor((this.x + TILE_SIZE/2) / TILE_SIZE);
         const gy = Math.floor((this.y + TILE_SIZE/2) / TILE_SIZE);
-        if (gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H) {
+        if (state.grid[gy] && state.items[gy]) {
             if (state.items[gy][gx] !== ITEMS.NONE) {
                 this.applyItem(state.items[gy][gx]);
                 state.items[gy][gx] = ITEMS.NONE;
@@ -309,11 +320,14 @@ export class Player {
             ctx.filter = `grayscale(100%) brightness(${Math.max(0, 0.5 - progress * 0.5)})`;
             ctx.globalAlpha = Math.max(0, 1 - progress);
         }
+        
         const bob = Math.sin(this.bobTimer) * 2; 
+        
+        // Schatten
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.beginPath(); ctx.ellipse(this.x + TILE_SIZE/2, this.y + TILE_SIZE - 5, 10, 5, 0, 0, Math.PI*2); ctx.fill();
         
-        // Pass activeCurses state to drawCharacterSprite
+        // Sprite
         drawCharacterSprite(ctx, this.x + TILE_SIZE/2, this.y + TILE_SIZE/2 + bob, this.charDef, this.activeCurses.length > 0, this.lastDir);
         ctx.restore();
     }

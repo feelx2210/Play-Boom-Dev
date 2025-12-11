@@ -1,10 +1,11 @@
 import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, LEVELS, CHARACTERS, BOOST_PADS, OIL_PADS, HELL_CENTER, DIRECTION_PADS, keyBindings } from './constants.js';
 import { state } from './state.js';
 import { createFloatingText, isSolid } from './utils.js';
-import { draw, drawLevelPreview, drawCharacterSprite } from './graphics.js';
+import { draw, drawLevelPreview, drawCharacterSprite, clearLevelCache } from './graphics.js';
 import { Player } from './player.js';
 import { endGame, showMenu, handleMenuInput, togglePause } from './ui.js';
 import { explodeBomb, triggerHellFire, killPlayer, spawnRandomIce } from './mechanics.js';
+import { InputHandler } from './InputHandler.js'; 
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -14,60 +15,45 @@ canvas.height = GRID_H * TILE_SIZE;
 
 let gameLoopId;
 
-// --- RESPONSIVE SCALING LOGIC (SMART CROP) ---
+// NEU: Zentrale Input-Instanz
+const input = new InputHandler();
+
+// --- RESPONSIVE SCALING (SMART CROP) ---
 function resizeGame() {
     const container = document.getElementById('game-container');
     if (!container) return;
 
     const winW = window.innerWidth;
     const winH = window.innerHeight;
-    
-    // Das gesamte Spiel ist 15x15 Tiles (720px)
     const fullSize = GRID_W * TILE_SIZE; 
-    
-    // Der "Active Area" (ohne die unzerstörbaren Randsteine) ist 13x13 Tiles
-    // Wir wollen auf Mobile in diesen Bereich reinzoomen.
-    const playableSize = (GRID_W - 2) * TILE_SIZE; // 624px
+    const playableSize = (GRID_W - 2) * TILE_SIZE; 
 
-    // 1. Scale berechnen, um ALLES anzuzeigen (für Desktop)
-    // Wir lassen 20px Rand zur Sicherheit
     const scaleFull = Math.min((winW - 20) / fullSize, (winH - 20) / fullSize);
-
-    // 2. Scale berechnen, um NUR DEN SPIELBEREICH anzuzeigen (für Mobile)
-    // Ränder werden hier bewusst abgeschnitten (gecroppt)
     const scaleCrop = Math.min(winW / playableSize, winH / playableSize);
 
-    // ENTSCHEIDUNG: Mobile oder Desktop?
-    // Wenn der Screen kleiner ist als das Spiel (720px), sind wir wahrscheinlich auf Mobile.
-    // Dann nutzen wir den Crop-Scale, um das Bild zu füllen.
-    // Auf großen Desktops (>720px) nutzen wir den Full-Scale, damit man alles sieht.
-    
     let finalScale = scaleFull;
-    
-    // Einfache Heuristik: Wenn wir zoomen müssen (<1), dann nehmen wir den aggressiveren Crop-Zoom
-    if (scaleFull < 1) {
-        finalScale = scaleCrop;
-    }
+    if (scaleFull < 1) finalScale = scaleCrop;
 
     container.style.transform = `scale(${finalScale})`;
-    
-    // Hinweis: Die Ausrichtung (Zentrierung oder Top-Align) wird via CSS geregelt.
-    // Im Portrait Mode erzwingt CSS 'transform-origin: top center', im Landscape 'center center'.
-    // Das sorgt dafür, dass beim Croppen die Mitte (das Spielfeld) sichtbar bleibt.
 }
-
 window.addEventListener('resize', resizeGame);
 resizeGame();
 
+// --- SPIEL STARTEN ---
 window.startGame = function() {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-over').classList.add('hidden');
     document.getElementById('ui-layer').classList.remove('hidden');
     document.getElementById('pause-btn').classList.remove('hidden'); 
     
+    // Controls sichtbar machen (InputHandler bindet Events automatisch)
     document.getElementById('mobile-controls').classList.remove('hidden');
 
     resizeGame(); 
+
+    // NEU: Cache leeren & Inputs resetten
+    clearLevelCache();
+    input.reset();
 
     const userChar = CHARACTERS[state.selectedCharIndex];
     state.currentLevel = LEVELS[state.selectedLevelKey];
@@ -77,11 +63,21 @@ window.startGame = function() {
     container.style.borderColor = state.currentLevel.border;
     document.getElementById('p1-name').innerText = userChar.name.toUpperCase();
 
-    state.grid = []; state.items = []; state.bombs = []; state.particles = []; state.players = [];
-    state.isGameOver = false; state.isPaused = false;
-    state.hellFireTimer = 0; state.hellFirePhase = 'IDLE'; state.hellFireActive = false; 
-    state.iceTimer = 0; state.iceSpawnCountdown = 1200; 
+    // Reset State
+    state.grid = []; 
+    state.items = []; 
+    state.bombs = []; 
+    state.particles = []; 
+    state.players = [];
+    state.isGameOver = false; 
+    state.isPaused = false;
+    state.hellFireTimer = 0; 
+    state.hellFirePhase = 'IDLE'; 
+    state.hellFireActive = false; 
+    state.iceTimer = 0; 
+    state.iceSpawnCountdown = 1200; 
 
+    // Level Generierung
     for (let y = 0; y < GRID_H; y++) {
         let row = []; let itemRow = [];
         for (let x = 0; x < GRID_W; x++) {
@@ -97,6 +93,7 @@ window.startGame = function() {
         }
         state.grid.push(row); state.items.push(itemRow);
     }
+
     if (state.currentLevel.id === 'hell') OIL_PADS.forEach(oil => { if(state.grid[oil.y][oil.x]!==TYPES.WALL_HARD) {state.grid[oil.y][oil.x]=TYPES.OIL; state.items[oil.y][oil.x]=ITEMS.NONE;} });
     const corners = [{x: 1, y: 1}, {x: 1, y: 2}, {x: 2, y: 1}, {x: GRID_W-2, y: 1}, {x: GRID_W-2, y: 2}, {x: GRID_W-3, y: 1}, {x: 1, y: GRID_H-2}, {x: 1, y: GRID_H-3}, {x: 2, y: GRID_H-2}, {x: GRID_W-2, y: GRID_H-2}, {x: GRID_W-3, y: GRID_H-2}, {x: GRID_W-2, y: GRID_H-3}];
     corners.forEach(p => state.grid[p.y][p.x] = TYPES.EMPTY);
@@ -127,23 +124,35 @@ function distributeItems() {
     });
 }
 
+// Global Listener (für Menü & Pause & Debug)
 window.addEventListener('keydown', e => {
-    if (!document.getElementById('main-menu').classList.contains('hidden')) { handleMenuInput(e.code); return; }
-    state.keys[e.code] = true;
-    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
-    if (e.code === keyBindings.CHANGE && state.players[0]) state.players[0].cycleBombType();
+    // Menü Steuerung
+    if (!document.getElementById('main-menu').classList.contains('hidden')) { 
+        handleMenuInput(e.code); 
+        return; 
+    }
+    // Pause / Globales
     if (e.key.toLowerCase() === 'p' || e.code === 'Escape') togglePause();
+    
+    // Fallback: Bomben-Wechsel via Keyboard (Optional, könnte auch in InputHandler)
+    if (e.code === keyBindings.CHANGE && state.players[0]) state.players[0].cycleBombType();
 });
-window.addEventListener('keyup', e => { state.keys[e.code] = false; });
 
 function update() {
     if (state.isGameOver) return;
+    
     state.players.forEach(p => p.inFire = false);
+    
+    // Hell Fire
     if (state.currentLevel.hasCentralFire) {
         if (!state.hellFireActive) { if (state.particles.some(p => p.isFire && p.gx === HELL_CENTER.x && p.gy === HELL_CENTER.y)) { state.hellFireActive = true; state.hellFirePhase = 'WARNING'; state.hellFireTimer = 0; createFloatingText(HELL_CENTER.x * TILE_SIZE, HELL_CENTER.y * TILE_SIZE, "ACTIVATED!", "#ff0000"); } } 
         else { state.hellFireTimer++; if (state.hellFirePhase === 'IDLE' && state.hellFireTimer >= 2200) { state.hellFireTimer = 0; state.hellFirePhase = 'WARNING'; createFloatingText(HELL_CENTER.x * TILE_SIZE, HELL_CENTER.y * TILE_SIZE, "!", "#ff0000"); } else if (state.hellFirePhase === 'WARNING' && state.hellFireTimer >= 225) { state.hellFireTimer = 0; state.hellFirePhase = 'IDLE'; triggerHellFire(); } }
     }
+    
+    // Ice Spawn
     if (state.currentLevel.id === 'ice') { state.iceTimer++; if (state.iceTimer > 1200) { state.iceSpawnCountdown--; if (state.iceSpawnCountdown <= 0) { spawnRandomIce(); spawnRandomIce(); state.iceSpawnCountdown = 1200; } } }
+    
+    // Bombs
     for (let i = state.bombs.length - 1; i >= 0; i--) {
         let b = state.bombs[i]; b.timer--;
         if (b.isRolling) {
@@ -166,6 +175,8 @@ function update() {
         b.walkableIds = b.walkableIds.filter(pid => { const p = state.players.find(pl => pl.id === pid); if (!p) return false; const size = TILE_SIZE * 0.7; const offset = (TILE_SIZE - size) / 2; const pLeft = p.x + offset; const pRight = pLeft + size; const pTop = p.y + offset; const pBottom = pTop + size; const bLeft = b.px; const bRight = bLeft + TILE_SIZE; const bTop = b.py; const bBottom = bTop + TILE_SIZE; return (pLeft < bRight && pRight > bLeft && pTop < bBottom && pBottom > bTop); });
         if (b.timer <= 0) { explodeBomb(b); state.bombs.splice(i, 1); }
     }
+    
+    // Particles
     for (let i = state.particles.length - 1; i >= 0; i--) {
         let p = state.particles[i]; p.life--; if (p.text) p.y += p.vy;
         if (p.isFire) {
@@ -176,8 +187,17 @@ function update() {
         if (p.type === 'freezing' && p.life <= 0) { state.grid[p.gy][p.gx] = TYPES.WALL_SOFT; if (Math.random() < 0.3) { const itemPool = [ITEMS.BOMB_UP, ITEMS.BOMB_UP, ITEMS.BOMB_UP, ITEMS.RANGE_UP, ITEMS.RANGE_UP, ITEMS.RANGE_UP, ITEMS.SPEED_UP, ITEMS.SPEED_UP, ITEMS.SKULL, ITEMS.ROLLING, ITEMS.NAPALM]; state.items[p.gy][p.gx] = itemPool[Math.floor(Math.random() * itemPool.length)]; } }
         if (p.life <= 0) state.particles.splice(i, 1);
     }
-    state.players.forEach(p => { if (p.inFire) { p.fireTimer++; if (p.fireTimer >= 30) { killPlayer(p); p.fireTimer = 0; } } else p.fireTimer = 0; });
-    let aliveCount = 0; let livingPlayers = []; state.players.forEach(p => { p.update(); if (p.alive) { aliveCount++; livingPlayers.push(p); } });
+    
+    // Players (mit neuem Input Handler)
+    state.players.forEach(p => { 
+        if (p.inFire) { p.fireTimer++; if (p.fireTimer >= 30) { killPlayer(p); p.fireTimer = 0; } } else p.fireTimer = 0; 
+    });
+    
+    let aliveCount = 0; let livingPlayers = []; 
+    // NEU: Input durchreichen
+    state.players.forEach(p => { p.update(input); if (p.alive) { aliveCount++; livingPlayers.push(p); } });
+
+    // Infection
     for (let i = 0; i < livingPlayers.length; i++) {
         for (let j = i + 1; j < livingPlayers.length; j++) {
             const p1 = livingPlayers[i]; const p2 = livingPlayers[j]; const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
@@ -196,66 +216,5 @@ function gameLoop() {
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// --- NEW MOBILE CONTROLS (GAME BOY D-PAD) ---
-(function setupMobileControls() {
-    const dpadArea = document.getElementById('dpad-area');
-    const btnBomb = document.getElementById('btn-bomb');
-    const btnChange = document.getElementById('btn-change');
-    
-    // Elements for visual feedback
-    const armUp = document.querySelector('.dpad-up');
-    const armDown = document.querySelector('.dpad-down');
-    const armLeft = document.querySelector('.dpad-left');
-    const armRight = document.querySelector('.dpad-right');
-
-    const resetKeys = () => {
-        state.keys[keyBindings.UP] = false; state.keys[keyBindings.DOWN] = false;
-        state.keys[keyBindings.LEFT] = false; state.keys[keyBindings.RIGHT] = false;
-        [armUp, armDown, armLeft, armRight].forEach(el => el && el.classList.remove('active'));
-    };
-
-    const handleDPadInput = (e) => {
-        e.preventDefault(); 
-        const touch = e.touches[0]; if (!touch) return;
-
-        const rect = dpadArea.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const dx = touch.clientX - centerX;
-        const dy = touch.clientY - centerY;
-        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-
-        resetKeys();
-
-        if (dist < 15) return; // Deadzone
-
-        if (angle > -135 && angle < -45) {
-            state.keys[keyBindings.UP] = true;
-            if(armUp) armUp.classList.add('active');
-        } else if (angle >= -45 && angle <= 45) {
-            state.keys[keyBindings.RIGHT] = true;
-            if(armRight) armRight.classList.add('active');
-        } else if (angle > 45 && angle < 135) {
-            state.keys[keyBindings.DOWN] = true;
-            if(armDown) armDown.classList.add('active');
-        } else {
-            state.keys[keyBindings.LEFT] = true;
-            if(armLeft) armLeft.classList.add('active');
-        }
-    };
-
-    dpadArea.addEventListener('touchstart', handleDPadInput, {passive: false});
-    dpadArea.addEventListener('touchmove', handleDPadInput, {passive: false});
-    dpadArea.addEventListener('touchend', (e) => { e.preventDefault(); resetKeys(); });
-    dpadArea.addEventListener('touchcancel', (e) => { e.preventDefault(); resetKeys(); });
-
-    btnBomb.addEventListener('touchstart', e => { e.preventDefault(); if (state.players[0] && state.players[0].alive) state.players[0].plantBomb(); btnBomb.style.transform = "scale(0.9)"; });
-    btnBomb.addEventListener('touchend', e => { e.preventDefault(); btnBomb.style.transform = "scale(1)"; });
-
-    btnChange.addEventListener('touchstart', e => { e.preventDefault(); if (state.players[0] && state.players[0].alive) state.players[0].cycleBombType(); btnChange.style.transform = "scale(0.9)"; });
-    btnChange.addEventListener('touchend', e => { e.preventDefault(); btnChange.style.transform = "scale(1)"; });
-
-})();
-
+// Initial Menu Start
 showMenu();
