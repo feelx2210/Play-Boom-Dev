@@ -45,35 +45,41 @@ export function initMenu() {
     const levelContainer = document.getElementById('level-select');
     const startBtn = document.getElementById('start-game-btn');
     
-    // Wir suchen den zweiten Button (ehemals Controls), um ihn zu "Settings" zu machen
+    // --- SETTINGS BUTTON LOGIK ---
+    // Wir suchen den Button im Footer. Wenn er nicht da ist, erstellen wir ihn.
     let settingsBtn = document.querySelector('.menu-footer .btn-secondary');
     if (!settingsBtn) {
-        // Falls er nicht existiert (Desktop only klasse?), erzeugen wir ihn für die Logik
         settingsBtn = document.createElement('button');
         settingsBtn.className = 'btn-secondary';
+        // FIX für das Springen: Wir geben ihm standardmäßig einen transparenten Rahmen
+        settingsBtn.style.border = "2px solid transparent"; 
         document.querySelector('.menu-footer').appendChild(settingsBtn);
     }
     
-    // Button Text & Funktion anpassen
+    // Sicherstellen, dass der Rahmenplatz reserviert ist (verhindert Layout-Shift)
+    if (settingsBtn.style.border === "" || settingsBtn.style.border === "none") {
+        settingsBtn.style.border = "2px solid transparent";
+    }
+    
     settingsBtn.innerText = "SETTINGS";
-    settingsBtn.onclick = showSettings; // Mausklick Logik
+    settingsBtn.onclick = showSettings;
 
     charContainer.innerHTML = '';
     levelContainer.innerHTML = '';
     
     updateMobileLabels();
 
-    // VISUAL FEEDBACK & STATES
-    // 0: Char Select
-    // 1: Level Select
-    // 2: Start Game Button
-    // 3: Settings Button (NEU)
-
-    // Reset styles
+    // VISUAL FEEDBACK
+    // 0: Char, 1: Level, 2: Start, 3: Settings
+    
+    // Reset classes
     charContainer.classList.remove('active-group', 'inactive-group');
     levelContainer.classList.remove('active-group', 'inactive-group');
     startBtn.classList.remove('focused');
-    settingsBtn.classList.remove('focused'); // Style für Settings Fokus
+    settingsBtn.classList.remove('focused');
+    
+    // Reset Border Color (auf Transparent zurück, damit Platz bleibt)
+    settingsBtn.style.borderColor = "transparent";
 
     if (state.menuState === 0) { 
         charContainer.classList.add('active-group'); 
@@ -85,17 +91,14 @@ export function initMenu() {
         charContainer.classList.add('inactive-group'); 
         levelContainer.classList.add('inactive-group');
         startBtn.classList.add('focused');
-    } else if (state.menuState === 3) { // NEU: Fokus auf Settings
+    } else if (state.menuState === 3) { 
         charContainer.classList.add('inactive-group'); 
         levelContainer.classList.add('inactive-group');
         settingsBtn.classList.add('focused');
-        // CSS Hack für Fokus auf Secondary Button falls nötig
-        settingsBtn.style.border = "2px solid #fff"; 
+        settingsBtn.style.borderColor = "#ffffff"; // Nur Farbe ändern, Dicke bleibt
     }
 
-    if (state.menuState !== 3) settingsBtn.style.border = "none";
-
-    // --- RENDERING CARDS ---
+    // --- CARDS RENDERING ---
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
@@ -159,13 +162,13 @@ export function handleMenuInput(code) {
         else if (code === 'ArrowRight') changeSelection('level', 1);
         else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 2; initMenu(); }
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 0; initMenu(); }
-    } else if (state.menuState === 2) { // Start Game
+    } else if (state.menuState === 2) { // Start Button
         if (code === 'Enter' || code === 'Space') { if (window.startGame) window.startGame(); }
-        else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); } // NEU: Runter zu Settings
+        else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); } // RUNTER zu Settings
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
-    } else if (state.menuState === 3) { // Settings Btn
+    } else if (state.menuState === 3) { // Settings Button
         if (code === 'Enter' || code === 'Space') { showSettings(); }
-        else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); } // NEU: Hoch zu Start
+        else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); } // HOCH zu Start
         else if (code === 'Escape') { state.menuState = 1; initMenu(); }
     }
 }
@@ -178,6 +181,7 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
+    // Altes Settings Menu entfernen
     const oldSet = document.getElementById('settings-menu');
     if (oldSet) oldSet.remove();
     
@@ -188,7 +192,7 @@ export function showMenu() {
     initMenu();
 }
 
-// NEU: Settings Menu (Mit Controls & Difficulty)
+// NEU: Settings Menu (Repariert)
 export function showSettings() {
     document.getElementById('main-menu').classList.add('hidden');
     
@@ -199,7 +203,7 @@ export function showSettings() {
     settingsMenu.id = 'settings-menu';
     settingsMenu.className = 'screen';
     
-    // Hier fügen wir Controls und Statistics (Dummy) wieder ein
+    // FIX: Alle Buttons wieder da
     settingsMenu.innerHTML = `
         <h1>SETTINGS</h1>
         
@@ -223,13 +227,23 @@ export function showSettings() {
     if (btnDiff) {
         const updateLabel = () => {
             const labels = ["EASY", "MEDIUM", "HARD"];
+            // FIX: Hintergrundfarben statt Textfarben (damit man Text sieht!)
             const colors = ["#44aa44", "#ff8800", "#ff0000"];
+            
+            // Safety Check
+            if (state.difficulty === undefined) state.difficulty = 1;
             const safeDiff = Math.max(0, Math.min(state.difficulty, 2));
+            
             btnDiff.innerText = labels[safeDiff];
-            btnDiff.style.color = colors[safeDiff];
-            btnDiff.style.borderColor = colors[safeDiff];
+            btnDiff.style.backgroundColor = colors[safeDiff]; // Ändert den Hintergrund
+            btnDiff.style.color = "#ffffff"; // Text immer Weiß
+            btnDiff.style.textShadow = "2px 2px 0px rgba(0,0,0,0.5)";
+            // Rahmenfarbe auch anpassen für coolen Look
+            btnDiff.style.borderColor = "rgba(0,0,0,0.3)";
         };
+        
         updateLabel();
+        
         btnDiff.onclick = () => {
             state.difficulty = (state.difficulty + 1) % 3;
             updateLabel();
@@ -240,7 +254,6 @@ export function showSettings() {
     const btnControls = settingsMenu.querySelector('#btn-controls');
     if (btnControls) {
         btnControls.onclick = () => {
-            // Settings schließen, Controls öffnen
             settingsMenu.remove(); 
             showControls(); 
         };
