@@ -1,8 +1,9 @@
-import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTIES } from './constants.js';
-import { state } from './state.js';
-import { drawCharacterSprite, drawLevelPreview } from './graphics.js';
+import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTIES } from './constants.js'; //
+import { state } from './state.js'; //
+import { drawCharacterSprite, drawLevelPreview } from './graphics.js'; //
 
 let remappingAction = null;
+let settingsIndex = 0; // 0: Difficulty, 1: Controls, 2: Stats, 3: Back
 
 export function updateHud(player) {
     const elType = document.getElementById('bomb-type');
@@ -45,20 +46,13 @@ export function initMenu() {
     const levelContainer = document.getElementById('level-select');
     const startBtn = document.getElementById('start-game-btn');
     
-    // --- SETTINGS BUTTON LOGIK ---
-    // Wir suchen den Button im Footer. Wenn er nicht da ist, erstellen wir ihn.
+    // --- SETTINGS BUTTON (Main Menu) ---
     let settingsBtn = document.querySelector('.menu-footer .btn-secondary');
     if (!settingsBtn) {
         settingsBtn = document.createElement('button');
         settingsBtn.className = 'btn-secondary';
-        // FIX für das Springen: Wir geben ihm standardmäßig einen transparenten Rahmen
-        settingsBtn.style.border = "2px solid transparent"; 
+        settingsBtn.style.border = "2px solid transparent"; // Platzhalter gegen Springen
         document.querySelector('.menu-footer').appendChild(settingsBtn);
-    }
-    
-    // Sicherstellen, dass der Rahmenplatz reserviert ist (verhindert Layout-Shift)
-    if (settingsBtn.style.border === "" || settingsBtn.style.border === "none") {
-        settingsBtn.style.border = "2px solid transparent";
     }
     
     settingsBtn.innerText = "SETTINGS";
@@ -69,36 +63,27 @@ export function initMenu() {
     
     updateMobileLabels();
 
-    // VISUAL FEEDBACK
-    // 0: Char, 1: Level, 2: Start, 3: Settings
-    
-    // Reset classes
+    // VISUAL FEEDBACK (0: Char, 1: Level, 2: Start, 3: SettingsBtn)
     charContainer.classList.remove('active-group', 'inactive-group');
     levelContainer.classList.remove('active-group', 'inactive-group');
     startBtn.classList.remove('focused');
     settingsBtn.classList.remove('focused');
-    
-    // Reset Border Color (auf Transparent zurück, damit Platz bleibt)
     settingsBtn.style.borderColor = "transparent";
 
     if (state.menuState === 0) { 
-        charContainer.classList.add('active-group'); 
-        levelContainer.classList.add('inactive-group');
+        charContainer.classList.add('active-group'); levelContainer.classList.add('inactive-group');
     } else if (state.menuState === 1) { 
-        charContainer.classList.add('inactive-group'); 
-        levelContainer.classList.add('active-group');
+        charContainer.classList.add('inactive-group'); levelContainer.classList.add('active-group');
     } else if (state.menuState === 2) { 
-        charContainer.classList.add('inactive-group'); 
-        levelContainer.classList.add('inactive-group');
+        charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
         startBtn.classList.add('focused');
     } else if (state.menuState === 3) { 
-        charContainer.classList.add('inactive-group'); 
-        levelContainer.classList.add('inactive-group');
+        charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
         settingsBtn.classList.add('focused');
-        settingsBtn.style.borderColor = "#ffffff"; // Nur Farbe ändern, Dicke bleibt
+        settingsBtn.style.borderColor = "#ffffff";
     }
 
-    // --- CARDS RENDERING ---
+    // --- RENDER CARDS ---
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
@@ -120,39 +105,39 @@ export function initMenu() {
         pCanvas.className='preview-canvas';
         const ctx = pCanvas.getContext('2d');
         
-        if (type === 'char') {
-            drawCharacterSprite(ctx, 24, 36, data);
-            div.appendChild(pCanvas);
-            const label = document.createElement('div');
-            label.className = 'card-label'; label.innerText = data.name;
-            div.appendChild(label);
-        } else {
-            drawLevelPreview(ctx, 48, 48, data);
-            div.appendChild(pCanvas);
-            const label = document.createElement('div');
-            label.className = 'card-label'; label.innerText = data.name;
-            div.appendChild(label);
-        }
+        if (type === 'char') drawCharacterSprite(ctx, 24, 36, data);
+        else drawLevelPreview(ctx, 48, 48, data);
+        
+        div.appendChild(pCanvas);
+        const label = document.createElement('div');
+        label.className = 'card-label'; label.innerText = data.name;
+        div.appendChild(label);
         container.appendChild(div);
     };
 
-    CHARACTERS.forEach((char, idx) => {
-        renderCard(charContainer, 'char', idx, char, idx === state.selectedCharIndex);
-    });
-
+    CHARACTERS.forEach((char, idx) => { renderCard(charContainer, 'char', idx, char, idx === state.selectedCharIndex); });
     const levelKeys = Object.keys(LEVELS);
-    levelKeys.forEach((key, idx) => {
-        renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey);
-    });
+    levelKeys.forEach((key, idx) => { renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey); });
 }
 
 export function handleMenuInput(code) {
-    // Falls Settings offen sind (Escape -> Zurück zum Menü)
-    if (document.getElementById('settings-menu')) {
-        if (code === 'Escape') showMenu();
+    // 4 = Inside Settings Menu (Input Handling)
+    if (state.menuState === 4) {
+        if (code === 'ArrowUp') {
+            settingsIndex = (settingsIndex - 1 + 4) % 4; // 4 Elemente (Diff, Ctrl, Stats, Back)
+            updateSettingsFocus();
+        } else if (code === 'ArrowDown') {
+            settingsIndex = (settingsIndex + 1) % 4;
+            updateSettingsFocus();
+        } else if (code === 'Enter' || code === 'Space') {
+            triggerSettingsAction();
+        } else if (code === 'Escape') {
+            showMenu();
+        }
         return;
     }
 
+    // Main Menu Navigation
     if (state.menuState === 0) { // Char
         if (code === 'ArrowLeft') changeSelection('char', -1);
         else if (code === 'ArrowRight') changeSelection('char', 1);
@@ -162,13 +147,13 @@ export function handleMenuInput(code) {
         else if (code === 'ArrowRight') changeSelection('level', 1);
         else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 2; initMenu(); }
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 0; initMenu(); }
-    } else if (state.menuState === 2) { // Start Button
+    } else if (state.menuState === 2) { // Start Btn
         if (code === 'Enter' || code === 'Space') { if (window.startGame) window.startGame(); }
-        else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); } // RUNTER zu Settings
+        else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); }
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
-    } else if (state.menuState === 3) { // Settings Button
+    } else if (state.menuState === 3) { // Settings Btn
         if (code === 'Enter' || code === 'Space') { showSettings(); }
-        else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); } // HOCH zu Start
+        else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); }
         else if (code === 'Escape') { state.menuState = 1; initMenu(); }
     }
 }
@@ -181,18 +166,60 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
-    // Altes Settings Menu entfernen
     const oldSet = document.getElementById('settings-menu');
     if (oldSet) oldSet.remove();
     
     const mobControls = document.getElementById('mobile-controls');
     if (mobControls) mobControls.classList.add('hidden');
     
-    state.menuState = 0;
+    state.menuState = 0; // Reset to Char Select
     initMenu();
 }
 
-// NEU: Settings Menu (Repariert)
+// --- SETTINGS LOGIC ---
+function updateSettingsFocus() {
+    const ids = ['btn-diff', 'btn-controls', 'btn-stats', 'btn-back'];
+    ids.forEach((id, idx) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (idx === settingsIndex) {
+                el.style.border = "2px solid #fff";
+                el.style.transform = "scale(1.05)";
+            } else {
+                el.style.border = "2px solid rgba(0,0,0,0.3)"; // Dezent dunkel
+                el.style.transform = "scale(1)";
+            }
+        }
+    });
+}
+
+function triggerSettingsAction() {
+    if (settingsIndex === 0) { // Difficulty
+        state.difficulty = (state.difficulty + 1) % 3;
+        updateDifficultyBtn();
+    } else if (settingsIndex === 1) { // Controls
+        document.getElementById('settings-menu').remove();
+        showControls();
+    } else if (settingsIndex === 3) { // Back
+        showMenu();
+    }
+}
+
+function updateDifficultyBtn() {
+    const btn = document.getElementById('btn-diff');
+    if (!btn) return;
+    
+    const labels = ["EASY", "MEDIUM", "HARD"];
+    const colors = ["#44aa44", "#ff8800", "#ff0000"];
+    
+    if (state.difficulty === undefined) state.difficulty = 1;
+    const safeDiff = Math.max(0, Math.min(state.difficulty, 2));
+
+    btn.innerText = labels[safeDiff];
+    btn.style.backgroundColor = colors[safeDiff];
+    btn.style.color = "#ffffff";
+}
+
 export function showSettings() {
     document.getElementById('main-menu').classList.add('hidden');
     
@@ -203,61 +230,37 @@ export function showSettings() {
     settingsMenu.id = 'settings-menu';
     settingsMenu.className = 'screen';
     
-    // FIX: Alle Buttons wieder da
+    state.menuState = 4; // Input State für Settings
+    settingsIndex = 0;   // Start bei Difficulty
+
+    // Layout: Flexbox Centering Wrapper
     settingsMenu.innerHTML = `
-        <h1>SETTINGS</h1>
-        
-        <div class="menu-section">
-            <h2>DIFFICULTY</h2>
-            <button id="btn-diff" class="main-btn" style="margin-top:5px; font-size:16px;">NORMAL</button>
-        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%;">
+            <h1 style="margin-bottom:30px;">SETTINGS</h1>
+            
+            <div style="margin-bottom: 20px; text-align:center;">
+                <h2 style="font-size:14px; margin-bottom:5px;">DIFFICULTY</h2>
+                <button id="btn-diff" class="main-btn" style="font-size:16px; border:2px solid rgba(0,0,0,0.3);">NORMAL</button>
+            </div>
 
-        <div class="menu-section" style="margin-top: 20px;">
-            <button id="btn-controls" class="btn-secondary">CONTROLS</button>
-            <button id="btn-stats" class="btn-secondary" style="opacity:0.5; cursor:default;">STATISTICS (WIP)</button>
+            <div style="display:flex; flex-direction:column; gap:10px; align-items:center; width:100%;">
+                <button id="btn-controls" class="btn-secondary" style="width:200px; border:2px solid rgba(0,0,0,0.3);">CONTROLS</button>
+                <button id="btn-stats" class="btn-secondary" style="width:200px; opacity:0.5; border:2px solid rgba(0,0,0,0.3);">STATISTICS</button>
+                <button id="btn-back" class="btn-secondary" style="width:200px; margin-top:20px; border:2px solid rgba(0,0,0,0.3);">BACK</button>
+            </div>
         </div>
-
-        <button class="btn-secondary" onclick="showMenu()" style="margin-top: 30px;">BACK</button>
     `;
     
     document.body.appendChild(settingsMenu);
-    
-    // Difficulty Button Logik
-    const btnDiff = settingsMenu.querySelector('#btn-diff');
-    if (btnDiff) {
-        const updateLabel = () => {
-            const labels = ["EASY", "MEDIUM", "HARD"];
-            // FIX: Hintergrundfarben statt Textfarben (damit man Text sieht!)
-            const colors = ["#44aa44", "#ff8800", "#ff0000"];
-            
-            // Safety Check
-            if (state.difficulty === undefined) state.difficulty = 1;
-            const safeDiff = Math.max(0, Math.min(state.difficulty, 2));
-            
-            btnDiff.innerText = labels[safeDiff];
-            btnDiff.style.backgroundColor = colors[safeDiff]; // Ändert den Hintergrund
-            btnDiff.style.color = "#ffffff"; // Text immer Weiß
-            btnDiff.style.textShadow = "2px 2px 0px rgba(0,0,0,0.5)";
-            // Rahmenfarbe auch anpassen für coolen Look
-            btnDiff.style.borderColor = "rgba(0,0,0,0.3)";
-        };
-        
-        updateLabel();
-        
-        btnDiff.onclick = () => {
-            state.difficulty = (state.difficulty + 1) % 3;
-            updateLabel();
-        };
-    }
 
-    // Controls Button Logik
-    const btnControls = settingsMenu.querySelector('#btn-controls');
-    if (btnControls) {
-        btnControls.onclick = () => {
-            settingsMenu.remove(); 
-            showControls(); 
-        };
-    }
+    updateDifficultyBtn();
+    updateSettingsFocus(); // Initiale Markierung
+
+    // Maus-Events (damit Klick auch geht)
+    document.getElementById('btn-diff').onclick = () => { settingsIndex=0; updateSettingsFocus(); triggerSettingsAction(); };
+    document.getElementById('btn-controls').onclick = () => { settingsIndex=1; updateSettingsFocus(); triggerSettingsAction(); };
+    document.getElementById('btn-stats').onclick = () => { settingsIndex=2; updateSettingsFocus(); };
+    document.getElementById('btn-back').onclick = () => { settingsIndex=3; updateSettingsFocus(); triggerSettingsAction(); };
 }
 
 export function togglePause() {
