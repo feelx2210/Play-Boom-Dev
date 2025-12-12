@@ -1,10 +1,11 @@
-import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTIES } from './constants.js'; //
-import { state } from './state.js'; //
-import { drawCharacterSprite, drawLevelPreview } from './graphics.js'; //
+import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTIES } from './constants.js';
+import { state } from './state.js';
+import { drawCharacterSprite, drawLevelPreview } from './graphics.js';
 
 let remappingAction = null;
 let settingsIndex = 0; // 0: Difficulty, 1: Controls, 2: Stats, 3: Back
 
+// --- HUD UPDATE ---
 export function updateHud(player) {
     const elType = document.getElementById('bomb-type');
     if (elType) {
@@ -27,6 +28,7 @@ function updateMobileLabels() {
     if (levelNameEl) levelNameEl.innerText = LEVELS[state.selectedLevelKey].name;
 }
 
+// --- SELECTION LOGIC ---
 function changeSelection(type, dir) {
     if (type === 'char') {
         const len = CHARACTERS.length;
@@ -41,34 +43,53 @@ function changeSelection(type, dir) {
     initMenu(); 
 }
 
+// --- MAIN MENU RENDER ---
 export function initMenu() {
     const charContainer = document.getElementById('char-select');
     const levelContainer = document.getElementById('level-select');
     const startBtn = document.getElementById('start-game-btn');
+    const footer = document.querySelector('.menu-footer');
     
-    // --- SETTINGS BUTTON (Main Menu) ---
-    let settingsBtn = document.querySelector('.menu-footer .btn-secondary');
+    // FIX: Settings Button robust erstellen/finden
+    let settingsBtn = document.getElementById('settings-btn-main');
     if (!settingsBtn) {
-        settingsBtn = document.createElement('button');
-        settingsBtn.className = 'btn-secondary';
-        settingsBtn.style.border = "2px solid transparent"; // Platzhalter gegen Springen
-        document.querySelector('.menu-footer').appendChild(settingsBtn);
+        // Versuch, den alten Controls Button zu recyceln, um Duplikate zu vermeiden
+        const existingSecondary = footer.querySelector('.btn-secondary');
+        if (existingSecondary) {
+            settingsBtn = existingSecondary;
+            settingsBtn.id = 'settings-btn-main';
+        } else {
+            settingsBtn = document.createElement('button');
+            settingsBtn.id = 'settings-btn-main';
+            settingsBtn.className = 'btn-secondary';
+            footer.appendChild(settingsBtn);
+        }
     }
-    
+
+    // FIX: Zwingend sichtbar machen (entfernt 'desktop-only' Klasse)
+    settingsBtn.classList.remove('desktop-only', 'hidden');
+    settingsBtn.style.display = 'block'; 
     settingsBtn.innerText = "SETTINGS";
     settingsBtn.onclick = showSettings;
+
+    // FIX: Fester transparenter Rahmen gegen das "Hüpfen"
+    settingsBtn.style.border = "2px solid transparent";
+    settingsBtn.style.marginTop = "15px";
 
     charContainer.innerHTML = '';
     levelContainer.innerHTML = '';
     
     updateMobileLabels();
 
-    // VISUAL FEEDBACK (0: Char, 1: Level, 2: Start, 3: SettingsBtn)
+    // VISUAL FEEDBACK STATES
+    // 0: Char, 1: Level, 2: Start, 3: Settings
+    
+    // Reset All Styles
     charContainer.classList.remove('active-group', 'inactive-group');
     levelContainer.classList.remove('active-group', 'inactive-group');
     startBtn.classList.remove('focused');
     settingsBtn.classList.remove('focused');
-    settingsBtn.style.borderColor = "transparent";
+    settingsBtn.style.borderColor = "transparent"; 
 
     if (state.menuState === 0) { 
         charContainer.classList.add('active-group'); levelContainer.classList.add('inactive-group');
@@ -80,10 +101,10 @@ export function initMenu() {
     } else if (state.menuState === 3) { 
         charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
         settingsBtn.classList.add('focused');
-        settingsBtn.style.borderColor = "#ffffff";
+        settingsBtn.style.borderColor = "#ffffff"; // Nur Farbe ändern, Pixelbreite bleibt gleich
     }
 
-    // --- RENDER CARDS ---
+    // Render Cards
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
@@ -120,11 +141,12 @@ export function initMenu() {
     levelKeys.forEach((key, idx) => { renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey); });
 }
 
+// --- INPUT HANDLING ---
 export function handleMenuInput(code) {
-    // 4 = Inside Settings Menu (Input Handling)
+    // 4 = Inside Settings Menu
     if (state.menuState === 4) {
         if (code === 'ArrowUp') {
-            settingsIndex = (settingsIndex - 1 + 4) % 4; // 4 Elemente (Diff, Ctrl, Stats, Back)
+            settingsIndex = (settingsIndex - 1 + 4) % 4; // 4 Items: Diff, Ctrl, Stats, Back
             updateSettingsFocus();
         } else if (code === 'ArrowDown') {
             settingsIndex = (settingsIndex + 1) % 4;
@@ -149,11 +171,11 @@ export function handleMenuInput(code) {
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 0; initMenu(); }
     } else if (state.menuState === 2) { // Start Btn
         if (code === 'Enter' || code === 'Space') { if (window.startGame) window.startGame(); }
-        else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); }
+        else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); } // Go Down to Settings
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
     } else if (state.menuState === 3) { // Settings Btn
         if (code === 'Enter' || code === 'Space') { showSettings(); }
-        else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); }
+        else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); } // Go Up to Start
         else if (code === 'Escape') { state.menuState = 1; initMenu(); }
     }
 }
@@ -166,13 +188,14 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
+    // Remove Settings Menu Overlay if exists
     const oldSet = document.getElementById('settings-menu');
     if (oldSet) oldSet.remove();
     
     const mobControls = document.getElementById('mobile-controls');
     if (mobControls) mobControls.classList.add('hidden');
     
-    state.menuState = 0; // Reset to Char Select
+    state.menuState = 0;
     initMenu();
 }
 
@@ -186,7 +209,7 @@ function updateSettingsFocus() {
                 el.style.border = "2px solid #fff";
                 el.style.transform = "scale(1.05)";
             } else {
-                el.style.border = "2px solid rgba(0,0,0,0.3)"; // Dezent dunkel
+                el.style.border = "2px solid rgba(0,0,0,0.3)";
                 el.style.transform = "scale(1)";
             }
         }
@@ -218,6 +241,7 @@ function updateDifficultyBtn() {
     btn.innerText = labels[safeDiff];
     btn.style.backgroundColor = colors[safeDiff];
     btn.style.color = "#ffffff";
+    btn.style.textShadow = "1px 1px 0 #000";
 }
 
 export function showSettings() {
@@ -228,41 +252,51 @@ export function showSettings() {
 
     const settingsMenu = document.createElement('div');
     settingsMenu.id = 'settings-menu';
-    settingsMenu.className = 'screen';
+    settingsMenu.className = 'screen'; 
+    // .screen hat bereits flex, center, center in style.css!
     
-    state.menuState = 4; // Input State für Settings
-    settingsIndex = 0;   // Start bei Difficulty
+    state.menuState = 4; // Switch to Settings Input Mode
+    settingsIndex = 0;   // Reset Selection
 
-    // Layout: Flexbox Centering Wrapper
     settingsMenu.innerHTML = `
-        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%;">
-            <h1 style="margin-bottom:30px;">SETTINGS</h1>
-            
-            <div style="margin-bottom: 20px; text-align:center;">
-                <h2 style="font-size:14px; margin-bottom:5px;">DIFFICULTY</h2>
-                <button id="btn-diff" class="main-btn" style="font-size:16px; border:2px solid rgba(0,0,0,0.3);">NORMAL</button>
-            </div>
+        <h1 style="margin-bottom:40px;">SETTINGS</h1>
+        
+        <div style="margin-bottom: 25px; text-align:center;">
+            <h2 style="font-size:14px; margin-bottom:8px; color:#aaa;">DIFFICULTY</h2>
+            <button id="btn-diff" class="main-btn" style="font-size:18px; width:220px; border:2px solid rgba(0,0,0,0.3);">NORMAL</button>
+        </div>
 
-            <div style="display:flex; flex-direction:column; gap:10px; align-items:center; width:100%;">
-                <button id="btn-controls" class="btn-secondary" style="width:200px; border:2px solid rgba(0,0,0,0.3);">CONTROLS</button>
-                <button id="btn-stats" class="btn-secondary" style="width:200px; opacity:0.5; border:2px solid rgba(0,0,0,0.3);">STATISTICS</button>
-                <button id="btn-back" class="btn-secondary" style="width:200px; margin-top:20px; border:2px solid rgba(0,0,0,0.3);">BACK</button>
-            </div>
+        <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
+            <button id="btn-controls" class="btn-secondary" style="width:220px; border:2px solid rgba(0,0,0,0.3);">CONTROLS</button>
+            <button id="btn-stats" class="btn-secondary" style="width:220px; opacity:0.5; border:2px solid rgba(0,0,0,0.3);">STATISTICS (WIP)</button>
+            <button id="btn-back" class="btn-secondary" style="width:220px; margin-top:30px; border:2px solid rgba(0,0,0,0.3);">BACK</button>
         </div>
     `;
     
     document.body.appendChild(settingsMenu);
 
     updateDifficultyBtn();
-    updateSettingsFocus(); // Initiale Markierung
+    updateSettingsFocus();
 
-    // Maus-Events (damit Klick auch geht)
-    document.getElementById('btn-diff').onclick = () => { settingsIndex=0; updateSettingsFocus(); triggerSettingsAction(); };
-    document.getElementById('btn-controls').onclick = () => { settingsIndex=1; updateSettingsFocus(); triggerSettingsAction(); };
-    document.getElementById('btn-stats').onclick = () => { settingsIndex=2; updateSettingsFocus(); };
-    document.getElementById('btn-back').onclick = () => { settingsIndex=3; updateSettingsFocus(); triggerSettingsAction(); };
+    // Mouse Interactions
+    const bindMouse = (id, idx, isAction) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.onmouseenter = () => { settingsIndex = idx; updateSettingsFocus(); };
+        el.onclick = () => { 
+            settingsIndex = idx; 
+            updateSettingsFocus(); 
+            if(isAction) triggerSettingsAction(); 
+        };
+    };
+
+    bindMouse('btn-diff', 0, true);
+    bindMouse('btn-controls', 1, true);
+    bindMouse('btn-stats', 2, false);
+    bindMouse('btn-back', 3, true);
 }
 
+// --- STANDARD EXPORTS ---
 export function togglePause() {
     if (state.isGameOver) { showMenu(); return; }
     if (!document.getElementById('main-menu').classList.contains('hidden')) return;
