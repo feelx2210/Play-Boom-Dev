@@ -153,25 +153,29 @@ export function showMenu() {
     initMenu();
 }
 
-// NEU: Settings Menu (Dynamisch generiert, um HTML-Änderungen zu vermeiden)
+// NEU: Settings Menu (Fix: Erzeugt Inhalt immer neu)
 export function showSettings() {
     document.getElementById('main-menu').classList.add('hidden');
     
     let settingsMenu = document.getElementById('settings-menu');
+    // Falls noch nicht da, Container erzeugen
     if (!settingsMenu) {
         settingsMenu = document.createElement('div');
         settingsMenu.id = 'settings-menu';
         settingsMenu.className = 'screen';
-        settingsMenu.innerHTML = `
-            <h1>SETTINGS</h1>
-            <div class="menu-section">
-                <h2>DIFFICULTY</h2>
-                <button id="btn-diff" class="main-btn" style="margin-top:10px; font-size:16px;">NORMAL</button>
-            </div>
-            <button class="btn-secondary" onclick="showMenu()">BACK</button>
-        `;
         document.body.appendChild(settingsMenu);
     }
+    
+    // FIX: Inhalt IMMER setzen (verhindert den "null" Crash, wenn das Element leer war)
+    settingsMenu.innerHTML = `
+        <h1>SETTINGS</h1>
+        <div class="menu-section">
+            <h2>DIFFICULTY</h2>
+            <button id="btn-diff" class="main-btn" style="margin-top:10px; font-size:16px;">NORMAL</button>
+        </div>
+        <button class="btn-secondary" onclick="showMenu()">BACK</button>
+    `;
+
     settingsMenu.classList.remove('hidden');
 
     // Button Logik
@@ -252,7 +256,7 @@ function startRemap(action) { remappingAction = action; initControlsMenu(); }
 
 // Global Exports
 window.showControls = showControls;
-window.showSettings = showSettings; // NEU
+window.showSettings = showSettings; 
 window.togglePause = togglePause;
 window.quitGame = quitGame;
 window.showMenu = showMenu;
