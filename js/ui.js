@@ -50,29 +50,25 @@ export function initMenu() {
     const startBtn = document.getElementById('start-game-btn');
     const footer = document.querySelector('.menu-footer');
     
-    // FIX: Settings Button robust erstellen/finden
+    // Settings Button Robustheit: Suchen oder neu erstellen
     let settingsBtn = document.getElementById('settings-btn-main');
     if (!settingsBtn) {
-        // Versuch, den alten Controls Button zu recyceln, um Duplikate zu vermeiden
-        const existingSecondary = footer.querySelector('.btn-secondary');
-        if (existingSecondary) {
-            settingsBtn = existingSecondary;
-            settingsBtn.id = 'settings-btn-main';
-        } else {
-            settingsBtn = document.createElement('button');
-            settingsBtn.id = 'settings-btn-main';
-            settingsBtn.className = 'btn-secondary';
-            footer.appendChild(settingsBtn);
-        }
+        // Aufräumen falls alte Buttons ohne ID da sind
+        const oldBtns = footer.querySelectorAll('.btn-secondary');
+        oldBtns.forEach(btn => { if(btn.innerText === "SETTINGS" || btn.innerText === "CONTROLS") btn.remove(); });
+
+        settingsBtn = document.createElement('button');
+        settingsBtn.id = 'settings-btn-main';
+        settingsBtn.className = 'btn-secondary';
+        footer.appendChild(settingsBtn);
     }
 
-    // FIX: Zwingend sichtbar machen (entfernt 'desktop-only' Klasse)
     settingsBtn.classList.remove('desktop-only', 'hidden');
     settingsBtn.style.display = 'block'; 
     settingsBtn.innerText = "SETTINGS";
     settingsBtn.onclick = showSettings;
 
-    // FIX: Fester transparenter Rahmen gegen das "Hüpfen"
+    // Fester transparenter Rahmen gegen das "Hüpfen"
     settingsBtn.style.border = "2px solid transparent";
     settingsBtn.style.marginTop = "15px";
 
@@ -84,7 +80,6 @@ export function initMenu() {
     // VISUAL FEEDBACK STATES
     // 0: Char, 1: Level, 2: Start, 3: Settings
     
-    // Reset All Styles
     charContainer.classList.remove('active-group', 'inactive-group');
     levelContainer.classList.remove('active-group', 'inactive-group');
     startBtn.classList.remove('focused');
@@ -101,14 +96,13 @@ export function initMenu() {
     } else if (state.menuState === 3) { 
         charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
         settingsBtn.classList.add('focused');
-        settingsBtn.style.borderColor = "#ffffff"; // Nur Farbe ändern, Pixelbreite bleibt gleich
+        settingsBtn.style.borderColor = "#ffffff"; 
     }
 
     // Render Cards
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
-        
         div.onclick = (e) => {
             e.stopPropagation();
             if (type === 'char') state.menuState = 0;
@@ -141,23 +135,11 @@ export function initMenu() {
     levelKeys.forEach((key, idx) => { renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey); });
 }
 
-// --- INPUT HANDLING ---
+// --- MAIN MENU INPUT HANDLING (States 0-3) ---
 export function handleMenuInput(code) {
-    // 4 = Inside Settings Menu
-    if (state.menuState === 4) {
-        if (code === 'ArrowUp') {
-            settingsIndex = (settingsIndex - 1 + 4) % 4; // 4 Items: Diff, Ctrl, Stats, Back
-            updateSettingsFocus();
-        } else if (code === 'ArrowDown') {
-            settingsIndex = (settingsIndex + 1) % 4;
-            updateSettingsFocus();
-        } else if (code === 'Enter' || code === 'Space') {
-            triggerSettingsAction();
-        } else if (code === 'Escape') {
-            showMenu();
-        }
-        return;
-    }
+    // Wenn wir im Settings Menü sind (State 4), wird das hier ignoriert 
+    // und vom Global Listener unten übernommen!
+    if (state.menuState === 4) return;
 
     // Main Menu Navigation
     if (state.menuState === 0) { // Char
@@ -180,6 +162,22 @@ export function handleMenuInput(code) {
     }
 }
 
+// --- SETTINGS INPUT HANDLING (State 4) ---
+// Wird vom globalen Listener aufgerufen
+function handleSettingsInput(code) {
+    if (code === 'ArrowUp') {
+        settingsIndex = (settingsIndex - 1 + 4) % 4; // 4 Items: Diff, Ctrl, Stats, Back
+        updateSettingsFocus();
+    } else if (code === 'ArrowDown') {
+        settingsIndex = (settingsIndex + 1) % 4;
+        updateSettingsFocus();
+    } else if (code === 'Enter' || code === 'Space') {
+        triggerSettingsAction();
+    } else if (code === 'Escape') {
+        showMenu();
+    }
+}
+
 export function showMenu() {
     document.getElementById('main-menu').classList.remove('hidden');
     document.getElementById('game-over').classList.add('hidden');
@@ -188,7 +186,7 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
-    // Remove Settings Menu Overlay if exists
+    // Settings Menü entfernen
     const oldSet = document.getElementById('settings-menu');
     if (oldSet) oldSet.remove();
     
@@ -208,9 +206,11 @@ function updateSettingsFocus() {
             if (idx === settingsIndex) {
                 el.style.border = "2px solid #fff";
                 el.style.transform = "scale(1.05)";
+                el.style.boxShadow = "0 0 10px rgba(255,255,255,0.2)";
             } else {
                 el.style.border = "2px solid rgba(0,0,0,0.3)";
                 el.style.transform = "scale(1)";
+                el.style.boxShadow = "none";
             }
         }
     });
@@ -253,23 +253,25 @@ export function showSettings() {
     const settingsMenu = document.createElement('div');
     settingsMenu.id = 'settings-menu';
     settingsMenu.className = 'screen'; 
-    // .screen hat bereits flex, center, center in style.css!
     
     state.menuState = 4; // Switch to Settings Input Mode
     settingsIndex = 0;   // Reset Selection
 
+    // Layout: Flexbox Centering Wrapper
     settingsMenu.innerHTML = `
-        <h1 style="margin-bottom:40px;">SETTINGS</h1>
-        
-        <div style="margin-bottom: 25px; text-align:center;">
-            <h2 style="font-size:14px; margin-bottom:8px; color:#aaa;">DIFFICULTY</h2>
-            <button id="btn-diff" class="main-btn" style="font-size:18px; width:220px; border:2px solid rgba(0,0,0,0.3);">NORMAL</button>
-        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%;">
+            <h1 style="margin-bottom:40px;">SETTINGS</h1>
+            
+            <div style="margin-bottom: 25px; text-align:center;">
+                <h2 style="font-size:14px; margin-bottom:8px; color:#aaa;">DIFFICULTY</h2>
+                <button id="btn-diff" class="main-btn" style="font-size:18px; width:220px; border:2px solid rgba(0,0,0,0.3);">NORMAL</button>
+            </div>
 
-        <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
-            <button id="btn-controls" class="btn-secondary" style="width:220px; border:2px solid rgba(0,0,0,0.3);">CONTROLS</button>
-            <button id="btn-stats" class="btn-secondary" style="width:220px; opacity:0.5; border:2px solid rgba(0,0,0,0.3);">STATISTICS (WIP)</button>
-            <button id="btn-back" class="btn-secondary" style="width:220px; margin-top:30px; border:2px solid rgba(0,0,0,0.3);">BACK</button>
+            <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
+                <button id="btn-controls" class="btn-secondary" style="width:220px; border:2px solid rgba(0,0,0,0.3);">CONTROLS</button>
+                <button id="btn-stats" class="btn-secondary" style="width:220px; opacity:0.5; border:2px solid rgba(0,0,0,0.3);">STATISTICS (WIP)</button>
+                <button id="btn-back" class="btn-secondary" style="width:220px; margin-top:30px; border:2px solid rgba(0,0,0,0.3);">BACK</button>
+            </div>
         </div>
     `;
     
@@ -278,7 +280,7 @@ export function showSettings() {
     updateDifficultyBtn();
     updateSettingsFocus();
 
-    // Mouse Interactions
+    // Mouse Interactions (Hover & Click)
     const bindMouse = (id, idx, isAction) => {
         const el = document.getElementById(id);
         if(!el) return;
@@ -363,6 +365,21 @@ window.quitGame = quitGame;
 window.showMenu = showMenu;
 window.restartGame = restartGame; 
 
+// --- GLOBAL EVENT LISTENER (DER FIX!) ---
+// Dieser Listener fängt Eingaben ab, auch wenn das Hauptmenü versteckt ist.
 window.addEventListener('keydown', e => {
-    if (remappingAction) { e.preventDefault(); keyBindings[remappingAction] = e.code; remappingAction = null; initControlsMenu(); }
+    // 1. Remapping (Höchste Priorität)
+    if (remappingAction) {
+        e.preventDefault();
+        keyBindings[remappingAction] = e.code;
+        remappingAction = null;
+        initControlsMenu();
+        return;
+    }
+
+    // 2. Settings Menu Input (State 4) - Umgeht den game.js Check!
+    if (state.menuState === 4) {
+        e.preventDefault(); // Verhindert Scrollen oder Spiel-Aktionen
+        handleSettingsInput(e.code);
+    }
 });
