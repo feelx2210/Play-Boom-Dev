@@ -4,6 +4,13 @@ export const TILE_SIZE = 48;
 export const GRID_W = 15;
 export const GRID_H = 15;
 
+// NEU: Schwierigkeitsgrade
+export const DIFFICULTIES = {
+    EASY: 0,   // Zufällig, selten Bomben
+    MEDIUM: 1, // Zerstört Wände, weicht aus
+    HARD: 2    // Jagt Spieler, legt Fallen, aggressiv
+};
+
 export const COLORS = {
     EXPLOSION_CORE: '#ffffcc'
 };
@@ -54,10 +61,3 @@ export const LEVELS = {
 export const TYPES = { EMPTY: 0, WALL_HARD: 1, WALL_SOFT: 2, BOMB: 3, WATER: 5, BRIDGE: 6, OIL: 7 };
 export const ITEMS = { NONE: 0, BOMB_UP: 1, RANGE_UP: 2, SPEED_UP: 3, SKULL: 4, NAPALM: 5, ROLLING: 6 };
 export const BOMB_MODES = { STANDARD: 0, NAPALM: 1, ROLLING: 2 };
-
-// NEU: Schwierigkeitsgrade
-export const DIFFICULTY = {
-    EASY: 0,
-    MEDIUM: 1,
-    HARD: 2
-};

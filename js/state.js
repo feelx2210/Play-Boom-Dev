@@ -1,4 +1,5 @@
-import { LEVELS, DIFFICULTY } from './constants.js';
+// js/state.js
+import { LEVELS, DIFFICULTIES } from './constants.js';
 
 export const state = {
     // Spielfeld-Daten
@@ -13,21 +14,14 @@ export const state = {
     selectedCharIndex: 0,
     selectedLevelKey: 'hell',
     
+    // NEU: Schwierigkeit (0=Easy, 1=Mid, 2=Hard)
+    difficulty: DIFFICULTIES.HARD,
+
     // Game-Flow Status
-    menuState: 0,       
+    menuState: 0,       // 0: Char, 1: Level, 2: Start
     isGameOver: false,
     isPaused: false,
     
-    // Settings & Stats
-    difficulty: DIFFICULTY.MEDIUM, // Standard: Medium
-    stats: {
-        gamesPlayed: 0,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        bestChar: '-'
-    },
-
     // Level-Spezifische Timer
     hellFireTimer: 0,
     hellFirePhase: 'IDLE', 
