@@ -1,15 +1,33 @@
-import { LEVELS, DIFFICULTIES } from './constants.js';
+import { LEVELS, DIFFICULTIES } from './constants.js'; //
 
-// Stats laden oder Defaultwerte setzen
-const savedStats = localStorage.getItem('boom_stats');
+// Default Stats definieren
 const defaultStats = {
     gamesPlayed: 0,
     wins: 0,
     draws: 0,
     losses: 0,
-    // Zählt Siege pro Charakter-ID (rambo, lucifer, etc.)
     winsByChar: { rambo: 0, lucifer: 0, nun: 0, yeti: 0 } 
 };
+
+// Versuch, gespeicherte Stats zu laden
+const savedData = localStorage.getItem('boom_stats');
+let finalStats = defaultStats;
+
+if (savedData) {
+    try {
+        const parsed = JSON.parse(savedData);
+        // MERGE: Wir nehmen die gespeicherten Werte und füllen fehlende mit Defaults auf.
+        // Das verhindert den Crash, wenn 'winsByChar' im alten Speicherstand fehlt.
+        finalStats = { ...defaultStats, ...parsed };
+        
+        // Expliziter Check für Nested Objects
+        if (!finalStats.winsByChar) finalStats.winsByChar = defaultStats.winsByChar;
+        
+    } catch (e) {
+        console.error("Stats corrupted, resetting.", e);
+        finalStats = defaultStats;
+    }
+}
 
 export const state = {
     // Spielfeld-Daten
@@ -25,13 +43,12 @@ export const state = {
     selectedLevelKey: 'hell',
     
     // Difficulty
-    difficulty: DIFFICULTIES.HARD, // Standard auf Hard, da du es so magst ;)
+    difficulty: DIFFICULTIES.HARD,
 
-    // Statistik (Persistent)
-    statistics: savedStats ? JSON.parse(savedStats) : defaultStats,
+    // Statistik (Sicher geladen)
+    statistics: finalStats,
 
     // Game-Flow Status
-    // 0: Char, 1: Level, 2: Start, 3: SettingsBtn, 4: SettingsMenu, 5: StatsMenu
     menuState: 0,       
     isGameOver: false,
     isPaused: false,
