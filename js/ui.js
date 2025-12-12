@@ -1,367 +1,474 @@
-import { GRID_W, GRID_H, TYPES, ITEMS, TILE_SIZE, BOOST_PADS, HELL_CENTER, DIFFICULTIES } from './constants.js';
+import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTIES } from './constants.js';
 import { state } from './state.js';
-import { isSolid } from './utils.js';
+import { drawCharacterSprite, drawLevelPreview } from './graphics.js';
 
-const DIRS = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
+let remappingAction = null;
+let settingsIndex = 0; // 0: Difficulty, 1: Controls, 2: Stats, 3: Back
 
-export function updateBotLogic(bot) {
-    const gx = Math.round(bot.x / TILE_SIZE);
-    const gy = Math.round(bot.y / TILE_SIZE);
+// --- HUD UPDATE ---
+export function updateHud(player) {
+    const elType = document.getElementById('bomb-type');
+    if (elType) {
+        switch(player.currentBombMode) {
+            case BOMB_MODES.STANDARD: elType.innerText = '⚫'; break;
+            case BOMB_MODES.NAPALM: elType.innerText = '☢️'; break;
+            case BOMB_MODES.ROLLING: elType.innerText = '🎳'; break;
+        }
+    }
+    const elBombs = document.getElementById('hud-bombs');
+    if (elBombs) elBombs.innerText = `💣 ${player.maxBombs}`;
+    const elFire = document.getElementById('hud-fire');
+    if (elFire) elFire.innerText = `🔥 ${player.bombRange}`;
+}
+
+function updateMobileLabels() {
+    const charNameEl = document.getElementById('char-name-display');
+    if (charNameEl) charNameEl.innerText = CHARACTERS[state.selectedCharIndex].name;
+    const levelNameEl = document.getElementById('level-name-display');
+    if (levelNameEl) levelNameEl.innerText = LEVELS[state.selectedLevelKey].name;
+}
+
+// --- MENU NAVIGATION ---
+function changeSelection(type, dir) {
+    if (type === 'char') {
+        const len = CHARACTERS.length;
+        state.selectedCharIndex = (state.selectedCharIndex + dir + len) % len;
+    } else if (type === 'level') {
+        const keys = Object.keys(LEVELS);
+        const currentIndex = keys.indexOf(state.selectedLevelKey);
+        const len = keys.length;
+        const newIndex = (currentIndex + dir + len) % len;
+        state.selectedLevelKey = keys[newIndex];
+    }
+    initMenu(); 
+}
+
+// --- MAIN MENU RENDER ---
+export function initMenu() {
+    const charContainer = document.getElementById('char-select');
+    const levelContainer = document.getElementById('level-select');
+    const startBtn = document.getElementById('start-game-btn');
+    const footer = document.querySelector('.menu-footer');
     
-    // Prüfen, ob Bot "mittig" auf der Kachel steht (Toleranzbereich 4px)
-    // Das verhindert das Zappeln zwischen Entscheidungen.
-    const isAlignedX = Math.abs(bot.x - gx * TILE_SIZE) < 4;
-    const isAlignedY = Math.abs(bot.y - gy * TILE_SIZE) < 4;
-    const isAligned = isAlignedX && isAlignedY;
+    // Settings Button Robustheit
+    let settingsBtn = document.getElementById('settings-btn-main');
+    if (!settingsBtn) {
+        // Aufräumen alter Buttons
+        const oldBtns = footer.querySelectorAll('.btn-secondary');
+        oldBtns.forEach(b => { if(b.innerText === "SETTINGS" || b.innerText === "CONTROLS") b.remove(); });
 
-    // 1. GEFAHREN-CHECK (Überleben hat absolute Priorität!)
-    const dangerMap = getDangerMap();
-    const amInDanger = dangerMap[gy][gx];
+        settingsBtn = document.createElement('button');
+        settingsBtn.id = 'settings-btn-main';
+        settingsBtn.className = 'btn-secondary';
+        footer.appendChild(settingsBtn);
+    }
+    
+    settingsBtn.classList.remove('desktop-only', 'hidden');
+    settingsBtn.style.display = 'block'; 
+    settingsBtn.innerText = "SETTINGS";
+    settingsBtn.onclick = showSettings;
 
-    // Wenn in Gefahr: SOFORT reagieren, egal wo wir stehen.
-    if (amInDanger) {
-        const safeDir = findSafeMove(gx, gy, dangerMap);
-        
-        // Richtung setzen
-        bot.botDir = safeDir;
-        if (safeDir.x !== 0) bot.lastDir = { x: Math.sign(safeDir.x), y: 0 };
-        else if (safeDir.y !== 0) bot.lastDir = { x: 0, y: Math.sign(safeDir.y) };
-        
-        // Bewegen
-        bot.move(bot.botDir.x * bot.speed, bot.botDir.y * bot.speed);
-        return;
+    // Rahmen gegen Hüpfen
+    settingsBtn.style.border = "2px solid transparent";
+    settingsBtn.style.marginTop = "15px";
+
+    charContainer.innerHTML = '';
+    levelContainer.innerHTML = '';
+    
+    updateMobileLabels();
+
+    // VISUAL FEEDBACK STATES
+    // 0: Char, 1: Level, 2: Start, 3: Settings
+    
+    charContainer.classList.remove('active-group', 'inactive-group');
+    levelContainer.classList.remove('active-group', 'inactive-group');
+    startBtn.classList.remove('focused');
+    settingsBtn.classList.remove('focused');
+    settingsBtn.style.borderColor = "transparent"; 
+
+    if (state.menuState === 0) { 
+        charContainer.classList.add('active-group'); levelContainer.classList.add('inactive-group');
+    } else if (state.menuState === 1) { 
+        charContainer.classList.add('inactive-group'); levelContainer.classList.add('active-group');
+    } else if (state.menuState === 2) { 
+        charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
+        startBtn.classList.add('focused');
+    } else if (state.menuState === 3) { 
+        charContainer.classList.add('inactive-group'); levelContainer.classList.add('inactive-group');
+        settingsBtn.classList.add('focused');
+        settingsBtn.style.borderColor = "#ffffff"; 
     }
 
-    // Wenn wir NICHT in Gefahr sind und NICHT mittig stehen:
-    // Lauf einfach weiter in die alte Richtung bis zur nächsten Kachel-Mitte.
-    // Das eliminiert das "Zappeln".
-    if (!isAligned && bot.botDir.x !== 0 || !isAligned && bot.botDir.y !== 0) {
-        // Prüfen ob wir gegen eine Wand laufen würden, falls ja -> Stop
-        const nextGx = gx + bot.botDir.x;
-        const nextGy = gy + bot.botDir.y;
-        if (isSolid(nextGx, nextGy)) {
-            // Ausrichten erzwingen um nicht an Ecken hängen zu bleiben
-            const targetX = gx * TILE_SIZE;
-            const targetY = gy * TILE_SIZE;
-            const dx = targetX - bot.x;
-            const dy = targetY - bot.y;
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                bot.move(Math.sign(dx)*bot.speed, Math.sign(dy)*bot.speed);
+    const renderCard = (container, type, index, data, isSelected) => {
+        const div = document.createElement('div');
+        div.className = `option-card ${isSelected ? 'selected' : ''}`;
+        div.onclick = (e) => {
+            e.stopPropagation();
+            if (type === 'char') state.menuState = 0;
+            if (type === 'level') state.menuState = 1;
+            if (index !== (type==='char' ? state.selectedCharIndex : Object.keys(LEVELS).indexOf(state.selectedLevelKey))) {
+                if (type === 'char') state.selectedCharIndex = index;
+                else state.selectedLevelKey = Object.keys(LEVELS)[index];
+                initMenu();
+            }
+        };
+
+        const pCanvas = document.createElement('canvas'); 
+        pCanvas.width=48; pCanvas.height=48; pCanvas.className='preview-canvas';
+        const ctx = pCanvas.getContext('2d');
+        if (type === 'char') drawCharacterSprite(ctx, 24, 36, data);
+        else drawLevelPreview(ctx, 48, 48, data);
+        div.appendChild(pCanvas);
+        const label = document.createElement('div');
+        label.className = 'card-label'; label.innerText = data.name;
+        div.appendChild(label);
+        container.appendChild(div);
+    };
+
+    CHARACTERS.forEach((char, idx) => { renderCard(charContainer, 'char', idx, char, idx === state.selectedCharIndex); });
+    const levelKeys = Object.keys(LEVELS);
+    levelKeys.forEach((key, idx) => { renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey); });
+}
+
+// --- INPUT HANDLING ---
+export function handleMenuInput(code) {
+    if (state.menuState === 4 || state.menuState === 5) return;
+
+    // Main Menu Navigation
+    if (state.menuState === 0) { // Char
+        if (code === 'ArrowLeft') changeSelection('char', -1);
+        else if (code === 'ArrowRight') changeSelection('char', 1);
+        else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 1; initMenu(); }
+    } else if (state.menuState === 1) { // Level
+        if (code === 'ArrowLeft') changeSelection('level', -1);
+        else if (code === 'ArrowRight') changeSelection('level', 1);
+        else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 2; initMenu(); }
+        else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 0; initMenu(); }
+    } else if (state.menuState === 2) { // Start Btn
+        if (code === 'Enter' || code === 'Space') { if (window.startGame) window.startGame(); }
+        else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); } 
+        else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
+    } else if (state.menuState === 3) { // Settings Btn
+        if (code === 'Enter' || code === 'Space') { showSettings(); }
+        else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); } 
+        else if (code === 'Escape') { state.menuState = 1; initMenu(); }
+    }
+}
+
+// --- SETTINGS LOGIC ---
+function handleSettingsInput(code) {
+    if (code === 'ArrowUp') {
+        settingsIndex = (settingsIndex - 1 + 4) % 4; 
+        updateSettingsFocus();
+    } else if (code === 'ArrowDown') {
+        settingsIndex = (settingsIndex + 1) % 4;
+        updateSettingsFocus();
+    } else if (code === 'Enter' || code === 'Space') {
+        triggerSettingsAction();
+    } else if (code === 'Escape') {
+        showMenu();
+    }
+}
+
+function handleStatsInput(code) {
+    if (code === 'Escape' || code === 'Enter' || code === 'Space') {
+        showSettings(); 
+    }
+}
+
+export function showSettings() {
+    document.getElementById('main-menu').classList.add('hidden');
+    
+    const oldStats = document.getElementById('stats-menu');
+    if (oldStats) oldStats.remove();
+
+    const oldMenu = document.getElementById('settings-menu');
+    if (oldMenu) oldMenu.remove();
+
+    const settingsMenu = document.createElement('div');
+    settingsMenu.id = 'settings-menu';
+    settingsMenu.className = 'screen'; 
+    
+    state.menuState = 4; // Settings Mode
+    settingsIndex = 0; 
+
+    settingsMenu.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%;">
+            <h1 style="margin-bottom:40px;">SETTINGS</h1>
+            
+            <div style="margin-bottom: 25px; text-align:center;">
+                <h2 style="font-size:14px; margin-bottom:8px; color:#aaa;">DIFFICULTY</h2>
+                <button id="btn-diff" class="main-btn" style="font-size:18px; width:220px; border:2px solid rgba(0,0,0,0.3);">NORMAL</button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
+                <button id="btn-controls" class="btn-secondary" style="width:220px; border:2px solid rgba(0,0,0,0.3);">CONTROLS</button>
+                <button id="btn-stats" class="btn-secondary" style="width:220px; border:2px solid rgba(0,0,0,0.3);">STATISTICS</button>
+                <button id="btn-back" class="btn-secondary" style="width:220px; margin-top:30px; border:2px solid rgba(0,0,0,0.3);">BACK</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(settingsMenu);
+
+    updateDifficultyBtn();
+    updateSettingsFocus();
+
+    const bindMouse = (id, idx, isAction) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.onmouseenter = () => { settingsIndex = idx; updateSettingsFocus(); };
+        el.onclick = (e) => { 
+            e.stopPropagation();
+            settingsIndex = idx; 
+            updateSettingsFocus(); 
+            if(isAction) triggerSettingsAction(); 
+        };
+    };
+    bindMouse('btn-diff', 0, true);
+    bindMouse('btn-controls', 1, true);
+    bindMouse('btn-stats', 2, true);
+    bindMouse('btn-back', 3, true);
+}
+
+// --- STATS SCREEN ---
+export function showStatistics() {
+    try {
+        const oldSet = document.getElementById('settings-menu');
+        if (oldSet) oldSet.remove();
+
+        const statsMenu = document.createElement('div');
+        statsMenu.id = 'stats-menu';
+        statsMenu.className = 'screen';
+        
+        state.menuState = 5; // Stats Mode
+
+        const s = state.statistics;
+        
+        const games = s ? (s.gamesPlayed || 0) : 0;
+        const wins = s ? (s.wins || 0) : 0;
+        const draws = s ? (s.draws || 0) : 0;
+        const losses = s ? (s.losses || 0) : 0;
+
+        let bestCharId = '-';
+        let maxWins = -1;
+        if (s && s.winsByChar) {
+            Object.keys(s.winsByChar).forEach(id => {
+                if (s.winsByChar[id] > maxWins) {
+                    maxWins = s.winsByChar[id];
+                    bestCharId = id;
+                }
+            });
+        }
+        
+        const bestCharObj = CHARACTERS.find(c => c.id === bestCharId);
+        const bestCharName = bestCharObj ? bestCharObj.name.toUpperCase() : (maxWins > 0 ? bestCharId.toUpperCase() : "NONE");
+
+        statsMenu.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%;">
+                <h1 style="margin-bottom:30px; color:#aaa;">STATISTICS</h1>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left; font-size:16px; margin-bottom:40px; background:rgba(0,0,0,0.5); padding:20px; border:2px solid #333;">
+                    <div style="color:#888;">GAMES PLAYED:</div> <div style="color:#fff; text-align:right;">${games}</div>
+                    <div style="color:#00ff00;">TOTAL WINS:</div> <div style="color:#fff; text-align:right;">${wins}</div>
+                    <div style="color:#ffff00;">DRAWS:</div> <div style="color:#fff; text-align:right;">${draws}</div>
+                    <div style="color:#ff0000;">LOSSES:</div> <div style="color:#fff; text-align:right;">${losses}</div>
+                    
+                    <div style="grid-column: 1 / -1; height:1px; background:#444; margin:10px 0;"></div>
+                    
+                    <div style="color:#00ccff;">MOST WINS WITH:</div> <div style="color:#fff; text-align:right;">${bestCharName}</div>
+                </div>
+
+                <button id="btn-stats-back" class="btn-secondary" style="width:200px; border:2px solid #fff; cursor:pointer;">BACK</button>
+            </div>
+        `;
+
+        document.body.appendChild(statsMenu);
+        
+        const btn = document.getElementById('btn-stats-back');
+        btn.onclick = (e) => { 
+            e.stopPropagation();
+            showSettings(); 
+        };
+
+    } catch(e) {
+        console.error("Stats Error:", e);
+        showSettings(); 
+    }
+}
+
+function updateSettingsFocus() {
+    const ids = ['btn-diff', 'btn-controls', 'btn-stats', 'btn-back'];
+    ids.forEach((id, idx) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (idx === settingsIndex) {
+                el.style.border = "2px solid #fff";
+                el.style.transform = "scale(1.05)";
+                el.style.boxShadow = "0 0 10px rgba(255,255,255,0.2)";
+            } else {
+                el.style.border = "2px solid rgba(0,0,0,0.3)";
+                el.style.transform = "scale(1)";
+                el.style.boxShadow = "none";
+            }
+        }
+    });
+}
+
+function triggerSettingsAction() {
+    if (settingsIndex === 0) { 
+        state.difficulty = (state.difficulty + 1) % 3;
+        updateDifficultyBtn();
+    } else if (settingsIndex === 1) { 
+        document.getElementById('settings-menu').remove();
+        showControls();
+    } else if (settingsIndex === 2) { 
+        showStatistics(); 
+    } else if (settingsIndex === 3) { 
+        showMenu();
+    }
+}
+
+function updateDifficultyBtn() {
+    const btn = document.getElementById('btn-diff');
+    if (!btn) return;
+    const labels = ["EASY", "MEDIUM", "HARD"];
+    const colors = ["#44aa44", "#ff8800", "#ff0000"];
+    if (state.difficulty === undefined) state.difficulty = 1;
+    const safeDiff = Math.max(0, Math.min(state.difficulty, 2));
+    btn.innerText = labels[safeDiff];
+    btn.style.backgroundColor = colors[safeDiff];
+    btn.style.color = "#ffffff";
+    btn.style.textShadow = "1px 1px 0 #000";
+}
+
+export function showMenu() {
+    document.getElementById('main-menu').classList.remove('hidden');
+    document.getElementById('game-over').classList.add('hidden');
+    document.getElementById('ui-layer').classList.add('hidden');
+    document.getElementById('pause-btn').classList.add('hidden'); 
+    document.getElementById('pause-menu').classList.add('hidden'); 
+    document.getElementById('controls-menu').classList.add('hidden');
+    
+    // Aufräumen aller Sub-Menüs
+    const oldSet = document.getElementById('settings-menu');
+    if (oldSet) oldSet.remove();
+    const oldStats = document.getElementById('stats-menu');
+    if (oldStats) oldStats.remove();
+    
+    const mobControls = document.getElementById('mobile-controls');
+    if (mobControls) mobControls.classList.add('hidden');
+    
+    state.menuState = 0;
+    initMenu();
+}
+
+export function togglePause() {
+    if (state.isGameOver) { showMenu(); return; }
+    if (!document.getElementById('main-menu').classList.contains('hidden')) return;
+    state.isPaused = !state.isPaused;
+    document.getElementById('pause-menu').classList.toggle('hidden', !state.isPaused);
+}
+
+export function quitGame() {
+    state.isPaused = false;
+    document.getElementById('pause-menu').classList.add('hidden');
+    showMenu();
+}
+
+export function restartGame() {
+    document.getElementById('pause-menu').classList.add('hidden');
+    state.isPaused = false;
+    if (window.startGame) window.startGame();
+}
+
+export function endGame(msg, winner) {
+    if (state.isGameOver) return; 
+    state.isGameOver = true; 
+    
+    // STATS SAVE
+    const s = state.statistics;
+    if (s) {
+        s.gamesPlayed++;
+        if (winner) {
+            if (winner.id === 1) {
+                s.wins++;
+                if (winner.charDef && winner.charDef.id) {
+                    if (!s.winsByChar[winner.charDef.id]) s.winsByChar[winner.charDef.id] = 0;
+                    s.winsByChar[winner.charDef.id]++;
+                }
+            } else {
+                s.losses++;
             }
         } else {
-            bot.move(bot.botDir.x * bot.speed, bot.botDir.y * bot.speed);
+            s.draws++;
         }
+        localStorage.setItem('boom_stats', JSON.stringify(s));
+    }
+
+    setTimeout(() => {
+        const titleEl = document.getElementById('go-title');
+        if (winner && winner.id === 1) {
+            titleEl.innerText = "YOU WON"; titleEl.style.color = "#00ff00"; titleEl.style.textShadow = "4px 4px 0 #005500"; 
+        } else {
+            titleEl.innerText = "GAME OVER"; titleEl.style.color = "#ff0000"; titleEl.style.textShadow = "4px 4px 0 #550000";
+        }
+        document.getElementById('go-message').innerText = msg;
+        document.getElementById('game-over').classList.remove('hidden');
+        document.getElementById('mobile-controls').classList.add('hidden');
+    }, 3000);
+}
+
+export function showControls() {
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('controls-menu').classList.remove('hidden');
+    initControlsMenu();
+}
+
+function initControlsMenu() {
+    const container = document.getElementById('controls-list');
+    container.innerHTML = '';
+    const formatKey = (code) => code.replace('Key', '').replace('Arrow', '').replace('Space', 'SPACE').toUpperCase();
+    Object.keys(keyBindings).forEach(action => {
+        const row = document.createElement('div'); row.className = 'control-row';
+        const label = document.createElement('span'); label.innerText = action;
+        const btn = document.createElement('button'); btn.className = 'key-btn';
+        btn.innerText = remappingAction === action ? 'PRESS KEY...' : formatKey(keyBindings[action]);
+        if (remappingAction === action) btn.classList.add('active');
+        btn.onclick = () => startRemap(action);
+        row.appendChild(label); row.appendChild(btn); container.appendChild(row);
+    });
+}
+
+function startRemap(action) { remappingAction = action; initControlsMenu(); }
+
+// Global Exports
+window.showControls = showControls;
+window.showSettings = showSettings; 
+window.togglePause = togglePause;
+window.quitGame = quitGame;
+window.showMenu = showMenu;
+window.restartGame = restartGame; 
+
+// FIX: Global verfügbar machen für player.js
+window.updateHud = updateHud;
+
+window.addEventListener('keydown', e => {
+    if (remappingAction) {
+        e.preventDefault();
+        keyBindings[remappingAction] = e.code;
+        remappingAction = null;
+        initControlsMenu();
         return;
     }
-
-    // --- ENTSCHEIDUNG TREFFEN (Nur wenn aligned und sicher) ---
-
-    // Anti-Stacking: Steht ein anderer Bot auf mir?
-    const stackingBot = state.players.find(p => p !== bot && p.alive && Math.abs(p.x - bot.x) < 5 && Math.abs(p.y - bot.y) < 5);
-    if (stackingBot && bot.id > stackingBot.id) {
-        // Warte kurz
-        return; 
+    if (state.menuState === 4) {
+        e.preventDefault();
+        handleSettingsInput(e.code);
+        return;
     }
-
-    let targetDir = {x:0, y:0};
-    
-    // ZIEL: Menschen jagen (HARD) oder Nächsten (EASY/MID)
-    let enemy = null;
-    const human = state.players.find(p => p.id === 1 && p.alive);
-    if (state.difficulty === DIFFICULTIES.HARD && human) enemy = human;
-    else enemy = findNearestEnemy(bot);
-
-    const isStrong = bot.maxBombs >= 2 && bot.bombRange >= 2;
-    // Kann ich Gegner erreichen?
-    const directPath = enemy ? findPathToTarget(gx, gy, Math.round(enemy.x/TILE_SIZE), Math.round(enemy.y/TILE_SIZE), dangerMap, false, bot.id) : null;
-    
-    let mode = 'IDLE';
-
-    if (state.difficulty === DIFFICULTIES.HARD) {
-        if (directPath) mode = 'HUNT';
-        else if (isStrong) mode = 'BREACH'; // Tunnel graben
-        else mode = 'FARM'; // Powerups holen
-    } else {
-        mode = (enemy && Math.hypot(enemy.x-bot.x, enemy.y-bot.y)/TILE_SIZE < 6) ? 'HUNT' : 'FARM';
+    if (state.menuState === 5) {
+        e.preventDefault();
+        handleStatsInput(e.code);
+        return;
     }
-
-    let bestMove = null;
-
-    // 1. HUNT
-    if (mode === 'HUNT' && enemy) {
-        bestMove = directPath;
-        
-        // Bomben-Check
-        if (bot.activeBombs < bot.maxBombs) {
-            const dist = Math.hypot(enemy.x-bot.x, enemy.y-bot.y)/TILE_SIZE;
-            
-            // Lege Bombe, wenn nah genug UND sicher
-            // NEU: Strict Safety Check
-            if (dist <= bot.bombRange && isSafeToPlant(gx, gy, dangerMap)) {
-                 // Auf Hard legen wir auch Fallen (Random)
-                 if (state.difficulty === DIFFICULTIES.HARD && Math.random() < 0.4) bot.plantBomb();
-                 // Oder wenn wir direkt auf gleicher Höhe sind
-                 else if ((Math.abs(enemy.x - bot.x) < 10 || Math.abs(enemy.y - bot.y) < 10)) bot.plantBomb();
-            }
-        }
-    }
-
-    // 2. BREACH (Durch Wände graben)
-    if (mode === 'BREACH' && enemy) {
-        bestMove = findPathToTarget(gx, gy, Math.round(enemy.x/TILE_SIZE), Math.round(enemy.y/TILE_SIZE), dangerMap, true, bot.id);
-        
-        // Stehen wir vor einer Softwall?
-        if (bestMove) {
-            const nextX = gx + bestMove.x;
-            const nextY = gy + bestMove.y;
-            if (state.grid[nextY] && state.grid[nextY][nextX] === TYPES.WALL_SOFT) {
-                if (bot.activeBombs < bot.maxBombs && isSafeToPlant(gx, gy, dangerMap)) {
-                    bot.plantBomb();
-                    // SOFORT: Fluchtweg berechnen und in diese Richtung starten (nicht warten!)
-                    const escapeMove = findSafeMove(gx, gy, getDangerMap()); // DangerMap neu holen inkl. virtueller Bombe
-                    targetDir = escapeMove;
-                    bot.botDir = targetDir;
-                    bot.move(bot.botDir.x * bot.speed, bot.botDir.y * bot.speed);
-                    return;
-                } else {
-                    bestMove = {x:0, y:0}; // Warten (Sicherheitsabstand)
-                }
-            }
-        }
-    }
-
-    // 3. FARM
-    if (mode === 'FARM' || (mode === 'BREACH' && !bestMove)) {
-        bestMove = findNearestLoot(gx, gy, dangerMap, bot.id);
-        if (bestMove) {
-            const nextX = gx + bestMove.x;
-            const nextY = gy + bestMove.y;
-            if (state.grid[nextY] && state.grid[nextY][nextX] === TYPES.WALL_SOFT) {
-                if (bot.activeBombs < bot.maxBombs && isSafeToPlant(gx, gy, dangerMap)) {
-                    bot.plantBomb();
-                    const escapeMove = findSafeMove(gx, gy, getDangerMap());
-                    targetDir = escapeMove;
-                    bot.botDir = targetDir;
-                    bot.move(bot.botDir.x * bot.speed, bot.botDir.y * bot.speed);
-                    return;
-                } else {
-                    bestMove = {x:0, y:0};
-                }
-            }
-        }
-    }
-
-    // 4. IDLE / RANDOM
-    if (!bestMove) {
-        // Wenn ich sicher stehe, bleib stehen! Nicht zappeln.
-        bestMove = {x:0, y:0}; 
-        
-        // Nur selten random laufen, wenn wirklich nichts zu tun ist
-        if (Math.random() < 0.05) {
-             const safeNeighbors = DIRS.filter(d => !isSolid(gx+d.x, gy+d.y) && !dangerMap[gy+d.y][gx+d.x] && !isOccupiedByBot(gx+d.x, gy+d.y, bot.id));
-             if (safeNeighbors.length > 0) bestMove = safeNeighbors[Math.floor(Math.random()*safeNeighbors.length)];
-        }
-    }
-
-    targetDir = bestMove;
-
-    // Bewegung ausführen
-    if (targetDir.x !== 0 || targetDir.y !== 0) {
-        bot.botDir = targetDir;
-        if (bot.botDir.x !== 0) bot.lastDir = { x: Math.sign(bot.botDir.x), y: 0 };
-        else if (bot.botDir.y !== 0) bot.lastDir = { x: 0, y: Math.sign(bot.botDir.y) };
-        bot.move(bot.botDir.x * bot.speed, bot.botDir.y * bot.speed);
-    } else {
-        // Explizit stehen bleiben (Snap to Grid)
-        // Hilft beim "Ruhe bewahren"
-        const dx = (gx * TILE_SIZE) - bot.x;
-        const dy = (gy * TILE_SIZE) - bot.y;
-        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-             bot.move(Math.sign(dx), Math.sign(dy)); // Langsam zentrieren
-        }
-    }
-}
-
-// --- INTELLIGENTE SAFETY CHECKS ---
-
-// Prüft rekursiv, ob eine Bombe hier sicher wäre (Fluchtweg-Tiefe: 3 Schritte)
-function isSafeToPlant(gx, gy, currentDangerMap) {
-    // 1. Simuliere Bombe an aktueller Position
-    // Wir tun so, als wäre das aktuelle Feld + Kreuz gefährlich
-    const simulatedDanger = currentDangerMap.map(row => [...row]); // Deep copy
-    simulatedDanger[gy][gx] = true; // Bombe selbst
-    // Wir vereinfachen und markieren die Nachbarn als Gefahr (konservativ)
-    DIRS.forEach(d => {
-        if (gy+d.y >= 0 && gy+d.y < GRID_H && gx+d.x >= 0 && gx+d.x < GRID_W)
-            simulatedDanger[gy+d.y][gx+d.x] = true;
-    });
-
-    // 2. Suche Fluchtweg (BFS)
-    // Start bei einem sicheren Nachbarn. Wenn KEIN Nachbar sicher ist -> Nicht legen.
-    const startNeighbors = DIRS.filter(d => {
-        const nx = gx + d.x; const ny = gy + d.y;
-        if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) return false;
-        // Nachbar muss begehbar sein UND (aktuell) sicher
-        return !isSolid(nx, ny) && !currentDangerMap[ny][nx]; 
-    });
-
-    if (startNeighbors.length === 0) return false; // Sackgasse
-
-    // 3. Prüfen, ob der Nachbar "Luft" hat (mindestens 2 weitere freie Felder erreichbar)
-    // Das verhindert, dass er in eine 1-Feld-Sackgasse läuft
-    for (let startNode of startNeighbors) {
-        const sx = gx + startNode.x;
-        const sy = gy + startNode.y;
-        
-        let freeTilesCount = 0;
-        // Zähle freie Felder um den Startknoten (Tiefe 1)
-        DIRS.forEach(d => {
-            const nx = sx + d.x; const ny = sy + d.y;
-            if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
-                if (!isSolid(nx, ny) && !simulatedDanger[ny][nx]) freeTilesCount++;
-            }
-        });
-        
-        // Wenn wir in eine Richtung laufen können, wo es weiter geht -> OK
-        if (freeTilesCount >= 1) return true;
-    }
-
-    return false; // Zu riskant
-}
-
-function findNearestEnemy(bot) {
-    let nearest = null;
-    let minDist = Infinity;
-    state.players.forEach(p => {
-        if (p === bot || !p.alive) return;
-        const d = (p.x - bot.x)**2 + (p.y - bot.y)**2;
-        if (d < minDist) { minDist = d; nearest = p; }
-    });
-    return nearest;
-}
-
-function isOccupiedByBot(gx, gy, selfId) {
-    return state.players.some(p => p.id !== selfId && p.alive && Math.round(p.x / TILE_SIZE) === gx && Math.round(p.y / TILE_SIZE) === gy);
-}
-
-// Pfadsuche mit Bot-Vermeidung
-function findPathToTarget(sx, sy, tx, ty, dangerMap, allowSoftWalls, selfId) {
-    const queue = [{x: sx, y: sy, firstMove: null}];
-    const visited = new Set();
-    visited.add(`${sx},${sy}`);
-    let ops = 0;
-    while(queue.length > 0) {
-        if (ops++ > 400) break;
-        const curr = queue.shift();
-        if (curr.x === tx && curr.y === ty) return curr.firstMove;
-        
-        const neighbors = DIRS.map(d => ({ x: curr.x + d.x, y: curr.y + d.y, dir: d }))
-            .sort((a, b) => (Math.abs(a.x - tx) + Math.abs(a.y - ty)) - (Math.abs(b.x - tx) + Math.abs(b.y - ty)));
-
-        for (let n of neighbors) {
-            if (n.x >= 0 && n.x < GRID_W && n.y >= 0 && n.y < GRID_H) {
-                if (visited.has(`${n.x},${n.y}`)) continue;
-                const tile = state.grid[n.y][n.x];
-                if (tile === TYPES.WALL_HARD || tile === TYPES.BOMB || dangerMap[n.y][n.x]) continue;
-                if (!allowSoftWalls && tile === TYPES.WALL_SOFT) continue;
-                if (isOccupiedByBot(n.x, n.y, selfId) && (n.x !== tx || n.y !== ty)) continue;
-                visited.add(`${n.x},${n.y}`);
-                queue.push({ x: n.x, y: n.y, firstMove: curr.firstMove || n.dir });
-            }
-        }
-    }
-    return null;
-}
-
-function findNearestLoot(sx, sy, dangerMap, selfId) {
-    const queue = [{x: sx, y: sy, firstMove: null}];
-    const visited = new Set();
-    visited.add(`${sx},${sy}`);
-    let ops = 0;
-    while(queue.length > 0) {
-        if (ops++ > 500) break;
-        const curr = queue.shift();
-        const tile = state.grid[curr.y][curr.x];
-        const item = state.items[curr.y][curr.x];
-        if ((curr.x !== sx || curr.y !== sy) && (tile === TYPES.WALL_SOFT || item !== ITEMS.NONE)) return curr.firstMove;
-        if (tile === TYPES.WALL_SOFT && (curr.x !== sx || curr.y !== sy)) continue; 
-        for (let d of DIRS) {
-            const nx = curr.x + d.x; const ny = curr.y + d.y;
-            if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
-                if (visited.has(`${nx},${ny}`)) continue;
-                const t = state.grid[ny][nx];
-                if (t === TYPES.WALL_HARD || t === TYPES.BOMB || dangerMap[ny][nx]) continue;
-                if (isOccupiedByBot(nx, ny, selfId)) continue;
-                visited.add(`${nx},${ny}`);
-                queue.push({ x: nx, y: ny, firstMove: curr.firstMove || d });
-            }
-        }
-    }
-    return null;
-}
-
-function getDangerMap() {
-    const map = Array(GRID_H).fill().map(() => Array(GRID_W).fill(false));
-    state.particles.forEach(p => { 
-        if (p.isFire && p.gx >= 0 && p.gx < GRID_W && p.gy >= 0 && p.gy < GRID_H) map[p.gy][p.gx] = true; 
-    });
-    state.bombs.forEach(b => {
-        const isBoost = (state.currentLevel.id === 'hell' || state.currentLevel.id === 'ice') && BOOST_PADS.some(p => p.x === b.gx && p.y === b.gy);
-        const isOil = (b.underlyingTile === TYPES.OIL);
-        const range = (isBoost || isOil) ? 15 : b.range;
-        map[b.gy][b.gx] = true;
-        DIRS.forEach(d => {
-            for (let i = 1; i <= range; i++) {
-                const tx = b.gx + (d.x * i); const ty = b.gy + (d.y * i);
-                if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) break;
-                if (state.grid[ty][tx] === TYPES.WALL_HARD) break;
-                map[ty][tx] = true; 
-                if (state.grid[ty][tx] === TYPES.WALL_SOFT) break;
-            }
-        });
-    });
-    if (state.currentLevel.hasCentralFire && state.hellFirePhase !== 'IDLE') {
-        map[HELL_CENTER.y][HELL_CENTER.x] = true;
-        const range = 5; 
-        DIRS.forEach(d => {
-            for(let i=1; i<=range; i++) {
-                const tx = HELL_CENTER.x + (d.x * i); const ty = HELL_CENTER.y + (d.y * i);
-                if (tx >= 0 && tx < GRID_W && ty >= 0 && ty < GRID_H) {
-                    if (state.grid[ty][tx] === TYPES.WALL_HARD) break;
-                    map[ty][tx] = true;
-                    if (state.grid[ty][tx] === TYPES.WALL_SOFT) break;
-                }
-            }
-        });
-    }
-    return map;
-}
-
-// Sicherer Move (Flucht) - Sucht den nächsten SICHEREN Fleck
-function findSafeMove(gx, gy, dangerMap) {
-    // Wenn wir schon sicher stehen, bleib stehen!
-    if (!dangerMap[gy][gx]) return {x:0, y:0};
-
-    const queue = [{x: gx, y: gy, firstMove: null, dist: 0}];
-    const visited = new Set();
-    visited.add(`${gx},${gy}`);
-    let ops = 0;
-    while (queue.length > 0) {
-        if (ops++ > 500) break;
-        const current = queue.shift();
-        
-        if (!dangerMap[current.y][current.x]) return current.firstMove || {x:0, y:0}; 
-        if (current.dist > 15) continue;
-
-        for (let d of DIRS) {
-            const nx = current.x + d.x; const ny = current.y + d.y; 
-            if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && !visited.has(`${nx},${ny}`)) {
-                if (!isSolid(nx, ny)) { 
-                    visited.add(`${nx},${ny}`);
-                    queue.push({ x: nx, y: ny, firstMove: current.firstMove || d, dist: current.dist + 1 });
-                }
-            }
-        }
-    }
-    return DIRS[Math.floor(Math.random()*DIRS.length)];
-}
+});

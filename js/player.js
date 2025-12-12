@@ -3,9 +3,8 @@ import { state } from './state.js';
 import { createFloatingText } from './utils.js';
 import { drawCharacterSprite } from './graphics.js';
 import { updateBotLogic } from './ai.js';
-import { updateHud } from './ui.js';
+// HIER WURDE DER IMPORT ENTFERNT, UM DEN CRASH ZU VERHINDERN
 
-// Globaler Canvas Context für Draw-Calls
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -15,7 +14,6 @@ export class Player {
         this.charDef = charDef; 
         this.name = charDef.name;
         
-        // Position
         this.startX = x * TILE_SIZE;
         this.startY = y * TILE_SIZE;
         this.x = this.startX; 
@@ -23,56 +21,46 @@ export class Player {
         this.gridX = x; 
         this.gridY = y;
         
-        // Status
         this.isBot = isBot;
         this.alive = true;
         this.invincibleTimer = 0;
         this.deathTimer = 0;
         
-        // Stats
-        this.speed = 2; // Basis-Geschwindigkeit
+        this.speed = 2; 
         this.maxBombs = 1;
         this.activeBombs = 0;
         this.bombRange = 1;
         
-        // Speed System
         this.speedMultiplier = 1; 
         this.speedTimer = 0;
 
-        // PowerUps & Timer (30s = 1800 frames)
         this.hasNapalm = false; this.napalmTimer = 0;
         this.hasRolling = false; this.rollingTimer = 0;
         this.currentBombMode = BOMB_MODES.STANDARD;
         
         this.activeCurses = []; 
 
-        // Animation / Movement
         this.lastDir = {x: 0, y: 1}; 
         this.bobTimer = 0;
         
-        // Input Flags
         this.bombLock = false;
         this.changeLock = false;
 
-        // Bot Stuff
         this.targetX = x; this.targetY = y; 
         this.changeDirTimer = 0; 
         this.botDir = {x:0, y:0};
     }
 
     activateSpeedBoost(multiplier, duration, label) {
-        // "Schnell" hebt "Langsam" auf
         if (this.hasCurse('slow')) {
             this.activeCurses = this.activeCurses.filter(c => c.type !== 'slow');
             createFloatingText(this.x, this.y, "NORMALIZED!", "#ffffff");
         }
 
         if (this.speedTimer > 0) {
-            // Wenn bereits aktiv: Nur Zeit verlängern
             this.speedTimer += duration;
             createFloatingText(this.x, this.y, "EXTENDED!", "#ffff00");
         } else {
-            // Neuer Boost
             this.speedMultiplier = multiplier;
             this.speedTimer = duration;
             createFloatingText(this.x, this.y, label, "#ffff00");
@@ -80,8 +68,6 @@ export class Player {
     }
 
     addCurse(type) {
-        // 1. SPEED RUSH (Spezialfall: Nutzt SpeedBoost Logik)
-        // Zeigt eigenen Text an ("SPEED CURSE!"), daher hier return.
         if (type === 'speed_rush') {
             this.activateSpeedBoost(2.5, 900, "SPEED CURSE!"); 
             return;
@@ -89,7 +75,6 @@ export class Player {
 
         let showedText = false;
 
-        // 2. SLOW (Konfliktlösung mit Speed)
         if (type === 'slow') {
             if (this.speedTimer > 0) {
                 this.speedTimer = 0;
@@ -99,13 +84,12 @@ export class Player {
             }
         }
 
-        // 3. Fluch zur Liste hinzufügen
         const existing = this.activeCurses.find(c => c.type === type);
         if (existing) {
-            existing.timer = 900; // 15s Reset
+            existing.timer = 900; 
             if (!showedText) createFloatingText(this.x, this.y, "CURSE EXTENDED!", "#ff00ff");
         } else {
-            this.activeCurses.push({ type: type, timer: 900 }); // 15s Neu
+            this.activeCurses.push({ type: type, timer: 900 }); 
             if (!showedText) createFloatingText(this.x, this.y, "CURSED: " + type.toUpperCase(), "#ff00ff");
         }
     }
@@ -120,23 +104,20 @@ export class Player {
             return;
         }
 
-        if (this.id === 1) updateHud(this);
+        // FIX: Update HUD über Global Window statt Import
+        if (this.id === 1 && window.updateHud) window.updateHud(this);
+        
         this.bobTimer += 0.2;
-
         this.updateTimers();
 
-        // --- GESCHWINDIGKEIT BERECHNEN ---
         let currentSpeed = this.speed * this.speedMultiplier;
         
-        // Wasser verlangsamt immer
         const gx = Math.round(this.x / TILE_SIZE);
         const gy = Math.round(this.y / TILE_SIZE);
         if (state.grid[gy] && state.grid[gy][gx] === TYPES.WATER) currentSpeed *= 0.5;
         
-        // Slow Fluch halbiert
         if (this.hasCurse('slow')) currentSpeed *= 0.5;
 
-        // --- INPUT / AI ---
         if (this.isBot) {
             updateBotLogic(this);
         } else if (input) {
@@ -147,7 +128,6 @@ export class Player {
     }
 
     updateTimers() {
-        // Skills: 30 Sekunden (1800 Frames)
         if (this.hasRolling && --this.rollingTimer <= 0) {
             this.hasRolling = false;
             if (this.currentBombMode === BOMB_MODES.ROLLING) this.currentBombMode = BOMB_MODES.STANDARD;
@@ -159,7 +139,6 @@ export class Player {
             createFloatingText(this.x, this.y, "NAPALM LOST", "#cccccc");
         }
         
-        // Speed Timer
         if (this.speedTimer > 0) {
             this.speedTimer--;
             if (this.speedTimer <= 0) {
@@ -170,7 +149,6 @@ export class Player {
 
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        // Flüche: 15 Sekunden (900 Frames)
         if (this.activeCurses.length > 0) {
             this.activeCurses.forEach(c => c.timer--);
             const prevCount = this.activeCurses.length;
@@ -222,12 +200,9 @@ export class Player {
             const gx = Math.floor(x / TILE_SIZE);
             const gy = Math.floor(y / TILE_SIZE);
             if (gx < 0 || gx >= GRID_W || gy < 0 || gy >= GRID_H) return true;
-            
             if (state.grid[gy][gx] === TYPES.WALL_HARD || state.grid[gy][gx] === TYPES.WALL_SOFT) return true;
-            
             const bomb = state.bombs.find(b => b.gx === gx && b.gy === gy);
             if (bomb && !bomb.walkableIds.includes(this.id)) return true;
-            
             return false;
         };
 
@@ -236,7 +211,6 @@ export class Player {
             const xEdge = dx > 0 ? nextX + size + offset : nextX + offset;
             const topY = this.y + offset;
             const bottomY = this.y + size + offset;
-            
             if (!isBlocked(xEdge, topY) && !isBlocked(xEdge, bottomY)) {
                 this.x = nextX;
             } else {
@@ -250,7 +224,6 @@ export class Player {
             const yEdge = dy > 0 ? nextY + size + offset : nextY + offset;
             const leftX = this.x + offset;
             const rightX = this.x + size + offset;
-            
             if (!isBlocked(leftX, yEdge) && !isBlocked(rightX, yEdge)) {
                 this.y = nextY;
             } else {
@@ -357,7 +330,6 @@ export class Player {
                 const effects = ['sickness', 'speed_rush', 'slow', 'cant_plant'];
                 const effect = effects[Math.floor(Math.random()*effects.length)];
                 this.addCurse(effect);
-                // FIX: Kein doppelter Text mehr hier! addCurse kümmert sich drum.
                 break;
         }
     }
