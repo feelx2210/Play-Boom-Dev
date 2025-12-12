@@ -53,7 +53,6 @@ export function initMenu() {
     // Settings Button Robustheit
     let settingsBtn = document.getElementById('settings-btn-main');
     if (!settingsBtn) {
-        // Aufräumen alter Buttons
         const oldBtns = footer.querySelectorAll('.btn-secondary');
         oldBtns.forEach(b => { if(b.innerText === "SETTINGS" || b.innerText === "CONTROLS") b.remove(); });
 
@@ -78,8 +77,6 @@ export function initMenu() {
     updateMobileLabels();
 
     // VISUAL FEEDBACK STATES
-    // 0: Char, 1: Level, 2: Start, 3: Settings
-    
     charContainer.classList.remove('active-group', 'inactive-group');
     levelContainer.classList.remove('active-group', 'inactive-group');
     startBtn.classList.remove('focused');
@@ -132,10 +129,8 @@ export function initMenu() {
 
 // --- INPUT HANDLING ---
 export function handleMenuInput(code) {
-    // Wenn in Settings (4) oder Stats (5), ignoriere MainMenu Input
     if (state.menuState === 4 || state.menuState === 5) return;
 
-    // Main Menu Navigation
     if (state.menuState === 0) { // Char
         if (code === 'ArrowLeft') changeSelection('char', -1);
         else if (code === 'ArrowRight') changeSelection('char', 1);
@@ -173,7 +168,7 @@ function handleSettingsInput(code) {
 
 function handleStatsInput(code) {
     if (code === 'Escape' || code === 'Enter' || code === 'Space') {
-        showSettings(); // Zurück
+        showSettings(); 
     }
 }
 
@@ -220,7 +215,7 @@ export function showSettings() {
         if(!el) return;
         el.onmouseenter = () => { settingsIndex = idx; updateSettingsFocus(); };
         el.onclick = (e) => { 
-            e.stopPropagation(); // WICHTIG: Verhindert Bubbling
+            e.stopPropagation();
             settingsIndex = idx; 
             updateSettingsFocus(); 
             if(isAction) triggerSettingsAction(); 
@@ -228,7 +223,7 @@ export function showSettings() {
     };
     bindMouse('btn-diff', 0, true);
     bindMouse('btn-controls', 1, true);
-    bindMouse('btn-stats', 2, true); // Aktiviert!
+    bindMouse('btn-stats', 2, true);
     bindMouse('btn-back', 3, true);
 }
 
@@ -246,7 +241,6 @@ export function showStatistics() {
 
         const s = state.statistics;
         
-        // Safety Checks für Daten
         const games = s ? (s.gamesPlayed || 0) : 0;
         const wins = s ? (s.wins || 0) : 0;
         const draws = s ? (s.draws || 0) : 0;
@@ -295,7 +289,7 @@ export function showStatistics() {
 
     } catch(e) {
         console.error("Stats Error:", e);
-        showSettings(); // Fallback
+        showSettings(); 
     }
 }
 
@@ -325,7 +319,7 @@ function triggerSettingsAction() {
         document.getElementById('settings-menu').remove();
         showControls();
     } else if (settingsIndex === 2) { 
-        showStatistics(); // Correct call!
+        showStatistics(); 
     } else if (settingsIndex === 3) { 
         showMenu();
     }
@@ -365,7 +359,6 @@ export function showMenu() {
     initMenu();
 }
 
-// --- STANDARD EXPORTS ---
 export function togglePause() {
     if (state.isGameOver) { showMenu(); return; }
     if (!document.getElementById('main-menu').classList.contains('hidden')) return;
@@ -445,7 +438,6 @@ function initControlsMenu() {
 
 function startRemap(action) { remappingAction = action; initControlsMenu(); }
 
-// GLOBAL EXPORTS & LISTENERS
 window.showControls = showControls;
 window.showSettings = showSettings; 
 window.togglePause = togglePause;
@@ -453,8 +445,8 @@ window.quitGame = quitGame;
 window.showMenu = showMenu;
 window.restartGame = restartGame; 
 
+// --- FIX: return verhindert Durchrutschen ---
 window.addEventListener('keydown', e => {
-    // 1. Remapping
     if (remappingAction) {
         e.preventDefault();
         keyBindings[remappingAction] = e.code;
@@ -462,14 +454,15 @@ window.addEventListener('keydown', e => {
         initControlsMenu();
         return;
     }
-    // 2. Settings Menu (State 4)
+    // WICHTIG: return nach jedem Block!
     if (state.menuState === 4) {
         e.preventDefault();
         handleSettingsInput(e.code);
+        return; 
     }
-    // 3. Stats Menu (State 5)
     if (state.menuState === 5) {
         e.preventDefault();
         handleStatsInput(e.code);
+        return;
     }
 });
