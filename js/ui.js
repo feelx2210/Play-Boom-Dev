@@ -114,8 +114,8 @@ export function initMenu() {
 }
 
 export function handleMenuInput(code) {
-    // Falls Settings offen sind
-    if (document.getElementById('settings-menu') && !document.getElementById('settings-menu').classList.contains('hidden')) {
+    // Falls Settings offen sind (Escape -> Zurück zum Menü)
+    if (document.getElementById('settings-menu')) {
         if (code === 'Escape') showMenu();
         return;
     }
@@ -143,8 +143,9 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
-    const setMenu = document.getElementById('settings-menu');
-    if (setMenu) setMenu.classList.add('hidden');
+    // Altes Settings Menu entfernen, falls vorhanden
+    const oldSet = document.getElementById('settings-menu');
+    if (oldSet) oldSet.remove();
     
     const mobControls = document.getElementById('mobile-controls');
     if (mobControls) mobControls.classList.add('hidden');
@@ -153,20 +154,19 @@ export function showMenu() {
     initMenu();
 }
 
-// NEU: Settings Menu (Fix: Erzeugt Inhalt immer neu)
+// NEU: Settings Menu (Robuste Version)
 export function showSettings() {
     document.getElementById('main-menu').classList.add('hidden');
     
-    let settingsMenu = document.getElementById('settings-menu');
-    // Falls noch nicht da, Container erzeugen
-    if (!settingsMenu) {
-        settingsMenu = document.createElement('div');
-        settingsMenu.id = 'settings-menu';
-        settingsMenu.className = 'screen';
-        document.body.appendChild(settingsMenu);
-    }
+    // 1. Altes Menü sicher entfernen (Fix für "Geister-Elemente")
+    const oldMenu = document.getElementById('settings-menu');
+    if (oldMenu) oldMenu.remove();
+
+    // 2. Neues Menü erstellen
+    const settingsMenu = document.createElement('div');
+    settingsMenu.id = 'settings-menu';
+    settingsMenu.className = 'screen';
     
-    // FIX: Inhalt IMMER setzen (verhindert den "null" Crash, wenn das Element leer war)
     settingsMenu.innerHTML = `
         <h1>SETTINGS</h1>
         <div class="menu-section">
@@ -175,17 +175,28 @@ export function showSettings() {
         </div>
         <button class="btn-secondary" onclick="showMenu()">BACK</button>
     `;
+    
+    // 3. Erst hinzufügen, dann suchen
+    document.body.appendChild(settingsMenu);
+    
+    // 4. Button sicher im neuen Element suchen
+    const btnDiff = settingsMenu.querySelector('#btn-diff');
+    
+    if (!btnDiff) {
+        console.error("Fehler: Difficulty-Button konnte nicht erstellt werden.");
+        return;
+    }
 
-    settingsMenu.classList.remove('hidden');
-
-    // Button Logik
-    const btnDiff = document.getElementById('btn-diff');
     const updateLabel = () => {
         const labels = ["EASY", "MEDIUM", "HARD"];
         const colors = ["#44aa44", "#ff8800", "#ff0000"];
-        btnDiff.innerText = labels[state.difficulty];
-        btnDiff.style.color = colors[state.difficulty];
-        btnDiff.style.borderColor = colors[state.difficulty];
+        
+        // Safety: Stelle sicher, dass difficulty im gültigen Bereich ist
+        const safeDiff = Math.max(0, Math.min(state.difficulty, 2));
+        
+        btnDiff.innerText = labels[safeDiff];
+        btnDiff.style.color = colors[safeDiff];
+        btnDiff.style.borderColor = colors[safeDiff];
     };
     
     updateLabel();
