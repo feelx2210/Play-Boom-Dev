@@ -35,11 +35,11 @@ export class Player {
         this.activeBombs = 0;
         this.bombRange = 1;
         
-        // NEU: Speed System
+        // Speed System
         this.speedMultiplier = 1; 
         this.speedTimer = 0;
 
-        // PowerUps & Timer (jetzt 30s = 1800 frames)
+        // PowerUps & Timer (30s = 1800 frames)
         this.hasNapalm = false; this.napalmTimer = 0;
         this.hasRolling = false; this.rollingTimer = 0;
         this.currentBombMode = BOMB_MODES.STANDARD;
@@ -60,7 +60,6 @@ export class Player {
         this.botDir = {x:0, y:0};
     }
 
-    // NEU: Zentrale Logik für Speed-Boosts (Skill & Fluch)
     activateSpeedBoost(multiplier, duration, label) {
         // "Schnell" hebt "Langsam" auf
         if (this.hasCurse('slow')) {
@@ -69,7 +68,7 @@ export class Player {
         }
 
         if (this.speedTimer > 0) {
-            // Wenn bereits aktiv: Nur Zeit verlängern, Multiplikator NICHT ändern
+            // Wenn bereits aktiv: Nur Zeit verlängern
             this.speedTimer += duration;
             createFloatingText(this.x, this.y, "EXTENDED!", "#ffff00");
         } else {
@@ -81,26 +80,33 @@ export class Player {
     }
 
     addCurse(type) {
-        // Spezialfall Speed-Fluch: 2.5x Speed, 15s (900 Frames)
+        // 1. SPEED RUSH (Spezialfall: Nutzt SpeedBoost Logik)
+        // Zeigt eigenen Text an ("SPEED CURSE!"), daher hier return.
         if (type === 'speed_rush') {
             this.activateSpeedBoost(2.5, 900, "SPEED CURSE!"); 
             return;
         }
 
-        // Konfliktlösung: "Langsam" hebt "Schnell" auf
+        let showedText = false;
+
+        // 2. SLOW (Konfliktlösung mit Speed)
         if (type === 'slow') {
             if (this.speedTimer > 0) {
                 this.speedTimer = 0;
                 this.speedMultiplier = 1;
                 createFloatingText(this.x, this.y, "SLOWED DOWN!", "#cccccc");
+                showedText = true;
             }
         }
 
+        // 3. Fluch zur Liste hinzufügen
         const existing = this.activeCurses.find(c => c.type === type);
         if (existing) {
             existing.timer = 900; // 15s Reset
+            if (!showedText) createFloatingText(this.x, this.y, "CURSE EXTENDED!", "#ff00ff");
         } else {
             this.activeCurses.push({ type: type, timer: 900 }); // 15s Neu
+            if (!showedText) createFloatingText(this.x, this.y, "CURSED: " + type.toUpperCase(), "#ff00ff");
         }
     }
 
@@ -122,7 +128,7 @@ export class Player {
         // --- GESCHWINDIGKEIT BERECHNEN ---
         let currentSpeed = this.speed * this.speedMultiplier;
         
-        // Wasser verlangsamt immer (multiplikativ)
+        // Wasser verlangsamt immer
         const gx = Math.round(this.x / TILE_SIZE);
         const gy = Math.round(this.y / TILE_SIZE);
         if (state.grid[gy] && state.grid[gy][gx] === TYPES.WATER) currentSpeed *= 0.5;
@@ -164,7 +170,7 @@ export class Player {
 
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
-        // Flüche: 15 Sekunden (900 Frames) - Timer läuft bereits in addCurse Logik
+        // Flüche: 15 Sekunden (900 Frames)
         if (this.activeCurses.length > 0) {
             this.activeCurses.forEach(c => c.timer--);
             const prevCount = this.activeCurses.length;
@@ -336,10 +342,8 @@ export class Player {
         switch(type) {
             case ITEMS.BOMB_UP: this.maxBombs++; createFloatingText(this.x, this.y, "+1 BOMB"); break;
             case ITEMS.RANGE_UP: this.bombRange++; createFloatingText(this.x, this.y, "FIRE UP"); break;
-            // 2x Speed, 30 Sekunden
             case ITEMS.SPEED_UP: this.activateSpeedBoost(2, 1800, "SPEED UP"); break;
             
-            // Napalm & Rolling: 30 Sekunden
             case ITEMS.NAPALM: 
                 this.hasNapalm = true; this.napalmTimer = 1800; 
                 createFloatingText(this.x, this.y, "NAPALM!", "#ff0000"); 
@@ -353,7 +357,8 @@ export class Player {
                 const effects = ['sickness', 'speed_rush', 'slow', 'cant_plant'];
                 const effect = effects[Math.floor(Math.random()*effects.length)];
                 this.addCurse(effect);
-                createFloatingText(this.x, this.y, "CURSED: "+effect.toUpperCase(), '#ff00ff'); break;
+                // FIX: Kein doppelter Text mehr hier! addCurse kümmert sich drum.
+                break;
         }
     }
 
