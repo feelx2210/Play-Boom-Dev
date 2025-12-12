@@ -1,6 +1,6 @@
-import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTIES } from './constants.js'; //
-import { state } from './state.js'; //
-import { drawCharacterSprite, drawLevelPreview } from './graphics.js'; //
+import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTIES } from './constants.js';
+import { state } from './state.js';
+import { drawCharacterSprite, drawLevelPreview } from './graphics.js';
 
 let remappingAction = null;
 
@@ -19,22 +19,13 @@ export function updateHud(player) {
     if (elFire) elFire.innerText = `🔥 ${player.bombRange}`;
 }
 
-// Mobile Label Update
 function updateMobileLabels() {
     const charNameEl = document.getElementById('char-name-display');
     if (charNameEl) charNameEl.innerText = CHARACTERS[state.selectedCharIndex].name;
     const levelNameEl = document.getElementById('level-name-display');
     if (levelNameEl) levelNameEl.innerText = LEVELS[state.selectedLevelKey].name;
-    
-    // NEU: Difficulty Label (falls vorhanden)
-    const diffLabel = document.getElementById('diff-name-display');
-    if (diffLabel) {
-        const diffNames = ["EASY", "MEDIUM", "HARD"];
-        diffLabel.innerText = diffNames[state.difficulty];
-    }
 }
 
-// Navigation Helper
 function changeSelection(type, dir) {
     if (type === 'char') {
         const len = CHARACTERS.length;
@@ -45,9 +36,6 @@ function changeSelection(type, dir) {
         const len = keys.length;
         const newIndex = (currentIndex + dir + len) % len;
         state.selectedLevelKey = keys[newIndex];
-    } else if (type === 'diff') {
-        // NEU: Schwierigkeit umschalten (0 -> 1 -> 2)
-        state.difficulty = (state.difficulty + dir + 3) % 3;
     }
     initMenu(); 
 }
@@ -57,47 +45,26 @@ export function initMenu() {
     const levelContainer = document.getElementById('level-select');
     const startBtn = document.getElementById('start-game-btn');
     
-    // Wir nutzen den Start-Button Bereich für die Difficulty-Anzeige, falls kein eigenes Element da ist
-    // Oder wir fügen es dynamisch hinzu, falls du das HTML nicht ändern willst.
-    // Hier eine einfache Lösung: Wir ändern den Text des Start-Buttons, um die Difficulty anzuzeigen, 
-    // solange wir im Difficulty-Modus sind.
-    
     charContainer.innerHTML = '';
     levelContainer.innerHTML = '';
     
     updateMobileLabels();
 
-    // VISUAL FEEDBACK
-    // 0: Char, 1: Level, 2: Difficulty, 3: Start
+    // VISUAL FEEDBACK (Original Flow: Char -> Level -> Start)
     if (state.menuState === 0) { 
         charContainer.classList.add('active-group'); charContainer.classList.remove('inactive-group');
         levelContainer.classList.add('inactive-group'); levelContainer.classList.remove('active-group');
         startBtn.classList.remove('focused');
-        startBtn.innerText = "NEXT >>";
     } else if (state.menuState === 1) { 
         charContainer.classList.add('inactive-group'); charContainer.classList.remove('active-group');
         levelContainer.classList.add('active-group'); levelContainer.classList.remove('inactive-group');
         startBtn.classList.remove('focused');
-        startBtn.innerText = "NEXT >>";
     } else if (state.menuState === 2) { 
-        // NEU: Difficulty Selection State
         charContainer.classList.add('inactive-group'); 
         levelContainer.classList.add('inactive-group');
         startBtn.classList.add('focused');
-        
-        const diffNames = ["EASY", "MEDIUM", "HARD"];
-        startBtn.innerText = `< ${diffNames[state.difficulty]} >`; // Zeigt Difficulty auf dem Button an
-        startBtn.style.background = state.difficulty === 2 ? '#ff0000' : (state.difficulty === 1 ? '#ff8800' : '#44aa44');
-    } else {
-        // Ready to Start
-        charContainer.classList.add('inactive-group'); 
-        levelContainer.classList.add('inactive-group');
-        startBtn.classList.add('focused');
-        startBtn.innerText = "START GAME";
-        startBtn.style.background = ''; // Reset Color
     }
 
-    // HELPER: KARTE RENDERN
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
@@ -119,54 +86,52 @@ export function initMenu() {
         pCanvas.className='preview-canvas';
         const ctx = pCanvas.getContext('2d');
         
-        let name = "";
         if (type === 'char') {
             drawCharacterSprite(ctx, 24, 36, data);
-            name = data.name;
+            div.appendChild(pCanvas);
+            const label = document.createElement('div');
+            label.className = 'card-label'; label.innerText = data.name;
+            div.appendChild(label);
         } else {
             drawLevelPreview(ctx, 48, 48, data);
-            name = data.name;
+            div.appendChild(pCanvas);
+            const label = document.createElement('div');
+            label.className = 'card-label'; label.innerText = data.name;
+            div.appendChild(label);
         }
-        div.appendChild(pCanvas);
-        
-        const label = document.createElement('div');
-        label.className = 'card-label'; label.innerText = name;
-        div.appendChild(label);
 
         container.appendChild(div);
     };
 
-    // Render Characters
     CHARACTERS.forEach((char, idx) => {
         renderCard(charContainer, 'char', idx, char, idx === state.selectedCharIndex);
     });
 
-    // Render Levels
     const levelKeys = Object.keys(LEVELS);
     levelKeys.forEach((key, idx) => {
         renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey);
     });
 }
 
-// KEYBOARD INPUT
 export function handleMenuInput(code) {
-    if (state.menuState === 0) { // Char Select
+    // Falls Settings offen sind
+    if (document.getElementById('settings-menu') && !document.getElementById('settings-menu').classList.contains('hidden')) {
+        if (code === 'Escape') showMenu();
+        return;
+    }
+
+    if (state.menuState === 0) {
         if (code === 'ArrowLeft') changeSelection('char', -1);
         else if (code === 'ArrowRight') changeSelection('char', 1);
         else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 1; initMenu(); }
-    } else if (state.menuState === 1) { // Level Select
+    } else if (state.menuState === 1) {
         if (code === 'ArrowLeft') changeSelection('level', -1);
         else if (code === 'ArrowRight') changeSelection('level', 1);
         else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 2; initMenu(); }
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 0; initMenu(); }
-    } else if (state.menuState === 2) { // Difficulty Select
-        if (code === 'ArrowLeft') changeSelection('diff', -1);
-        else if (code === 'ArrowRight') changeSelection('diff', 1);
-        else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 3; initMenu(); }
-        else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
-    } else if (state.menuState === 3) { // Start Game
+    } else if (state.menuState === 2) {
         if (code === 'Enter' || code === 'Space') { if (window.startGame) window.startGame(); }
-        else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 2; initMenu(); }
+        else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
     }
 }
 
@@ -178,12 +143,53 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
-    // Controls aus
+    const setMenu = document.getElementById('settings-menu');
+    if (setMenu) setMenu.classList.add('hidden');
+    
     const mobControls = document.getElementById('mobile-controls');
     if (mobControls) mobControls.classList.add('hidden');
     
     state.menuState = 0;
     initMenu();
+}
+
+// NEU: Settings Menu (Dynamisch generiert, um HTML-Änderungen zu vermeiden)
+export function showSettings() {
+    document.getElementById('main-menu').classList.add('hidden');
+    
+    let settingsMenu = document.getElementById('settings-menu');
+    if (!settingsMenu) {
+        settingsMenu = document.createElement('div');
+        settingsMenu.id = 'settings-menu';
+        settingsMenu.className = 'screen';
+        settingsMenu.innerHTML = `
+            <h1>SETTINGS</h1>
+            <div class="menu-section">
+                <h2>DIFFICULTY</h2>
+                <button id="btn-diff" class="main-btn" style="margin-top:10px; font-size:16px;">NORMAL</button>
+            </div>
+            <button class="btn-secondary" onclick="showMenu()">BACK</button>
+        `;
+        document.body.appendChild(settingsMenu);
+    }
+    settingsMenu.classList.remove('hidden');
+
+    // Button Logik
+    const btnDiff = document.getElementById('btn-diff');
+    const updateLabel = () => {
+        const labels = ["EASY", "MEDIUM", "HARD"];
+        const colors = ["#44aa44", "#ff8800", "#ff0000"];
+        btnDiff.innerText = labels[state.difficulty];
+        btnDiff.style.color = colors[state.difficulty];
+        btnDiff.style.borderColor = colors[state.difficulty];
+    };
+    
+    updateLabel();
+    
+    btnDiff.onclick = () => {
+        state.difficulty = (state.difficulty + 1) % 3;
+        updateLabel();
+    };
 }
 
 export function togglePause() {
@@ -246,6 +252,7 @@ function startRemap(action) { remappingAction = action; initControlsMenu(); }
 
 // Global Exports
 window.showControls = showControls;
+window.showSettings = showSettings; // NEU
 window.togglePause = togglePause;
 window.quitGame = quitGame;
 window.showMenu = showMenu;
