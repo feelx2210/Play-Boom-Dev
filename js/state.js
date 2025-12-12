@@ -1,4 +1,4 @@
-import { LEVELS } from './constants.js';
+import { LEVELS, DIFFICULTY } from './constants.js';
 
 export const state = {
     // Spielfeld-Daten
@@ -14,10 +14,20 @@ export const state = {
     selectedLevelKey: 'hell',
     
     // Game-Flow Status
-    menuState: 0,       // 0: Char, 1: Level, 2: Start
+    menuState: 0,       
     isGameOver: false,
     isPaused: false,
     
+    // Settings & Stats
+    difficulty: DIFFICULTY.MEDIUM, // Standard: Medium
+    stats: {
+        gamesPlayed: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        bestChar: '-'
+    },
+
     // Level-Spezifische Timer
     hellFireTimer: 0,
     hellFirePhase: 'IDLE', 
@@ -25,6 +35,4 @@ export const state = {
     
     iceTimer: 0,
     iceSpawnCountdown: 0
-    
-    // HINWEIS: 'keys' wurde entfernt -> Nutzt jetzt InputHandler
 };

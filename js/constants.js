@@ -21,12 +21,11 @@ export const BOOST_PADS = [
     {x: 5, y: 5}, {x: 9, y: 5}, {x: 5, y: 9}, {x: 9, y: 9}
 ];
 
-// ANGEPASST: Exakte Richtungen wie angefordert
 export const DIRECTION_PADS = [
-    { x: 3, y: 3, dir: {x: 1, y: 0} },    // Oben Links -> Rechts
-    { x: 11, y: 3, dir: {x: 0, y: 1} },   // Oben Rechts -> Unten
-    { x: 11, y: 11, dir: {x: -1, y: 0} }, // Unten Rechts -> Links
-    { x: 3, y: 11, dir: {x: 0, y: -1} }   // Unten Links -> Oben
+    { x: 3, y: 3, dir: {x: 1, y: 0} },    
+    { x: 11, y: 3, dir: {x: 0, y: 1} },   
+    { x: 11, y: 11, dir: {x: -1, y: 0} }, 
+    { x: 3, y: 11, dir: {x: 0, y: -1} }   
 ];
 
 export const OIL_PADS = [
@@ -55,3 +54,10 @@ export const LEVELS = {
 export const TYPES = { EMPTY: 0, WALL_HARD: 1, WALL_SOFT: 2, BOMB: 3, WATER: 5, BRIDGE: 6, OIL: 7 };
 export const ITEMS = { NONE: 0, BOMB_UP: 1, RANGE_UP: 2, SPEED_UP: 3, SKULL: 4, NAPALM: 5, ROLLING: 6 };
 export const BOMB_MODES = { STANDARD: 0, NAPALM: 1, ROLLING: 2 };
+
+// NEU: Schwierigkeitsgrade
+export const DIFFICULTY = {
+    EASY: 0,
+    MEDIUM: 1,
+    HARD: 2
+};

@@ -1,8 +1,22 @@
-import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES } from './constants.js';
+import { CHARACTERS, LEVELS, keyBindings, BOMB_MODES, DIFFICULTY } from './constants.js';
 import { state } from './state.js';
 import { drawCharacterSprite, drawLevelPreview } from './graphics.js';
 
 let remappingAction = null;
+
+// --- STATISTICS LOGIC ---
+function loadStatistics() {
+    const saved = localStorage.getItem('boom_stats');
+    if (saved) {
+        try {
+            state.stats = JSON.parse(saved);
+        } catch(e) { console.error("Stats parse error", e); }
+    }
+}
+
+function saveStatistics() {
+    localStorage.setItem('boom_stats', JSON.stringify(state.stats));
+}
 
 export function updateHud(player) {
     const elType = document.getElementById('bomb-type');
@@ -19,7 +33,6 @@ export function updateHud(player) {
     if (elFire) elFire.innerText = `🔥 ${player.bombRange}`;
 }
 
-// Mobile Label Update
 function updateMobileLabels() {
     const charNameEl = document.getElementById('char-name-display');
     if (charNameEl) charNameEl.innerText = CHARACTERS[state.selectedCharIndex].name;
@@ -27,7 +40,6 @@ function updateMobileLabels() {
     if (levelNameEl) levelNameEl.innerText = LEVELS[state.selectedLevelKey].name;
 }
 
-// Navigation Helper
 function changeSelection(type, dir) {
     if (type === 'char') {
         const len = CHARACTERS.length;
@@ -43,6 +55,9 @@ function changeSelection(type, dir) {
 }
 
 export function initMenu() {
+    // Initial Load Stats
+    loadStatistics();
+
     const charContainer = document.getElementById('char-select');
     const levelContainer = document.getElementById('level-select');
     const startBtn = document.getElementById('start-game-btn');
@@ -52,7 +67,6 @@ export function initMenu() {
     
     updateMobileLabels();
 
-    // VISUAL FEEDBACK FÜR DESKTOP
     if (state.menuState === 0) { 
         charContainer.classList.add('active-group'); charContainer.classList.remove('inactive-group');
         levelContainer.classList.add('inactive-group'); levelContainer.classList.remove('active-group');
@@ -67,7 +81,6 @@ export function initMenu() {
         startBtn.classList.add('focused');
     }
 
-    // HELPER: KARTE RENDERN
     const renderCard = (container, type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
@@ -106,20 +119,20 @@ export function initMenu() {
         container.appendChild(div);
     };
 
-    // Render Characters
     CHARACTERS.forEach((char, idx) => {
         renderCard(charContainer, 'char', idx, char, idx === state.selectedCharIndex);
     });
 
-    // Render Levels
     const levelKeys = Object.keys(LEVELS);
     levelKeys.forEach((key, idx) => {
         renderCard(levelContainer, 'level', idx, LEVELS[key], key === state.selectedLevelKey);
     });
 }
 
-// KEYBOARD INPUT
 export function handleMenuInput(code) {
+    // Nur aktiv, wenn wir wirklich im Main Menu sind (und nicht in Settings)
+    if (document.getElementById('settings-menu').classList.contains('hidden') === false) return;
+
     if (state.menuState === 0) {
         if (code === 'ArrowLeft') changeSelection('char', -1);
         else if (code === 'ArrowRight') changeSelection('char', 1);
@@ -137,18 +150,71 @@ export function handleMenuInput(code) {
 
 export function showMenu() {
     document.getElementById('main-menu').classList.remove('hidden');
-    document.getElementById('game-over').classList.add('hidden');
-    document.getElementById('ui-layer').classList.add('hidden');
-    document.getElementById('pause-btn').classList.add('hidden'); 
-    document.getElementById('pause-menu').classList.add('hidden'); 
-    document.getElementById('controls-menu').classList.add('hidden');
     
-    // Controls aus
+    // Hide all overlays
+    ['game-over', 'ui-layer', 'pause-btn', 'pause-menu', 'controls-menu', 'settings-menu', 'difficulty-menu', 'statistics-menu'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+    
     const mobControls = document.getElementById('mobile-controls');
     if (mobControls) mobControls.classList.add('hidden');
     
     state.menuState = 0;
     initMenu();
+}
+
+// --- NEW MENU FUNCTIONS ---
+
+export function showSettings() {
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('difficulty-menu').classList.add('hidden');
+    document.getElementById('controls-menu').classList.add('hidden');
+    document.getElementById('statistics-menu').classList.add('hidden');
+    
+    document.getElementById('settings-menu').classList.remove('hidden');
+}
+
+export function showDifficulty() {
+    document.getElementById('settings-menu').classList.add('hidden');
+    document.getElementById('difficulty-menu').classList.remove('hidden');
+    
+    const labels = { 0: 'EASY', 1: 'MEDIUM', 2: 'HARD' };
+    document.getElementById('current-diff').innerText = labels[state.difficulty];
+}
+
+export function setDifficulty(diffStr) {
+    if (diffStr === 'EASY') state.difficulty = DIFFICULTY.EASY;
+    if (diffStr === 'MEDIUM') state.difficulty = DIFFICULTY.MEDIUM;
+    if (diffStr === 'HARD') state.difficulty = DIFFICULTY.HARD;
+    
+    showDifficulty(); // Refresh Label
+}
+
+export function showStatistics() {
+    document.getElementById('settings-menu').classList.add('hidden');
+    document.getElementById('statistics-menu').classList.remove('hidden');
+    
+    const s = state.stats;
+    const rate = s.gamesPlayed > 0 ? Math.round((s.wins / s.gamesPlayed) * 100) : 0;
+    
+    let html = `
+        TOTAL GAMES: ${s.gamesPlayed}<br>
+        WINS: ${s.wins} <span style="color:#0f0">(${rate}%)</span><br>
+        LOSSES: ${s.losses}<br>
+        DRAWS: ${s.draws}<br>
+        <br>
+        BEST CHARACTER:<br>
+        <span style="color:#ffcc00">${s.bestChar}</span>
+    `;
+    document.getElementById('stats-content').innerHTML = html;
+}
+
+export function resetStatistics() {
+    if (confirm("Reset all statistics?")) {
+        state.stats = { gamesPlayed: 0, wins: 0, losses: 0, draws: 0, bestChar: '-' };
+        saveStatistics();
+        showStatistics();
+    }
 }
 
 export function togglePause() {
@@ -164,18 +230,36 @@ export function quitGame() {
     showMenu();
 }
 
-// NEU: Restart Funktion
 export function restartGame() {
-    // Menü verstecken
     document.getElementById('pause-menu').classList.add('hidden');
     state.isPaused = false;
-    // Spiel neu starten (die ausgewählten Charaktere/Level bleiben im state erhalten)
     if (window.startGame) window.startGame();
 }
 
 export function endGame(msg, winner) {
     if (state.isGameOver) return; 
     state.isGameOver = true; 
+    
+    // --- UPDATE STATS ---
+    state.stats.gamesPlayed++;
+    if (winner) {
+        if (winner.id === 1) { // Player 1 (User) wins
+            state.stats.wins++;
+            
+            // Track Best Char logic (simple string update for now, ideally object map)
+            // Just saving last winner char as best for simplicity or keep manual logic?
+            // Let's make it simpler: just store the name of the char who won most?
+            // Since we don't have a complex breakdown in state.stats yet, just save current winner name.
+            state.stats.bestChar = winner.name.toUpperCase();
+        } else {
+            state.stats.losses++;
+        }
+    } else {
+        state.stats.draws++;
+    }
+    saveStatistics();
+    // --------------------
+
     setTimeout(() => {
         const titleEl = document.getElementById('go-title');
         if (winner && winner.id === 1) {
@@ -190,6 +274,7 @@ export function endGame(msg, winner) {
 }
 
 export function showControls() {
+    document.getElementById('settings-menu').classList.add('hidden'); // Verstecke Settings
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('controls-menu').classList.remove('hidden');
     initControlsMenu();
@@ -214,10 +299,15 @@ function startRemap(action) { remappingAction = action; initControlsMenu(); }
 
 // Global Exports
 window.showControls = showControls;
+window.showSettings = showSettings;
+window.showDifficulty = showDifficulty;
+window.showStatistics = showStatistics;
+window.setDifficulty = setDifficulty;
+window.resetStatistics = resetStatistics;
 window.togglePause = togglePause;
 window.quitGame = quitGame;
 window.showMenu = showMenu;
-window.restartGame = restartGame; // Neu exportiert
+window.restartGame = restartGame;
 
 window.addEventListener('keydown', e => {
     if (remappingAction) { e.preventDefault(); keyBindings[remappingAction] = e.code; remappingAction = null; initControlsMenu(); }
