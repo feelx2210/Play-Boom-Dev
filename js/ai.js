@@ -94,7 +94,8 @@ export function updateBotLogic(bot) {
         
         // A) BOMBEN CHECK (Strategisch & Effizient)
         if (bot.activeBombs < bot.maxBombs) {
-            const analysis = analyzePosition(bot, gx, gy, state.difficulty);
+            // FIX: dangerMap wird jetzt übergeben!
+            const analysis = analyzePosition(bot, gx, gy, state.difficulty, dangerMap);
             
             if (analysis.shouldPlant) {
                 // SAFETY CHECK: Können wir flüchten?
@@ -133,7 +134,8 @@ export function updateBotLogic(bot) {
 //              STRATEGIE LOGIK
 // ==========================================
 
-function analyzePosition(bot, gx, gy, difficulty) {
+// FIX: Parameter 'dangerMap' hinzugefügt
+function analyzePosition(bot, gx, gy, difficulty, dangerMap) {
     // 1. Gegner Check (Kill hat Vorrang)
     const enemy = findNearestEnemy(bot);
     if (enemy) {
