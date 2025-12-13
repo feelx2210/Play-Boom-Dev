@@ -26,40 +26,43 @@ export function updateBotLogic(bot) {
     // ---------------------------------------------------------
     // 1. SURVIVAL MODE (Absoluter Vorrang)
     // ---------------------------------------------------------
-    // Wenn wir in Gefahr sind ODER gerade eine Bombe gelegt haben (Locked Path)
     if (currentDanger > 0 || mem.state === 'SURVIVING') {
         mem.state = 'SURVIVING';
-        mem.target = null;
+        mem.target = null; // Vergiss normales Ziel
 
-        // Wenn wir sicher stehen UND kein akutes Feuer um uns ist -> Entwarnung
-        if (currentDanger === 0 && !mem.lockedPath) {
+        // FIX: Prüfen, ob der Pfad leer/abgearbeitet ist
+        const pathFinished = (!mem.lockedPath || mem.lockedPath.length === 0);
+
+        // Wenn wir sicher stehen UND fertig sind -> Modus beenden
+        if (currentDanger === 0 && pathFinished) {
             snapToGrid(bot);
             mem.state = 'IDLE';
-            return;
+            mem.lockedPath = null;
+            return; // Nächster Frame entscheidet neu
         }
 
-        // Haben wir schon einen Rettungsweg?
-        if (!mem.lockedPath || mem.lockedPath.length === 0) {
-            // Neuen suchen
+        // Wenn wir keinen Pfad haben (oder er leer ist), aber noch in Gefahr sind -> Suchen
+        if (pathFinished) {
             const escapePath = findEscapePathBFS(gx, gy, dangerMap);
-            if (escapePath) {
+            if (escapePath && escapePath.length > 0) {
                 mem.lockedPath = escapePath;
             } else {
-                // Panik: Kein Weg gefunden! Random Move als letzte Hoffnung
+                // Panik: Random Move (besser als Stillstand)
                 moveRandomly(bot);
                 return;
             }
         }
 
         // Dem Rettungsweg folgen
-        if (mem.lockedPath.length > 0) {
+        if (mem.lockedPath && mem.lockedPath.length > 0) {
             const nextStep = mem.lockedPath[0];
-            // Sind wir beim nächsten Schritt angekommen?
+            
+            // Sind wir da?
             if (hasReachedPixel(bot, nextStep.x * TILE_SIZE, nextStep.y * TILE_SIZE)) {
-                mem.lockedPath.shift(); // Schritt abhaken
-                snapToGrid(bot); // Sauber ausrichten
+                mem.lockedPath.shift(); // Schritt entfernen
+                // Keine Bewegung mehr in diesem Frame, erst neuen Schritt prüfen
             } else {
-                // Hinlaufen (schnell!)
+                // Hinlaufen
                 moveToPixel(bot, nextStep.x * TILE_SIZE, nextStep.y * TILE_SIZE);
             }
         }
@@ -73,17 +76,17 @@ export function updateBotLogic(bot) {
         const tx = Math.round(mem.target.x / TILE_SIZE);
         const ty = Math.round(mem.target.y / TILE_SIZE);
 
-        // Ziel-Validierung: Ist es gefährlich geworden?
+        // Validierung: Ziel noch sicher?
         if (dangerMap[ty][tx] > 0 || isSolid(tx, ty)) {
-            mem.state = 'IDLE'; // Abbruch
+            mem.state = 'IDLE';
             mem.target = null;
         } else if (hasReachedPixel(bot, mem.target.x, mem.target.y)) {
             snapToGrid(bot);
-            mem.state = 'IDLE'; // Angekommen -> Neu entscheiden
+            mem.state = 'IDLE';
             mem.target = null;
         } else {
             moveToPixel(bot, mem.target.x, mem.target.y);
-            return; // Wir sind beschäftigt
+            return;
         }
     }
 
@@ -92,26 +95,27 @@ export function updateBotLogic(bot) {
     // ---------------------------------------------------------
     if (mem.state === 'IDLE') {
         
-        // A) BOMBEN CHECK (Strategisch & Effizient)
+        // A) BOMBEN CHECK
         if (bot.activeBombs < bot.maxBombs) {
-            // FIX: dangerMap wird jetzt übergeben!
             const analysis = analyzePosition(bot, gx, gy, state.difficulty, dangerMap);
             
             if (analysis.shouldPlant) {
-                // SAFETY CHECK: Können wir flüchten?
-                // Simuliere Bombe an aktueller Position
+                // Simulation: Können wir flüchten?
                 const realRange = getEffectiveBlastRange(gx, gy, bot.bombRange);
                 const escapePath = simulateBombAndFindEscape(gx, gy, dangerMap, realRange);
 
                 if (escapePath) {
                     bot.plantBomb();
-                    // SOFORT in den Survival Mode wechseln und Pfad zuweisen
+                    
+                    // SOFORT in den Survival Mode wechseln
                     mem.state = 'SURVIVING';
                     mem.lockedPath = escapePath;
                     
-                    // Ersten Schritt direkt ausführen (Reaktionszeit = 0)
-                    const first = escapePath[0];
-                    moveToPixel(bot, first.x * TILE_SIZE, first.y * TILE_SIZE);
+                    // Ersten Schritt sofort ausführen
+                    if (escapePath.length > 0) {
+                        const first = escapePath[0];
+                        moveToPixel(bot, first.x * TILE_SIZE, first.y * TILE_SIZE);
+                    }
                     return;
                 }
             }
@@ -124,7 +128,6 @@ export function updateBotLogic(bot) {
             mem.target = { x: nextTarget.x * TILE_SIZE, y: nextTarget.y * TILE_SIZE };
             moveToPixel(bot, mem.target.x, mem.target.y);
         } else {
-            // Idle wackeln
             if (Math.random() < 0.1) moveRandomly(bot);
         }
     }
@@ -134,45 +137,41 @@ export function updateBotLogic(bot) {
 //              STRATEGIE LOGIK
 // ==========================================
 
-// FIX: Parameter 'dangerMap' hinzugefügt
 function analyzePosition(bot, gx, gy, difficulty, dangerMap) {
     // 1. Gegner Check (Kill hat Vorrang)
     const enemy = findNearestEnemy(bot);
     if (enemy) {
         const dist = Math.hypot(enemy.x - bot.x, enemy.y - bot.y) / TILE_SIZE;
-        // Hard Bots snipen über Distanz, andere nur nah
-        const rangeNeeded = (difficulty === DIFFICULTIES.HARD) ? bot.bombRange + 1 : bot.bombRange;
+        const rangeNeeded = (difficulty === DIFFICULTIES.HARD) ? bot.bombRange + 2 : bot.bombRange;
         
         if (dist <= rangeNeeded) {
-            // Linie prüfen (X oder Y)
             const dx = Math.abs(Math.round(enemy.x/TILE_SIZE) - gx);
             const dy = Math.abs(Math.round(enemy.y/TILE_SIZE) - gy);
+            // Wenn in Linie -> Feuer frei!
             if (dx < 1 || dy < 1) return { shouldPlant: true };
         }
     }
 
     // 2. Kisten Check (Effizienz)
-    // Wie viele Kisten zerstören wir hier?
     const wallsHit = countDestroyableWalls(gx, gy, bot.bombRange);
     
-    // Wenn 0 -> Nicht legen
     if (wallsHit === 0) return { shouldPlant: false };
 
-    // Wenn >= 2 -> Super Spot! Legen!
+    // Wenn wir viele Kisten treffen -> Immer gut
     if (wallsHit >= 2) return { shouldPlant: true };
 
-    // Wenn nur 1 Kiste: Prüfen ob ein Nachbarfeld BESSER ist (Sackgassen-Logik)
-    // Nur auf HARD machen Bots diesen Smart-Check
+    // Wenn nur 1 Kiste: Prüfen ob ein Nachbarfeld BESSER ist
+    // Auf HARD suchen wir aktiv nach "Sweet Spots"
     if (difficulty === DIFFICULTIES.HARD) {
-        const bestNeighbor = getBestNeighborSpot(gx, gy, bot.bombRange, dangerMap);
-        if (bestNeighbor > wallsHit) {
-            // Es gibt ein besseres Feld nebenan! Warte und gehe dorthin.
+        const bestNeighborHits = getBestNeighborSpot(gx, gy, bot.bombRange, dangerMap);
+        // Wenn ein Nachbarfeld mehr trifft als wir hier -> Warten und hingehen
+        if (bestNeighborHits > wallsHit) {
             return { shouldPlant: false }; 
         }
     }
 
-    // Wenn Easy/Medium oder kein besseres Feld -> Legen (1 Kiste ist besser als nix)
-    return { shouldPlant: Math.random() < 0.5 }; // 50% Verzögerung für natürlicheres Verhalten
+    // Sonst legen (50% Chance um nicht zu robotisch zu wirken)
+    return { shouldPlant: Math.random() < 0.5 };
 }
 
 function countDestroyableWalls(gx, gy, range) {
@@ -180,10 +179,10 @@ function countDestroyableWalls(gx, gy, range) {
     DIRS.forEach(d => {
         for(let i=1; i<=range; i++) {
             const tx = gx + d.x*i; const ty = gy + d.y*i;
-            if (isSolidWall(tx, ty)) break; // Hard Wall stoppt
+            if (isSolidWall(tx, ty)) break; 
             if (state.grid[ty] && state.grid[ty][tx] === TYPES.WALL_SOFT) {
                 count++;
-                break; // Soft Wall stoppt Strahl, zählt aber
+                break; 
             }
         }
     });
@@ -194,6 +193,7 @@ function getBestNeighborSpot(gx, gy, range, dangerMap) {
     let maxHits = 0;
     DIRS.forEach(d => {
         const nx = gx+d.x; const ny = gy+d.y;
+        // Nur begehbare, sichere Nachbarn prüfen
         if (!isSolid(nx, ny) && dangerMap[ny][nx] === 0) {
             const hits = countDestroyableWalls(nx, ny, range);
             if (hits > maxHits) maxHits = hits;
@@ -203,16 +203,23 @@ function getBestNeighborSpot(gx, gy, range, dangerMap) {
 }
 
 function pickSmartTarget(bot, gx, gy, dangerMap) {
-    // A) Wenn wir wissen, dass ein Nachbarfeld ein "Super Spot" ist (viele Kisten), gehen wir dahin
+    // A) Suche "Sweet Spot" (Viele Kisten) in direkter Nähe (HARD)
     if (state.difficulty === DIFFICULTIES.HARD) {
-        for (let d of DIRS) {
+        let bestSpot = null;
+        let maxHits = 0;
+        
+        DIRS.forEach(d => {
             const nx = gx+d.x; const ny = gy+d.y;
             if (!isSolid(nx, ny) && dangerMap[ny][nx] === 0) {
-                if (countDestroyableWalls(nx, ny, bot.bombRange) >= 2) {
-                    return {x: nx, y: ny}; // Gehe zum Sweet Spot
+                const hits = countDestroyableWalls(nx, ny, bot.bombRange);
+                // Wenn wir einen Spot mit >= 2 Kisten finden, gehen wir hin!
+                if (hits >= 2 && hits > maxHits) {
+                    maxHits = hits;
+                    bestSpot = {x: nx, y: ny};
                 }
             }
-        }
+        });
+        if (bestSpot) return bestSpot;
     }
 
     // B) Gegner jagen (Breach auf Hard)
@@ -222,8 +229,7 @@ function pickSmartTarget(bot, gx, gy, dangerMap) {
     if (enemy && (state.difficulty === DIFFICULTIES.HARD || Math.random() < 0.5)) {
         const pathStep = findNextStepAStar(gx, gy, Math.round(enemy.x/TILE_SIZE), Math.round(enemy.y/TILE_SIZE), dangerMap, canBreach);
         if (pathStep) {
-            // Wenn der Schritt auf eine Kiste führt -> Stehenbleiben (damit Bomb-Logic greift)
-            if (state.grid[pathStep.y][pathStep.x] === TYPES.WALL_SOFT) return null;
+            if (state.grid[pathStep.y][pathStep.x] === TYPES.WALL_SOFT) return null; // Warten & Sprengen
             return pathStep;
         }
     }
@@ -235,7 +241,7 @@ function pickSmartTarget(bot, gx, gy, dangerMap) {
         return lootStep;
     }
 
-    // D) Random
+    // D) Random Safe Neighbor
     return getRandomSafeNeighbor(gx, gy, dangerMap);
 }
 
@@ -244,9 +250,8 @@ function pickSmartTarget(bot, gx, gy, dangerMap) {
 // ==========================================
 
 function simulateBombAndFindEscape(gx, gy, currentDangerMap, range) {
-    // 1. Virtuelle Blast Zone
     const virtualDanger = new Set();
-    virtualDanger.add(`${gx},${gy}`); // Bombe selbst
+    virtualDanger.add(`${gx},${gy}`); 
     
     DIRS.forEach(d => {
         for(let i=1; i<=range; i++) {
@@ -257,8 +262,6 @@ function simulateBombAndFindEscape(gx, gy, currentDangerMap, range) {
         }
     });
 
-    // 2. BFS Pfadsuche zu einem sicheren Feld
-    // Node: {x, y, path[]}
     const queue = [{x: gx, y: gy, path: []}];
     const visited = new Set([`${gx},${gy}`]);
     let ops = 0;
@@ -267,23 +270,15 @@ function simulateBombAndFindEscape(gx, gy, currentDangerMap, range) {
         const curr = queue.shift();
         const key = `${curr.x},${curr.y}`;
 
-        // ZIEL ERREICHT? 
-        // Feld ist sicher wenn: Nicht im neuen Blast UND keine alte Gefahr
         if (!virtualDanger.has(key) && currentDangerMap[curr.y][curr.x] === 0) {
-            // Pfad gefunden! (Der erste Schritt davon reicht uns)
-            // Wenn wir schon sicher stehen (path leer), geben wir leeres Array zurück
             return curr.path; 
         }
 
-        if (curr.path.length > 6) continue; // Max Fluchtweg
+        if (curr.path.length > 8) continue; 
 
         for (let d of DIRS) {
             const nx = curr.x + d.x; const ny = curr.y + d.y;
-            // Valid?
             if (nx>=0 && nx<GRID_W && ny>=0 && ny<GRID_H && !visited.has(`${nx},${ny}`)) {
-                // Wir dürfen nur auf freie Felder laufen.
-                // WICHTIG: Wir dürfen NICHT in bestehende Gefahr (currentDangerMap > 0) laufen!
-                // Ausnahme: Wenn wir schon drin stehen, müssen wir raus. Aber hier planen wir NACH dem Legen.
                 if (!isSolid(nx, ny) && currentDangerMap[ny][nx] === 0) {
                     visited.add(`${nx},${ny}`);
                     const newPath = [...curr.path, {x:nx, y:ny}];
@@ -292,26 +287,22 @@ function simulateBombAndFindEscape(gx, gy, currentDangerMap, range) {
             }
         }
     }
-    return null; // Kein sicherer Weg
+    return null; 
 }
 
-// --- STANDARD PFADFINDUNG ---
-
 function findEscapePathBFS(gx, gy, dangerMap) {
-    // Sucht einfach nur den kürzesten Weg aus der Gefahr (ohne Simulation, für akute Gefahr)
     const queue = [{x:gx, y:gy, path:[]}];
     const visited = new Set([`${gx},${gy}`]);
     let ops = 0;
 
     while(queue.length > 0 && ops++ < 300) {
         const curr = queue.shift();
-        // Safe?
         if (dangerMap[curr.y][curr.x] === 0) return curr.path;
 
         for (let d of DIRS) {
             const nx = curr.x+d.x; const ny = curr.y+d.y;
             if(!isSolid(nx, ny) && !visited.has(`${nx},${ny}`)) {
-                // Bei Flucht akzeptieren wir Gefahrstufe 1 (Radius), meiden aber 2 (Feuer)
+                // Bei Flucht akzeptieren wir Radius-Gefahr (1), meiden aber Feuer (2)
                 if (dangerMap[ny][nx] < 2) {
                     visited.add(`${nx},${ny}`);
                     queue.push({x:nx, y:ny, path:[...curr.path, {x:nx, y:ny}]});
@@ -337,7 +328,7 @@ function findNextStepAStar(sx, sy, tx, ty, dangerMap, canBreach) {
             if(visited.has(`${n.x},${n.y}`)) continue;
             if(n.x<0||n.x>=GRID_W||n.y<0||n.y>=GRID_H) continue;
 
-            let blocked = isSolidWall(n.x, n.y); // Hard Wall
+            let blocked = isSolidWall(n.x, n.y);
             const tile = state.grid[n.y][n.x];
             
             if(tile === TYPES.BOMB) blocked = true;
@@ -362,7 +353,6 @@ function findNearestLootBFS(sx, sy, dangerMap) {
         const t = state.grid[curr.y][curr.x];
         const item = state.items[curr.y][curr.x];
 
-        // Found Loot?
         if ((curr.x!==sx || curr.y!==sy) && (t===TYPES.WALL_SOFT || item!==ITEMS.NONE)) {
             return curr.first || {x:curr.x, y:curr.y};
         }
@@ -439,11 +429,10 @@ function getEffectiveBlastRange(gx, gy, baseRange) {
 }
 
 function getDangerMap() {
-    // 0=Safe, 1=Radius, 2=Deadly
     const map = Array(GRID_H).fill().map(() => Array(GRID_W).fill(0));
     state.particles.forEach(p => { if(p.isFire) map[p.gy][p.gx] = 2; });
     state.bombs.forEach(b => {
-        map[b.gy][b.gx] = 2; // Bombe selbst
+        map[b.gy][b.gx] = 2; 
         const r = getEffectiveBlastRange(b.gx, b.gy, b.range);
         DIRS.forEach(d => {
             for(let i=1; i<=r; i++) {
