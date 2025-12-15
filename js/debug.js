@@ -61,6 +61,14 @@ window.addEventListener('unhandledrejection', function(event) {
 window.addEventListener('error', (e) => {
     if (e.target.tagName === 'SCRIPT' || e.target.tagName === 'IMG') {
         const src = e.target.src || e.target.href;
+        
+        // FIX: Ignoriere Fehler vom Umami-Tracking-Skript
+        if (src && src.includes('umami.is')) {
+            // Optional: Nur in die Browser-Konsole loggen, aber NICHT ins Overlay
+            console.warn('Tracking script blocked (AdBlocker detected):', src);
+            return; 
+        }
+
         showLog(`RESOURCE LOAD ERROR:\n>> Konnte ${src} nicht laden.`);
     }
 }, true);

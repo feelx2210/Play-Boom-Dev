@@ -130,7 +130,7 @@ window.startGame = function() {
     document.getElementById('bomb-type').innerText = '⚫';
     if (gameLoopId) cancelAnimationFrame(gameLoopId);
     gameLoopId = requestAnimationFrame(gameLoop);
-};
+}
 
 function distributeItems() {
     let softWalls = [];
