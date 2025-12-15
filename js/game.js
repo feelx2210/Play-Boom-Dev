@@ -69,10 +69,15 @@ window.startGame = function() {
     document.getElementById('pause-btn').classList.remove('hidden'); 
     
     document.getElementById('mobile-controls').classList.remove('hidden');
+
+    // TRACKING START
+    // Wir setzen hier die Zeit für die Dauer-Messung
+    state.gameStartTime = Date.now();
+    
     if (window.umami) {
         umami.track('Game Started');
     }
-}
+    // HIER WAR DER FEHLER: Die Klammer '}' war hier zu früh geschlossen.
 
     // Level laden
     const userChar = CHARACTERS[state.selectedCharIndex];
@@ -130,7 +135,7 @@ window.startGame = function() {
     document.getElementById('bomb-type').innerText = '⚫';
     if (gameLoopId) cancelAnimationFrame(gameLoopId);
     gameLoopId = requestAnimationFrame(gameLoop);
-}
+};
 
 function distributeItems() {
     let softWalls = [];
