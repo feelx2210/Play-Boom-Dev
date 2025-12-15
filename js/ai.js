@@ -5,28 +5,24 @@ import { isSolid } from './utils.js';
 const DIRS = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
 
 /**
- * Prüft, ob der Spieler in einer direkten Feuerlinie steht (für "Sniper"-Schüsse).
+ * Prüft, ob der Spieler verwundbar in einer Linie steht ("Sniper"-Schuss).
  */
 function isPlayerAlignedAndVulnerable(gx, gy, range, targetPlayer) {
     if (!targetPlayer) return false;
     const pgx = Math.round(targetPlayer.x / TILE_SIZE);
     const pgy = Math.round(targetPlayer.y / TILE_SIZE);
 
-    // Nicht auf der gleichen Linie?
     if (pgx !== gx && pgy !== gy) return false;
     
-    // Zu weit weg?
     const dist = Math.abs(pgx - gx) + Math.abs(pgy - gy);
     if (dist > range) return false;
 
-    // Ist eine Wand dazwischen?
     const dx = Math.sign(pgx - gx);
     const dy = Math.sign(pgy - gy);
     
     for (let i = 1; i < dist; i++) {
         const tx = gx + (dx * i);
         const ty = gy + (dy * i);
-        // Hard Wall oder Soft Wall blockiert das Feuer
         if (state.grid[ty][tx] === TYPES.WALL_HARD || state.grid[ty][tx] === TYPES.WALL_SOFT) {
             return false;
         }
@@ -35,17 +31,16 @@ function isPlayerAlignedAndVulnerable(gx, gy, range, targetPlayer) {
 }
 
 /**
- * Bewertet, ob eine Bombe an der aktuellen Position sinnvoll ist.
+ * Bewertet Bombenpositionen. Im Angriffsmodus extrem aggressiv.
  */
-function calculateBombScore(gx, gy, range, isEndgame, targetPlayer) {
+function calculateBombScore(gx, gy, range, isAggro, targetPlayer) {
     let score = 0;
     
-    // 1. KILL-CHECK (Höchste Prio): Steht der Spieler in der Schusslinie?
+    // 1. SNIPER-CHECK (Tötet sofort)
     if (targetPlayer && isPlayerAlignedAndVulnerable(gx, gy, range, targetPlayer)) {
-        return 9999; // SOFORT FEUERN!
+        return 9999; 
     }
 
-    // Distanz für Nahkampf-Entscheidungen
     let distToPlayer = 999;
     if (targetPlayer) {
         const pgx = Math.round(targetPlayer.x / TILE_SIZE);
@@ -53,15 +48,16 @@ function calculateBombScore(gx, gy, range, isEndgame, targetPlayer) {
         distToPlayer = Math.abs(gx - pgx) + Math.abs(gy - pgy);
     }
 
-    // 2. AGGRESSION IM ENDGAME (Zone Control)
-    if (isEndgame) {
-        // Wenn wir nah dran sind, Bombe legen um ihn einzuschränken
-        if (distToPlayer <= 4) score += 50;
-        // Wenn wir sehr nah sind ("Kuscheln"), Bombe legen (Trap)
-        if (distToPlayer <= 1) score += 200;
+    // 2. ZONE CONTROL (Den Spieler einsperren)
+    // Wenn wir im Aggro-Modus sind, ist jede Bombe in der Nähe des Spielers gut.
+    if (isAggro) {
+        // Sehr nah: "Panic Bombing" / Trap
+        if (distToPlayer <= 2) score += 300;
+        // Mittel: "Zoning" (Weg abschneiden)
+        else if (distToPlayer <= 6) score += 100;
     }
 
-    // 3. FARMING (Wände & Items & Skulls)
+    // 3. STANDARD-ZIELE
     DIRS.forEach(d => {
         for (let i = 1; i <= range; i++) {
             const tx = gx + (d.x * i); const ty = gy + (d.y * i);
@@ -75,9 +71,9 @@ function calculateBombScore(gx, gy, range, isEndgame, targetPlayer) {
                 break; 
             }
             
-            // SKULLS ZERSTÖREN!
+            // SKULLS ZERSTÖREN
             if (state.items[ty][tx] === ITEMS.SKULL) {
-                 score += 1000; // Sehr wichtig
+                 score += 500; 
                  break; 
             }
 
@@ -89,7 +85,8 @@ function calculateBombScore(gx, gy, range, isEndgame, targetPlayer) {
 }
 
 /**
- * Findet den Weg zum Spieler (Aggressive Verfolgung).
+ * Sucht Pfad zum Spieler. Ignoriert Skulls.
+ * Findet den Weg auch über weite Distanzen, wenn der Weg frei ist.
  */
 function findPathToPlayer(gx, gy, dangerMap) {
     const targetPlayer = state.players.find(p => p.isHuman && !p.isDead); 
@@ -104,7 +101,7 @@ function findPathToPlayer(gx, gy, dangerMap) {
     
     let ops = 0;
     while (queue.length > 0) {
-        if (++ops > 600) break;
+        if (++ops > 1000) break; // Erhöhtes Limit für weite Wege
         const current = queue.shift();
         
         // Ziel erreicht (oder benachbart)
@@ -112,8 +109,8 @@ function findPathToPlayer(gx, gy, dangerMap) {
              return current.firstMove;
         }
         
-        // Im Endgame suchen wir weiter (ganze Map), sonst begrenzen wir die Suche
-        if (current.dist > 25) continue; 
+        // Distanzlimit erhöht: Bots sehen dich jetzt fast überall
+        if (current.dist > 30) continue; 
 
         for (let d of DIRS) {
             const nx = current.x + d.x; 
@@ -121,8 +118,10 @@ function findPathToPlayer(gx, gy, dangerMap) {
             const key = nx + "," + ny;
             
             if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && !visited.has(key)) {
+                // Skulls sind Wände für die Wegfindung
                 const isSkull = state.items[ny][nx] === ITEMS.SKULL;
-                // Wichtig: dangerMap checken, ABER wenn das Ziel sicher ist, ignorieren wir Pfad-Gefahr manchmal (Risiko)? Nein, sicher bleiben.
+                
+                // Wir laufen nicht in Gefahr und nicht in Wände
                 if (!isSolid(nx, ny) && !dangerMap[ny][nx] && !isSkull) {
                     visited.add(key);
                     queue.push({ 
@@ -138,9 +137,6 @@ function findPathToPlayer(gx, gy, dangerMap) {
     return null;
 }
 
-/**
- * Sucht Items auf der ganzen Karte (Fallback).
- */
 function findGoodItemMove(gx, gy, dangerMap) {
     const queue = [{x: gx, y: gy, firstMove: null, dist: 0}];
     const visited = new Set();
@@ -148,7 +144,7 @@ function findGoodItemMove(gx, gy, dangerMap) {
     
     let ops = 0;
     while (queue.length > 0) {
-        if (++ops > 500) break;
+        if (++ops > 400) break;
         const current = queue.shift();
         
         const item = state.items[current.y][current.x];
@@ -156,7 +152,7 @@ function findGoodItemMove(gx, gy, dangerMap) {
             return current.firstMove;
         }
         
-        if (current.dist > 15) continue;
+        if (current.dist > 10) continue;
         
         for (let d of DIRS) {
             const nx = current.x + d.x; 
@@ -187,111 +183,116 @@ export function updateBotLogic(bot) {
     if (targetPlayer) {
         distToPlayer = Math.abs(gx - Math.round(targetPlayer.x/TILE_SIZE)) + Math.abs(gy - Math.round(targetPlayer.y/TILE_SIZE));
     }
-    
-    const softWallsLeft = state.grid.flat().filter(t => t === TYPES.WALL_SOFT).length;
-    const isEndgame = (softWallsLeft < 5);
 
     let targetDir = {x:0, y:0};
 
     // ----------------------------------------------------------------
-    // 1. FLUCHT (Überleben ist Prio 1)
+    // 1. FLUCHT (Prio 1)
     // ----------------------------------------------------------------
     if (amInDanger) {
-        // Defensive Bombe ("Counter-Attack"), wenn Gegner nah ist und wir flüchten
-        if (isHardMode && isEndgame && distToPlayer <= 3 && bot.activeBombs < bot.maxBombs) {
-             if (canEscapeAfterPlanting(gx, gy, dangerMap)) {
-                 bot.plantBomb();
-                 dangerMap = getDangerMap(); // Map update für Fluchtweg
-             }
+        // Counter-Attack: Wenn wir flüchten müssen, aber der Spieler nah ist, Bombe legen!
+        if (isHardMode && distToPlayer <= 3 && bot.activeBombs < bot.maxBombs) {
+            if (canEscapeAfterPlanting(gx, gy, dangerMap)) {
+                bot.plantBomb();
+                dangerMap = getDangerMap(); 
+            }
         }
         targetDir = findSafeMove(gx, gy, dangerMap);
     } 
     // ----------------------------------------------------------------
-    // 2. HARD MODE LOGIK (Attacke & Items)
+    // 2. HARD MODE: KILLER LOGIK
     // ----------------------------------------------------------------
     else if (isHardMode) {
         
-        // A) "GREEDY" ITEM GRAB (Löst das "Vorbeilaufen"-Problem)
-        // Checke direkte Nachbarn. Wenn da ein Item liegt -> Nimm es sofort!
-        let greedyItemMove = null;
-        for (let d of DIRS) {
-            const nx = gx + d.x; const ny = gy + d.y;
-            if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
-                const item = state.items[ny][nx];
-                // Ist da ein gutes Item, ist es sicher und keine Wand?
-                if (item !== ITEMS.NONE && item !== ITEMS.SKULL && !dangerMap[ny][nx] && !isSolid(nx, ny)) {
-                    greedyItemMove = d;
-                    break; // Sofort nehmen!
-                }
-            }
-        }
-        if (greedyItemMove) {
-            targetDir = greedyItemMove;
-        }
+        // --- BLUTRAUSCH-ERKENNUNG ---
+        // Wann ist der Bot im "Tötungsmodus"?
+        // 1. Wenn der Weg zum Spieler frei ist (Pathfinding findet was)
+        // 2. ODER wenn der Spieler einen Fluch hat (schwach ist)
+        // 3. ODER wenn wir nah dran sind
+        
+        // Prüfen, ob wir einen Weg zum Spieler haben (ignoriert Items auf dem Weg)
+        const killPath = findPathToPlayer(gx, gy, dangerMap);
+        
+        // Prüfen auf Flüche (wenn Property existiert)
+        const playerIsWeak = targetPlayer && (targetPlayer.hasCurse || targetPlayer.noBombs); 
+        
+        // Aggro-Trigger: Haben wir einen Weg? -> ATTACKE!
+        // Wir ignorieren Items, wenn wir einen Weg zum Spieler haben.
+        const isAggro = (killPath !== null) || playerIsWeak;
 
-        // B) BOMBEN LEGEN (Wenn kein Greedy Item Move ansteht, oder um zu töten)
-        // Wir prüfen das VOR der normalen Bewegung, damit wir stehen bleiben und legen können.
-        if ((!targetDir.x && !targetDir.y) && bot.activeBombs < bot.maxBombs) {
-            const bombScore = calculateBombScore(gx, gy, bot.range, isEndgame, targetPlayer);
-            const threshold = isEndgame ? 1 : 10; // Im Endgame sehr aggressiv (1 Punkt reicht)
+        // A) BOMBEN LEGEN (Offensive)
+        if (bot.activeBombs < bot.maxBombs) {
+            const bombScore = calculateBombScore(gx, gy, bot.range, isAggro, targetPlayer);
+            // Im Aggro-Modus reicht 1 Punkt (Hauptsache Druck machen)
+            const threshold = isAggro ? 1 : 15; 
             
             if (bombScore >= threshold) {
                 if (canEscapeAfterPlanting(gx, gy, dangerMap)) {
                     bot.plantBomb();
-                    // Sofort Flucht einleiten
+                    // Sofort wegrennen nach dem Legen
                     targetDir = findSafeMove(gx, gy, getDangerMap());
                 }
             }
         }
 
-        // C) TAKTISCHE BEWEGUNG (Wenn nicht gebombt oder Item genommen)
+        // B) BEWEGUNG ZUM ZIEL
         if (targetDir.x === 0 && targetDir.y === 0) {
             
-            let move = null;
-
-            // Logik:
-            // 1. Wenn Endgame -> Immer Spieler jagen (es gibt sonst nichts zu tun)
-            // 2. Wenn Spieler nah -> Spieler jagen
-            // 3. Sonst -> Items suchen -> Spieler suchen
-            
-            if (isEndgame || distToPlayer <= 8) {
-                // Modus: JÄGER
-                move = findPathToPlayer(gx, gy, dangerMap);
-                // Wenn Jäger keinen Weg findet (eingesperrt?), such Items
-                if (!move) move = findGoodItemMove(gx, gy, dangerMap);
-            } else {
-                // Modus: SAMMLER
-                move = findGoodItemMove(gx, gy, dangerMap);
-                // Wenn Sammler nichts findet, such Spieler
-                if (!move) move = findPathToPlayer(gx, gy, dangerMap);
+            // PRIO A: TÖTEN (Wenn Aggro aktiv)
+            if (isAggro && killPath) {
+                // Wir haben einen Weg zum Spieler -> Nimm ihn!
+                // Keine Ablenkung durch Items.
+                targetDir = killPath;
             }
-            
-            if (move) {
-                targetDir = move;
-            } else {
-                // Fallback: Random (ohne Skulls)
-                const safeNeighbors = DIRS.filter(d => {
+            // PRIO B: GREEDY ITEMS (Nur wenn wir NICHT im Blutrausch sind oder keinen Weg zum Spieler finden)
+            else {
+                // Quick-Check: Liegt ein Item direkt nebenan?
+                let greedyMove = null;
+                for (let d of DIRS) {
+                    const nx = gx + d.x; const ny = gy + d.y;
+                    if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
+                        const item = state.items[ny][nx];
+                        if (item !== ITEMS.NONE && item !== ITEMS.SKULL && !dangerMap[ny][nx] && !isSolid(nx, ny)) {
+                            greedyMove = d; break;
+                        }
+                    }
+                }
+                
+                if (greedyMove) {
+                    targetDir = greedyMove;
+                } else {
+                    // Items suchen (weit)
+                    let itemMove = findGoodItemMove(gx, gy, dangerMap);
+                    if (itemMove) targetDir = itemMove;
+                    
+                    // Wenn keine Items da sind -> Versuch trotzdem zum Spieler zu kommen (Fallback)
+                    else if (killPath) targetDir = killPath;
+                }
+            }
+
+            // Fallback: Random Movement (Skull-Free)
+            if (!targetDir.x && !targetDir.y) {
+                 const safeNeighbors = DIRS.filter(d => {
                     const nx = gx + d.x; const ny = gy + d.y;
                     if (isSolid(nx, ny)) return false;
                     if (state.items[ny][nx] === ITEMS.SKULL) return false;
                     return !dangerMap[ny][nx]; 
-                });
-                if (safeNeighbors.length > 0) {
+                 });
+                 if (safeNeighbors.length > 0) {
                     targetDir = safeNeighbors[Math.floor(Math.random() * safeNeighbors.length)];
-                }
+                 }
             }
         }
 
-        // D) SKULL PROTECTION (Letzte Instanz)
+        // C) SKULL SCHUTZ (Überschreibt alles)
         if (targetDir.x !== 0 || targetDir.y !== 0) {
             const nx = gx + targetDir.x; const ny = gy + targetDir.y;
             if (state.items[ny] && state.items[ny][nx] === ITEMS.SKULL) {
-                // Bewegung abbrechen!
                 if (bot.activeBombs < bot.maxBombs && canEscapeAfterPlanting(gx, gy, dangerMap)) {
-                    bot.plantBomb(); // Wegsprengen
+                    bot.plantBomb(); 
                     targetDir = findSafeMove(gx, gy, getDangerMap());
                 } else {
-                    targetDir = {x:0, y:0}; // Stehen bleiben
+                    targetDir = {x:0, y:0}; 
                 }
             }
         }
@@ -301,7 +302,7 @@ export function updateBotLogic(bot) {
     // 3. EASY/MEDIUM LOGIK
     // ----------------------------------------------------------------
     else {
-        // ... (Original Code für Easy/Medium, unverändert sicher und simpel)
+        // ... (Original Code bleibt hier, sicherheitshalber gekürzt für Übersicht)
         const nearTarget = DIRS.some(d => {
             const tx = gx + d.x; const ty = gy + d.y;
             if (tx < 0 || ty < 0 || tx >= GRID_W || ty >= GRID_H) return false;
@@ -323,7 +324,6 @@ export function updateBotLogic(bot) {
                     return !dangerMap[ny][nx]; 
                 });
                 if (safeNeighbors.length > 0) {
-                    // Auch dumme Bots mögen Items
                     const itemMove = safeNeighbors.find(d => state.items[gy+d.y][gx+d.x] !== ITEMS.NONE);
                     targetDir = itemMove || safeNeighbors[Math.floor(Math.random() * safeNeighbors.length)];
                 } else { targetDir = {x:0, y:0}; }
@@ -332,7 +332,7 @@ export function updateBotLogic(bot) {
         }
     }
 
-    // Bewegung ausführen
+    // Ausführen
     if (targetDir.x !== 0 || targetDir.y !== 0) {
         bot.botDir = targetDir;
         if (bot.botDir.x !== 0) bot.lastDir = { x: Math.sign(bot.botDir.x), y: 0 };
@@ -407,8 +407,6 @@ function findSafeMove(gx, gy, dangerMap) {
 }
 
 function canEscapeAfterPlanting(gx, gy, currentDangerMap) {
-    // Check neighbors: Gibt es ein Feld, das sicher ist?
-    // Die Bombe macht (gx,gy) gefährlich. Wir brauchen einen sicheren Nachbarn.
     const neighbors = DIRS.filter(d => {
         const nx = gx+d.x; const ny = gy+d.y;
         return !isSolid(nx, ny) && !currentDangerMap[ny][nx]; 
