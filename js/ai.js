@@ -5,16 +5,48 @@ import { isSolid } from './utils.js';
 const DIRS = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
 
 /**
- * Wählt die fieseste verfügbare Bombe.
+ * Entscheidet taktisch, welcher Bomben-Modus genutzt werden soll.
  */
-function botPlantBomb(bot) {
+function decideAndPlant(bot, gx, gy, distToPlayer, isAligned) {
+    let selectedMode = BOMB_MODES.STANDARD;
+
+    // Analyse der Umgebung (Wände in direkter Nachbarschaft)
+    let wallCount = 0;
+    DIRS.forEach(d => {
+        if (state.grid[gy+d.y] && (state.grid[gy+d.y][gx+d.x] === TYPES.WALL_HARD || state.grid[gy+d.y][gx+d.x] === TYPES.WALL_SOFT)) {
+            wallCount++;
+        }
+    });
+    
+    // Hat der Bot Napalm?
     if (bot.hasNapalm) {
-        bot.currentBombMode = BOMB_MODES.NAPALM;
-    } else if (bot.hasRolling) {
-        bot.currentBombMode = BOMB_MODES.ROLLING;
-    } else {
-        bot.currentBombMode = BOMB_MODES.STANDARD;
+        // REGEL: Kein Napalm in engen Ecken (Farming-Phase), sonst sperrt man sich ein.
+        // Ausnahme: Wir wollen den Spieler im Nahkampf töten (Selbstmord-Risiko in Kauf nehmen oder Falle).
+        const isCramped = wallCount >= 2;
+        const trapIntent = distToPlayer <= 2;
+        
+        if (!isCramped || trapIntent) {
+            selectedMode = BOMB_MODES.NAPALM; // Feuer frei zur Gebietskontrolle
+        }
     }
+
+    // Hat der Bot Rolling Bombs? (Überschreibt Napalm ggf. für Fernkampf)
+    if (bot.hasRolling) {
+        // REGEL: Rolling Bombs nur auf Distanz und wenn Platz ist.
+        // Sniper-Schuss oder wir sind auf freiem Feld.
+        const longRange = distToPlayer > 4;
+        const openField = wallCount === 0; // Keine Wände direkt daneben
+        
+        if ((isAligned && longRange) || (openField && longRange)) {
+            selectedMode = BOMB_MODES.ROLLING;
+        } else if (selectedMode === BOMB_MODES.ROLLING) {
+             // Fallback, falls wir Rolling gewählt hätten aber die Bedingungen schlecht sind
+             selectedMode = BOMB_MODES.STANDARD; 
+             if (bot.hasNapalm && (!wallCount >= 2)) selectedMode = BOMB_MODES.NAPALM;
+        }
+    }
+
+    bot.currentBombMode = selectedMode;
     bot.plantBomb();
 }
 
@@ -29,7 +61,7 @@ function isPlayerAlignedAndVulnerable(gx, gy, range, targetPlayer) {
     if (pgx !== gx && pgy !== gy) return false;
     
     const dist = Math.abs(pgx - gx) + Math.abs(pgy - gy);
-    if (dist > range) return false;
+    if (dist > range * 1.5) return false; // Etwas mehr Range Check für Rolling
 
     const dx = Math.sign(pgx - gx);
     const dy = Math.sign(pgy - gy);
@@ -45,14 +77,13 @@ function isPlayerAlignedAndVulnerable(gx, gy, range, targetPlayer) {
 }
 
 /**
- * Bewertet Bombenpositionen. 
- * NEU: Extrem aggressiv bei Nachbarschaft.
+ * Bewertet Bombenpositionen.
  */
 function calculateBombScore(gx, gy, range, isAggro, targetPlayer) {
     let score = 0;
     
     // 1. SNIPER (Fernkampf)
-    if (targetPlayer && isPlayerAlignedAndVulnerable(gx, gy, range, targetPlayer)) {
+    if (targetPlayer && isPlayerAlignedAndVulnerable(gx, gy, 10, targetPlayer)) {
         return 9999; 
     }
 
@@ -63,39 +94,29 @@ function calculateBombScore(gx, gy, range, isAggro, targetPlayer) {
         distToPlayer = Math.abs(gx - pgx) + Math.abs(gy - pgy);
     }
 
-    // 2. NAHKAMPF & FALLE (Das löst das Sackgassen-Problem)
-    // Wenn wir direkt neben dem Spieler stehen: BOMBE. Immer.
-    // Das tötet ihn in der Sackgasse und stresst ihn im Offenen.
-    if (targetPlayer && distToPlayer <= 1) {
-        score += 50000; // Höchste Priorität
-    }
-    // Wenn wir sehr nah sind (2 Felder), machen wir Druck
-    else if (targetPlayer && distToPlayer <= 2) {
-        score += 500;
-    }
+    // 2. NAHKAMPF & FALLE
+    if (targetPlayer && distToPlayer <= 1) score += 50000;
+    else if (targetPlayer && distToPlayer <= 2) score += 500;
 
     // 3. ZONE CONTROL (Endgame)
-    if (isAggro && distToPlayer <= 6) {
-        score += 100;
+    if (isAggro && distToPlayer <= 6) score += 100;
+    
+    // 4. MULTI-BOMB (SPAM)
+    // Wenn wir aggressiv sind und noch Bomben übrig haben: RAUS DAMIT!
+    if (isAggro && score > 0) {
+        score += 50; // Bonus um die Schwelle sicher zu knacken
     }
 
-    // 4. FARMING (Standard)
+    // 5. FARMING
     DIRS.forEach(d => {
         for (let i = 1; i <= range; i++) {
             const tx = gx + (d.x * i); const ty = gy + (d.y * i);
             if (tx < 0 || tx >= GRID_W || ty < 0 || ty >= GRID_H) break;
-            
             const tile = state.grid[ty][tx];
             if (tile === TYPES.WALL_HARD) break;
             
-            if (tile === TYPES.WALL_SOFT) {
-                score += 20;
-                break; 
-            }
-            if (state.items[ty][tx] === ITEMS.SKULL) {
-                 score += 500; 
-                 break; 
-            }
+            if (tile === TYPES.WALL_SOFT) { score += 20; break; }
+            if (state.items[ty][tx] === ITEMS.SKULL) { score += 500; break; }
             if (state.grid[ty][tx] === TYPES.WALL_SOFT) break; 
         }
     });
@@ -104,49 +125,29 @@ function calculateBombScore(gx, gy, range, isAggro, targetPlayer) {
 }
 
 /**
- * Findet den Spieler. Zwingt den Bot, in die Sackgasse zu laufen.
+ * Findet den Spieler.
  */
 function findPathToPlayer(gx, gy, dangerMap) {
     const targetPlayer = state.players.find(p => p.isHuman && !p.isDead); 
     if (!targetPlayer) return null;
-
     const targetGx = Math.round(targetPlayer.x / TILE_SIZE);
     const targetGy = Math.round(targetPlayer.y / TILE_SIZE);
-
     const queue = [{x: gx, y: gy, firstMove: null, dist: 0}];
     const visited = new Set();
     visited.add(gx + "," + gy);
-    
     let ops = 0;
     while (queue.length > 0) {
-        if (++ops > 1500) break; // Weite Suche erlauben
+        if (++ops > 1500) break; 
         const current = queue.shift();
-        
-        // Ziel: Direktes Nachbarfeld des Spielers
-        if (Math.abs(current.x - targetGx) + Math.abs(current.y - targetGy) <= 1) {
-             return current.firstMove;
-        }
-        
-        // Keine Distanzbegrenzung im Hard Mode mehr, damit sie dich überall finden
+        if (Math.abs(current.x - targetGx) + Math.abs(current.y - targetGy) <= 1) return current.firstMove;
         if (current.dist > 40) continue; 
-
         for (let d of DIRS) {
-            const nx = current.x + d.x; 
-            const ny = current.y + d.y; 
-            const key = nx + "," + ny;
-            
+            const nx = current.x + d.x; const ny = current.y + d.y; const key = nx + "," + ny;
             if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && !visited.has(key)) {
-                // Skulls ignorieren, Gefahr ignorieren WENN es der einzige Weg zum Kill ist? 
-                // Nein, lieber sicher spielen.
                 const isSkull = state.items[ny][nx] === ITEMS.SKULL;
                 if (!isSolid(nx, ny) && !dangerMap[ny][nx] && !isSkull) {
                     visited.add(key);
-                    queue.push({ 
-                        x: nx, 
-                        y: ny, 
-                        firstMove: current.firstMove || d, 
-                        dist: current.dist + 1
-                    });
+                    queue.push({ x: nx, y: ny, firstMove: current.firstMove || d, dist: current.dist + 1 });
                 }
             }
         }
@@ -158,23 +159,15 @@ function findGoodItemMove(gx, gy, dangerMap) {
     const queue = [{x: gx, y: gy, firstMove: null, dist: 0}];
     const visited = new Set();
     visited.add(gx + "," + gy);
-    
     let ops = 0;
     while (queue.length > 0) {
         if (++ops > 500) break;
         const current = queue.shift();
-        
         const item = state.items[current.y][current.x];
-        if (item !== ITEMS.NONE && item !== ITEMS.SKULL) {
-            return current.firstMove;
-        }
-        
+        if (item !== ITEMS.NONE && item !== ITEMS.SKULL) return current.firstMove;
         if (current.dist > 15) continue;
-        
         for (let d of DIRS) {
-            const nx = current.x + d.x; 
-            const ny = current.y + d.y; 
-            const key = nx + "," + ny;
+            const nx = current.x + d.x; const ny = current.y + d.y; const key = nx + "," + ny;
             if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && !visited.has(key)) {
                 if (!isSolid(nx, ny) && !dangerMap[ny][nx] && state.items[ny][nx] !== ITEMS.SKULL) {
                     visited.add(key);
@@ -190,10 +183,8 @@ export function updateBotLogic(bot) {
     const gx = Math.round(bot.x / TILE_SIZE);
     const gy = Math.round(bot.y / TILE_SIZE);
     const isHardMode = (bot.difficulty === DIFFICULTIES.HARD);
-    
     let dangerMap = getDangerMap();
     const amInDanger = dangerMap[gy][gx];
-    
     const targetPlayer = state.players.find(p => p.isHuman && !p.isDead);
     let distToPlayer = 999;
     if (targetPlayer) {
@@ -201,73 +192,54 @@ export function updateBotLogic(bot) {
     }
 
     let targetDir = {x:0, y:0};
-    
-    // Bestehende Bewegung übernehmen (Smoothness), aber Interrupts erlauben
-    if (bot.botDir.x !== 0 || bot.botDir.y !== 0) {
-        targetDir = bot.botDir;
-    }
+    if (bot.botDir.x !== 0 || bot.botDir.y !== 0) targetDir = bot.botDir;
 
-    // -----------------------------------------------------------
     // 1. FLUCHT (PRIO 1)
-    // -----------------------------------------------------------
     if (amInDanger) {
-        // Counter-Bomb: "Wenn ich eh rennen muss, hinterlasse ich Chaos"
         if (isHardMode && distToPlayer <= 3 && bot.activeBombs < bot.maxBombs) {
             if (canEscapeAfterPlanting(gx, gy, dangerMap)) {
-                botPlantBomb(bot);
+                // Taktische Entscheidung auch bei Flucht-Bomben
+                decideAndPlant(bot, gx, gy, distToPlayer, false);
                 dangerMap = getDangerMap(); 
             }
         }
         targetDir = findSafeMove(gx, gy, dangerMap);
         bot.changeDirTimer = 0; 
     } 
-    // -----------------------------------------------------------
-    // 2. HARD MODE LOGIK (KILLER)
-    // -----------------------------------------------------------
+    // 2. HARD MODE LOGIK
     else if (isHardMode) {
-        
         const killPath = findPathToPlayer(gx, gy, dangerMap);
-        // Wir sind "Aggro", wenn wir den Spieler erreichen können.
-        const isAggro = (killPath !== null) || (distToPlayer < 10);
+        const isAligned = isPlayerAlignedAndVulnerable(gx, gy, 15, targetPlayer); // Weite Sicht für Rolling
+        const isAggro = (killPath !== null) || (distToPlayer < 10) || isAligned;
 
         // A) INTERRUPT: BOMBE LEGEN?
-        // Check JEDEN FRAME, ob wir eine perfekte Gelegenheit haben (z.B. Sackgasse)
+        // Checken wir JEDEN Frame. Wenn wir Aggro sind und Bomben haben: Legen!
+        // Nicht warten bis man steht.
         if (bot.activeBombs < bot.maxBombs) {
             const bombScore = calculateBombScore(gx, gy, bot.range, isAggro, targetPlayer);
+            // Schwelle im Aggro-Modus extrem niedrig (1), damit er "alle Bomben legt"
             const threshold = isAggro ? 1 : 15; 
             
             if (bombScore >= threshold) {
                 if (canEscapeAfterPlanting(gx, gy, dangerMap)) {
-                    botPlantBomb(bot);
-                    // Nach dem Legen SOFORT in Fluchtmodus wechseln
+                    decideAndPlant(bot, gx, gy, distToPlayer, isAligned);
+                    // Flucht
                     targetDir = findSafeMove(gx, gy, getDangerMap());
                     bot.changeDirTimer = 0;
                 }
             }
         }
 
-        // B) BEWEGUNG PLANEN
-        // Wenn wir sicher sind und nicht gerade gebombt haben: Wohin?
+        // B) BEWEGUNG
         const nextX = Math.round((bot.x + bot.botDir.x * 20) / TILE_SIZE);
         const nextY = Math.round((bot.y + bot.botDir.y * 20) / TILE_SIZE);
         const isBlocked = isSolid(nextX, nextY);
         
-        // Wir entscheiden neu, wenn: Wir stehen, wir blockiert sind, oder der Timer abgelaufen ist
         if ((targetDir.x === 0 && targetDir.y === 0) || isBlocked || bot.changeDirTimer <= 0) {
-            
-            // STRATEGIE:
-            // 1. Wenn Weg zum Spieler frei -> KILL (Prio!)
-            // 2. Wenn Items nah -> Nimm sie
-            // 3. Wenn kein Weg zum Spieler -> Such Items weit weg
-            
             if (killPath) {
-                // Konsequente Verfolgung
                 targetDir = killPath;
-                // Kurzer Timer, damit er auf Bewegungen des Spielers reagiert
                 bot.changeDirTimer = 5; 
             } else {
-                // Kein Weg zum Spieler? Items suchen.
-                // Erst greedy (direkt daneben)
                 let greedyMove = null;
                 for (let d of DIRS) {
                     const nx = gx + d.x; const ny = gy + d.y;
@@ -283,22 +255,21 @@ export function updateBotLogic(bot) {
                     targetDir = greedyMove;
                     bot.changeDirTimer = 5;
                 } else {
-                    // Weite Suche nach Items
                     let itemMove = findGoodItemMove(gx, gy, dangerMap);
                     if (itemMove) {
                         targetDir = itemMove;
                         bot.changeDirTimer = 15;
                     } else {
-                        // Fallback: Lauf einfach irgendwie zum Spieler (Luftlinie minimieren),
-                        // auch wenn kein Pfad da ist (vielleicht wird einer frei)
+                        // Fallback: Lauf zum Spieler (Luftlinie), auch ohne Pfad
                         const safeNeighbors = DIRS.filter(d => {
                              const nx = gx + d.x; const ny = gy + d.y;
                              if (isSolid(nx, ny)) return false;
                              if (state.items[ny][nx] === ITEMS.SKULL) return false;
                              return !dangerMap[ny][nx]; 
                         });
-                        // Wähle den Nachbarn, der die Distanz zum Spieler minimiert
                         if (targetPlayer && safeNeighbors.length > 0) {
+                             const targetGx = Math.round(targetPlayer.x/TILE_SIZE);
+                             const targetGy = Math.round(targetPlayer.y/TILE_SIZE);
                              safeNeighbors.sort((a, b) => {
                                  const distA = Math.abs((gx+a.x) - targetGx) + Math.abs((gy+a.y) - targetGy);
                                  const distB = Math.abs((gx+b.x) - targetGx) + Math.abs((gy+b.y) - targetGy);
@@ -320,7 +291,8 @@ export function updateBotLogic(bot) {
             const nx = gx + targetDir.x; const ny = gy + targetDir.y;
             if (state.items[ny] && state.items[ny][nx] === ITEMS.SKULL) {
                 if (bot.activeBombs < bot.maxBombs && canEscapeAfterPlanting(gx, gy, dangerMap)) {
-                    botPlantBomb(bot); 
+                    bot.currentBombMode = BOMB_MODES.STANDARD; // Normale Bombe zum Zerstören
+                    bot.plantBomb(); 
                     targetDir = findSafeMove(gx, gy, getDangerMap());
                     bot.changeDirTimer = 0;
                 } else {
@@ -330,11 +302,8 @@ export function updateBotLogic(bot) {
             }
         }
     } 
-    // -----------------------------------------------------------
     // 3. EASY/MEDIUM LOGIK
-    // -----------------------------------------------------------
     else {
-        // Original-Verhalten
         const nearTarget = DIRS.some(d => {
             const tx = gx + d.x; const ty = gy + d.y;
             if (tx < 0 || ty < 0 || tx >= GRID_W || ty >= GRID_H) return false;
@@ -343,7 +312,7 @@ export function updateBotLogic(bot) {
 
         if (nearTarget && Math.random() < 0.05 && bot.activeBombs < bot.maxBombs) {
             if (canEscapeAfterPlanting(gx, gy, dangerMap)) {
-                botPlantBomb(bot); 
+                bot.plantBomb(); 
                 targetDir = findSafeMove(gx, gy, getDangerMap()); 
             }
         }
