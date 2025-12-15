@@ -1,4 +1,4 @@
-import { GRID_W, GRID_H, TYPES, ITEMS, TILE_SIZE, BOOST_PADS, HELL_CENTER, DIFFICULTIES } from './constants.js'; // DIFFICULTIES hinzugefügt
+import { GRID_W, GRID_H, TYPES, ITEMS, TILE_SIZE, BOOST_PADS, HELL_CENTER, DIFFICULTIES } from './constants.js';
 import { state } from './state.js';
 import { isSolid } from './utils.js';
 
@@ -28,7 +28,8 @@ function calculateWallScore(gx, gy, range) {
             
             // Regel 7: Skull-Items wegsprengen - sehr hohe Priorität, um sie zu verhindern
             if (state.items[ty][tx] === ITEMS.SKULL) {
-                 score += 100; 
+                 score += 100; // Hohe Punktzahl zur Priorisierung der Zerstörung
+                 break; // Nach Skull/Soft Wall stoppt die Ausbreitung (falls das Item direkt an der Wand liegt, wird nur 100 addiert)
             }
             
             if (state.grid[ty][tx] === TYPES.WALL_SOFT) break; // Feuer stoppt hier
@@ -64,7 +65,8 @@ function findGoodItemMove(gx, gy, dangerMap) {
             
             if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && !visited.has(key)) {
                 // Sicherstellen, dass der Weg nicht fest ist und nicht in Gefahr führt.
-                if (!isSolid(nx, ny) && !dangerMap[ny][nx]) {
+                // ACHTUNG: Auch hier Skulls als Pfad-Blocker behandeln (wenn nicht Flucht)
+                if (!isSolid(nx, ny) && !dangerMap[ny][nx] && state.items[ny][nx] !== ITEMS.SKULL) {
                     visited.add(key);
                     queue.push({ 
                         x: nx, 
@@ -94,7 +96,6 @@ function findPlayerMove(gx, gy, dangerMap) {
 
     // Wenn der Bot direkt neben dem Player steht (Regel 6: Falle legen)
     if (Math.abs(gx - targetGx) + Math.abs(gy - targetGy) <= 1) {
-        // Hier sollte die Logik zum Bomben/Einsperren stattfinden.
         // Signalisiere in der Rückgabe, dass dies der beste Platz zum Bomben ist.
         return {x: 0, y: 0, isBombSpot: true}; 
     }
@@ -116,7 +117,8 @@ function findPlayerMove(gx, gy, dangerMap) {
             
             if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H && !visited.has(key)) {
                 // Sicherstellen, dass der Weg nicht fest ist und nicht in Gefahr führt.
-                if (!isSolid(nx, ny) && !dangerMap[ny][nx]) {
+                // ACHTUNG: Skulls als Pfad-Blocker behandeln (wenn nicht Flucht)
+                if (!isSolid(nx, ny) && !dangerMap[ny][nx] && state.items[ny][nx] !== ITEMS.SKULL) {
                     visited.add(key);
                     const isTarget = (nx === targetGx && ny === targetGy) || (Math.abs(nx - targetGx) + Math.abs(ny - targetGy) <= 1);
                     queue.push({ 
@@ -185,6 +187,7 @@ export function updateBotLogic(bot) {
                     if (!isSolid(gx, gy) && canEscapeAfterPlanting(gx, gy, dangerMap)) {
                         let currentSpotScore = calculateWallScore(gx, gy, botRange);
                         
+                        // Wenn der Score hoch genug ist (z.B. > 0, d.h. Soft Walls oder Skull), dann legen
                         if (currentSpotScore > maxScore) { 
                             maxScore = currentSpotScore;
                             bestMove = { x: 0, y: 0, shouldPlant: true }; // Bleibe stehen und lege
@@ -197,11 +200,6 @@ export function updateBotLogic(bot) {
                     // Bombe legen (Spielerfalle oder strategisch)
                     if (bestMove.shouldPlant && bot.activeBombs < bot.maxBombs) {
                         
-                        // Regel 4 (Kein Friendly Fire): Nur legen, wenn es nicht zu einem Selbstmord führt.
-                        // Der check 'canEscapeAfterPlanting' und 'findSafeMove' nach dem Legen regelt dies (Regel 1).
-                        // Vermeidung anderer Bots (Regel 4) ist hier implizit, da der Bot primär den Player angreift
-                        // und nicht versucht, sich von anderen Bots zu entfernen, wenn er sich nicht im Fluchtmodus befindet.
-
                         bot.plantBomb();
                         // Nach dem Bomben sofort Fluchtweg suchen (Regel 1)
                         targetDir = findSafeMove(gx, gy, getDangerMap());
@@ -212,15 +210,43 @@ export function updateBotLogic(bot) {
                 }
             }
             
+            // --- NEUE PRÜFUNG: Skull-Vermeidung/Sprengen (Regel 7) ---
+            // Wenn der Bot im Angriffs-Modus eine Bewegung plant, die ihn auf einen Skull führt:
+            if (!amInDanger && (targetDir.x !== 0 || targetDir.y !== 0)) {
+                const nextGx = gx + targetDir.x;
+                const nextGy = gy + targetDir.y;
+                
+                if (state.items[nextGy] && state.items[nextGy][nextGx] === ITEMS.SKULL) {
+                    
+                    // Höchste Priorität: Skull wegsprengen, statt ihn aufzuheben
+                    if (bot.activeBombs < bot.maxBombs && canEscapeAfterPlanting(gx, gy, dangerMap)) {
+                        // Statt der Bewegung wird eine Bombe platziert.
+                        bot.plantBomb();
+                        // Die neue targetDir muss der Fluchtweg sein (Flucht vor der eigenen Bombe, Regel 1)
+                        targetDir = findSafeMove(gx, gy, getDangerMap()); 
+                    } else {
+                        // Kann nicht bomben (keine Bomben oder kein Fluchtweg): Bewegung abbrechen.
+                        // Im nächsten Frame wird der Fallback-Zufallszug ohne Skull gewählt.
+                        targetDir = {x:0, y:0}; 
+                    }
+                }
+            }
+            // --- ENDE NEUE PRÜFUNG ---
+            
             // 3. Fallback: Zufällige, sichere Bewegung
             if (!targetDir.x && !targetDir.y) {
                  const safeNeighbors = DIRS.filter(d => {
                     const nx = gx + d.x; const ny = gy + d.y;
                     if (isSolid(nx, ny)) return false;
+                    // NEU: Skull vermeiden, wenn wir nicht in Gefahr sind (amInDanger)
+                    if (state.items[ny][nx] === ITEMS.SKULL) return false;
                     return !dangerMap[ny][nx]; // Nicht in Gefahr laufen
                  });
                  if (safeNeighbors.length > 0) {
                     targetDir = safeNeighbors[Math.floor(Math.random() * safeNeighbors.length)];
+                 } else {
+                     // Wenn wirklich keine sichere Bewegung möglich ist, bleibt er stehen
+                     targetDir = {x:0, y:0};
                  }
                  
                  // Beibehalten des Timers für den Richtungswechsel
@@ -259,7 +285,7 @@ export function updateBotLogic(bot) {
                     });
                     
                     if (safeNeighbors.length > 0) {
-                        // Priorität: Items einsammeln
+                        // Priorität: Items einsammeln (auch Skull auf Easy/Medium)
                         const itemMove = safeNeighbors.find(d => state.items[gy+d.y][gx+d.x] !== ITEMS.NONE);
                         targetDir = itemMove || safeNeighbors[Math.floor(Math.random() * safeNeighbors.length)];
                     } else {
@@ -334,7 +360,7 @@ function getDangerMap() {
     return map;
 }
 
-// Breitensuche zum nächsten sicheren Feld
+// Breitensuche zum nächsten sicheren Feld (Nur für die Flucht: Alle Items erlaubt, wenn es der einzige Weg ist)
 function findSafeMove(gx, gy, dangerMap) {
     const queue = [{x: gx, y: gy, firstMove: null, dist: 0}];
     const visited = new Set();
