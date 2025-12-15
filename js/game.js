@@ -69,6 +69,10 @@ window.startGame = function() {
     document.getElementById('pause-btn').classList.remove('hidden'); 
     
     document.getElementById('mobile-controls').classList.remove('hidden');
+    if (window.umami) {
+        umami.track('Game Started');
+    }
+}
 
     // Level laden
     const userChar = CHARACTERS[state.selectedCharIndex];
