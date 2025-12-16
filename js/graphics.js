@@ -12,18 +12,22 @@ function getCachedSprite(charDef, d, isCursed) {
     const c = document.createElement('canvas');
     c.width = 48; c.height = 48;
     const ctx = c.getContext('2d');
-    ctx.translate(24, 24); // Zentrum
+    ctx.translate(24, 24); // 0,0 ist die Mitte
 
     // --- HELPER ---
     const fillCircle = (x, y, r, col) => { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); };
-    const gradient = (y1, y2, c1, c2) => { const g = ctx.createLinearGradient(0, y1, 0, y2); g.addColorStop(0, c1); g.addColorStop(1, c2); return g; };
     const rect = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+    const gradient = (y1, y2, c1, c2) => { 
+        const g = ctx.createLinearGradient(0, y1, 0, y2); 
+        g.addColorStop(0, c1); g.addColorStop(1, c2); 
+        return g; 
+    };
 
     const id = charDef.id;
 
-    // ==========================================
+    // ============================================================
     // 1. ORIGINAL CHARACTERS (High Detail Restore)
-    // ==========================================
+    // ============================================================
     
     if (id === 'lucifer') {
         const skinGrad = gradient(-24, 10, '#ff5555', '#aa0000');
@@ -43,226 +47,257 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.beginPath(); ctx.moveTo(-6, -26); ctx.quadraticCurveTo(-14, -32, -10, -40); ctx.lineTo(-4, -28); ctx.fill();
             ctx.beginPath(); ctx.moveTo(6, -26); ctx.quadraticCurveTo(14, -32, 10, -40); ctx.lineTo(4, -28); ctx.fill();
         }
-        // Gesicht
         if(d==='front') {
-            ctx.fillStyle='#ffff00'; ctx.fillRect(-7, -22, 5, 4); ctx.fillRect(2, -22, 5, 4); // Augen
-            ctx.fillStyle='#000'; ctx.fillRect(-5, -21, 2, 2); ctx.fillRect(3, -21, 2, 2);
-            ctx.fillStyle='#330000'; ctx.beginPath(); ctx.arc(0, -14, 4, 0, Math.PI, false); ctx.fill(); // Mund
+            rect(-7, -22, 5, 4, '#ffff00'); rect(2, -22, 5, 4, '#ffff00'); // Augen
+            rect(-5, -21, 2, 2, '#000'); rect(3, -21, 2, 2, '#000');
+            ctx.fillStyle='#330000'; ctx.beginPath(); ctx.arc(0, -14, 4, 0, Math.PI, false); ctx.fill(); 
         }
     }
     else if (id === 'rambo') {
         const skin = '#ffccaa'; const skinShadow = '#eebba0';
-        // Hose (Camo)
-        ctx.fillStyle = '#226622'; 
+        ctx.fillStyle = '#226622'; // Camo Hose
         if(d==='side') { ctx.fillRect(-5, 10, 10, 14); } else { ctx.fillRect(-9, 10, 8, 14); ctx.fillRect(1, 10, 8, 14); }
-        // Muskel-Körper (Nackt)
+        // Muskel-Körper
         const bodyGrad = gradient(-15, 10, skin, skinShadow);
         ctx.fillStyle = bodyGrad;
         ctx.beginPath(); ctx.moveTo(-12, -18); ctx.quadraticCurveTo(-14, 0, -8, 10); ctx.lineTo(8, 10); ctx.quadraticCurveTo(14, 0, 12, -18); ctx.fill();
-        // Bandolier
+        // Bandolier (Gurt)
         ctx.strokeStyle = '#442200'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, -18); ctx.lineTo(10, 10); ctx.stroke();
         // Kopf
         ctx.beginPath(); ctx.arc(0, -22, 9, 0, Math.PI*2); ctx.fill();
         // Bandana
         ctx.fillStyle = '#cc0000'; ctx.fillRect(-10, -28, 20, 6);
-        if(d==='back' || d==='side') { ctx.beginPath(); ctx.moveTo(8, -25); ctx.quadraticCurveTo(16, -20, 14, -10); ctx.lineTo(10, -22); ctx.fill(); }
+        if(d==='back' || d==='side') { ctx.beginPath(); ctx.moveTo(8, -25); ctx.quadraticCurveTo(16, -20, 14, -10); ctx.lineTo(10, -22); ctx.fill(); } // Bandana Tails
         // Haare
         ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -24, 9, Math.PI, 0); ctx.fill();
-        // Gesicht
         if(d==='front') {
-            ctx.fillStyle='#fff'; ctx.fillRect(-7, -24, 5, 4); ctx.fillRect(2, -24, 5, 4);
-            ctx.fillStyle='#000'; ctx.fillRect(-5, -23, 2, 2); ctx.fillRect(3, -23, 2, 2);
+            rect(-7, -24, 5, 4, '#fff'); rect(2, -24, 5, 4, '#fff');
+            rect(-5, -23, 2, 2, '#000'); rect(3, -23, 2, 2, '#000');
         }
     }
     else if (id === 'nun') {
-        // Robe
         const robeGrad = gradient(-20, 20, '#333', '#000');
         ctx.fillStyle = robeGrad;
-        ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-14, 24); ctx.lineTo(14, 24); ctx.fill();
-        // Kopf
-        ctx.fillStyle = '#ffccaa'; ctx.beginPath(); ctx.arc(0, -18, 7, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-14, 24); ctx.lineTo(14, 24); ctx.fill(); // Robe
+        ctx.fillStyle = '#ffccaa'; ctx.beginPath(); ctx.arc(0, -18, 7, 0, Math.PI*2); ctx.fill(); // Kopf
         // Haube
         ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -20, 9, Math.PI, 0); ctx.lineTo(10, 0); ctx.lineTo(-10, 0); ctx.fill();
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -18, 7, Math.PI, 0); ctx.stroke();
-        // Kreuz
         if(d==='front') {
-            ctx.fillStyle='#ffcc00'; ctx.fillRect(-3, -5, 6, 18); ctx.fillRect(-8, 0, 16, 6);
-            // Augen
-            ctx.fillStyle='#000'; ctx.fillRect(-4, -19, 2, 2); ctx.fillRect(2, -19, 2, 2);
+            rect(-3, -5, 6, 18, '#ffdd44'); rect(-8, 0, 16, 6, '#ffdd44'); // Kreuz
+            rect(-4, -19, 2, 2, '#000'); rect(2, -19, 2, 2, '#000');
         }
     }
     else if (id === 'yeti') {
         const furGrad = gradient(-20, 20, '#ddffff', '#88ccff');
         ctx.fillStyle = furGrad;
-        // Zotteliger Körper (Kreise)
-        fillCircle(0, 0, 16, furGrad);
+        fillCircle(0, 0, 16, furGrad); // Body
         fillCircle(-10, -10, 8, furGrad); fillCircle(10, -10, 8, furGrad); // Schultern
         fillCircle(-8, 12, 8, furGrad); fillCircle(8, 12, 8, furGrad); // Beine
-        // Kopf
-        fillCircle(0, -20, 10, furGrad);
-        // Gesicht Blau
+        fillCircle(0, -20, 10, furGrad); // Kopf
         if(d==='front') {
-            ctx.fillStyle='#004488'; ctx.beginPath(); ctx.arc(0, -18, 6, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle='#fff'; ctx.fillRect(-4, -20, 3, 3); ctx.fillRect(1, -20, 3, 3);
-            ctx.fillStyle='#fff'; ctx.fillRect(-3, -15, 2, 3); ctx.fillRect(1, -15, 2, 3); // Zähne
+            ctx.fillStyle='#004488'; ctx.beginPath(); ctx.arc(0, -18, 6, 0, Math.PI*2); ctx.fill(); // FaceBG
+            rect(-4, -20, 3, 3, '#fff'); rect(1, -20, 3, 3, '#fff');
+            rect(-3, -15, 2, 3, '#fff'); rect(1, -15, 2, 3, '#fff'); // Zähne
         }
     }
 
-    // ==========================================
-    // 2. NEW CELEBRITIES (High Detail Style)
-    // ==========================================
+    // ============================================================
+    // 2. NEW CELEBRITIES (Custom High-Detail)
+    // ============================================================
     else {
-        const drawBody = (skin, topCol, botCol, shoesCol) => {
+        // Konfigurierbare Körper-Funktion für Variationen
+        const drawBodyBase = (skinCol, topCol, botCol, shoesCol, widthMod = 1) => {
             // Beine
             ctx.fillStyle = botCol;
             if(d==='side') { ctx.fillRect(-5, 10, 10, 14); } 
-            else { ctx.fillRect(-9, 10, 8, 14); ctx.fillRect(1, 10, 8, 14); }
+            else { 
+                ctx.fillRect(-9 * widthMod, 10, 8 * widthMod, 14); 
+                ctx.fillRect(1 * widthMod, 10, 8 * widthMod, 14); 
+            }
             // Schuhe
             ctx.fillStyle = shoesCol;
             if(d==='side') { ctx.fillRect(-5, 20, 12, 4); } 
-            else { ctx.fillRect(-9, 20, 8, 4); ctx.fillRect(1, 20, 8, 4); }
+            else { ctx.fillRect(-9 * widthMod, 20, 8 * widthMod, 4); ctx.fillRect(1 * widthMod, 20, 8 * widthMod, 4); }
             
-            // Torso
+            // Torso (Trapezform für Schultern)
             ctx.fillStyle = topCol;
-            ctx.beginPath(); ctx.moveTo(-11, -14); ctx.lineTo(11, -14); ctx.lineTo(10, 12); ctx.lineTo(-10, 12); ctx.fill();
+            ctx.beginPath(); 
+            ctx.moveTo(-11 * widthMod, -14); ctx.lineTo(11 * widthMod, -14); 
+            ctx.lineTo(10 * widthMod, 12); ctx.lineTo(-10 * widthMod, 12); 
+            ctx.fill();
             
             // Arme (Haut)
             if(d!=='side') {
-                ctx.fillStyle = skin;
-                ctx.beginPath(); ctx.arc(-14, -8, 4, 0, Math.PI*2); ctx.fill(); ctx.fillRect(-16, -8, 4, 12);
-                ctx.beginPath(); ctx.arc(14, -8, 4, 0, Math.PI*2); ctx.fill(); ctx.fillRect(12, -8, 4, 12);
+                ctx.fillStyle = skinCol;
+                // Arme leicht abgewinkelt
+                ctx.beginPath(); ctx.ellipse(-14 * widthMod, -4, 4, 10, 0.2, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(14 * widthMod, -4, 4, 10, -0.2, 0, Math.PI*2); ctx.fill();
+                // Ärmel
+                ctx.fillStyle = topCol;
+                ctx.beginPath(); ctx.ellipse(-14 * widthMod, -10, 4.5, 5, 0.2, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(14 * widthMod, -10, 4.5, 5, -0.2, 0, Math.PI*2); ctx.fill();
             }
             
-            // Kopf
-            ctx.fillStyle = skin;
-            ctx.beginPath(); ctx.arc(0, -22, 9, 0, Math.PI*2); ctx.fill();
+            // Kopf Basis (Rund, immer gleich groß)
+            ctx.fillStyle = skinCol;
+            ctx.beginPath(); ctx.arc(0, -22, 10, 0, Math.PI*2); ctx.fill();
         };
 
-        const addFace = (glasses=false, beard=false) => {
+        const drawFace = (glasses=false, beard=false) => {
             if(d!=='front') return;
             // Augen
             if(!glasses) {
-                ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(-4, -23, 3, 2, 0, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(4, -23, 3, 2, 0, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(-4, -23, 1, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(4, -23, 1, 0, Math.PI*2); ctx.fill();
+                rect(-5, -23, 3, 3, '#fff'); rect(2, -23, 3, 3, '#fff');
+                rect(-4, -23, 2, 2, '#000'); rect(3, -23, 2, 2, '#000');
             } else {
-                ctx.fillStyle='#111'; ctx.fillRect(-8, -25, 16, 5); // Sonnenbrille
+                ctx.fillStyle='#111'; ctx.fillRect(-9, -25, 18, 5); // Breite Brille
             }
             // Bart
             if(beard) {
-                ctx.fillStyle='rgba(0,0,0,0.15)';
-                ctx.beginPath(); ctx.arc(0, -22, 9, 0.5, 2.6); ctx.lineTo(0, -18); ctx.fill();
+                ctx.fillStyle='rgba(0,0,0,0.15)'; // Stoppel
+                ctx.beginPath(); ctx.arc(0, -22, 10, 0.5, 2.6); ctx.lineTo(0, -18); ctx.fill();
+                rect(-3, -15, 6, 2, '#000'); // Goatee Detail
             }
         };
 
+        // --- CRISTIANO ---
         if (id === 'cristiano') {
-            drawBody('#d2b48c', '#da291c', '#fff', '#fff'); // ManUtd Rot, Weiße Hose
-            if(d==='front') { ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif'; ctx.fillText('7', -3, 5); } // Nr 7
-            // Haare
-            ctx.fillStyle='#221100'; ctx.beginPath(); ctx.moveTo(-10, -26); ctx.quadraticCurveTo(0, -34, 10, -26); ctx.lineTo(10, -20); ctx.lineTo(-10, -20); ctx.fill();
-            addFace();
-            if(d==='front') { ctx.fillStyle='#fff'; ctx.fillRect(-3, -18, 6, 2); } // Lächeln
+            drawBodyBase('#d2b48c', '#da291c', '#fff', '#fff', 1.1); // ManUtd Rot, Breit
+            if(d==='front') { 
+                ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center'; ctx.fillText('7', 0, 5); // Nr 7
+                ctx.fillStyle='#fff'; ctx.fillRect(-1, -9, 2, 14); // Kragen
+            }
+            // Haare (Sidecut)
+            ctx.fillStyle='#221100'; 
+            ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill();
+            ctx.fillRect(-10, -26, 20, 6);
+            if(d==='front') rect(-3, -18, 6, 2, '#fff'); // Grinsen
+            drawFace();
         }
+        // --- HITMAN ---
         else if (id === 'hitman') {
             const suitGrad = gradient(-20, 10, '#333', '#000');
-            drawBody('#ffe0bd', suitGrad, '#111', '#000');
+            drawBodyBase('#ffe0bd', suitGrad, '#111', '#000');
             if(d==='front') {
                 ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(-6,-14); ctx.lineTo(0,-4); ctx.lineTo(6,-14); ctx.fill(); // Hemd
-                ctx.fillStyle='#cc0000'; ctx.fillRect(-2, -14, 4, 12); // Krawatte
+                rect(-2, -14, 4, 12, '#cc0000'); // Rote Krawatte
             }
-            addFace(); // Glatze (Keine Haare)
-            if(d==='back') { ctx.fillStyle='#000'; ctx.fillRect(-3, -20, 6, 2); } // Barcode
+            drawFace();
+            if(d==='back') { rect(-3, -20, 6, 2, '#000'); } // Barcode
+            // Pistolen (Silber)
+            if(d!=='side') { rect(-18, 0, 4, 10, '#999'); rect(14, 0, 4, 10, '#999'); }
         }
+        // --- ELON ---
         else if (id === 'elon') {
-            drawBody('#f0d5be', '#111', '#111', '#333'); // Black on Black
+            drawBodyBase('#f0d5be', '#111', '#111', '#333'); 
             if(d==='front') {
-                ctx.fillStyle='#888'; ctx.beginPath(); ctx.moveTo(-6, -5); ctx.lineTo(6, -5); ctx.lineTo(0, 5); ctx.fill(); // Logo
+                // Cybertruck Logo (Dreieck)
+                ctx.fillStyle='#888'; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(5,0); ctx.lineTo(0,-6); ctx.fill();
             }
-            // Haare
-            ctx.fillStyle='#332211'; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill();
-            addFace();
+            // Haare (Wuschelig)
+            ctx.fillStyle='#332211'; ctx.beginPath(); ctx.arc(0, -25, 11, Math.PI, 0); ctx.fill();
+            if(d==='side') ctx.fillRect(-5, -30, 10, 5);
+            drawFace();
         }
+        // --- MJ ---
         else if (id === 'mj') {
-            drawBody('#8d5524', '#222', '#111', '#000'); // Dunkler Anzug
+            drawBodyBase('#8d5524', '#222', '#111', '#000', 0.9); // Schmaler
             // Weiße Socken
             ctx.fillStyle='#fff'; ctx.fillRect(-9, 18, 8, 2); ctx.fillRect(1, 18, 8, 2);
-            // Hut
+            if(d==='front') {
+                ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(-4,-14); ctx.lineTo(4,-14); ctx.lineTo(0,-8); ctx.fill(); // V-Neck
+                rect(13, 4, 6, 6, '#fff'); // Handschuh rechts
+            }
+            drawFace();
+            // Fedora Hut
             ctx.fillStyle='#111';
-            ctx.beginPath(); ctx.ellipse(0, -28, 12, 3, 0, 0, Math.PI*2); ctx.fill(); // Krempe
-            ctx.fillRect(-8, -34, 16, 6); // Krone
-            ctx.fillStyle='#fff'; ctx.fillRect(-8, -30, 16, 1); // Band
-            // Locke
-            ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(5, -22, 2, 0, Math.PI*2); ctx.fill();
-            addFace();
+            ctx.beginPath(); ctx.ellipse(0, -28, 14, 3, 0, 0, Math.PI*2); ctx.fill(); 
+            ctx.fillRect(-9, -36, 18, 8); 
+            ctx.fillStyle='#fff'; ctx.fillRect(-9, -31, 18, 2); // Hutband
+            ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(6, -22, 3, 0, Math.PI*2); ctx.fill(); // Locke
         }
+        // --- DUA ---
         else if (id === 'dua') {
-            // Hautfarben Bauch
-            drawBody('#f0d5be', '#111', '#111', '#111');
-            ctx.fillStyle='#f0d5be'; ctx.fillRect(-10, -2, 20, 6); // Bauchfrei
-            // Haare (Lang Schwarz)
+            drawBodyBase('#f0d5be', '#111', '#111', '#111', 0.85); // Sehr schmal
+            // Bauchfrei
+            ctx.fillStyle='#f0d5be'; ctx.fillRect(-9, -2, 18, 6);
+            // Lange Schwarze Haare (Glatt)
             ctx.fillStyle='#000';
-            ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill();
-            if(d!=='back') { ctx.fillRect(-11, -24, 4, 20); ctx.fillRect(7, -24, 4, 20); }
-            else { ctx.fillRect(-10, -24, 20, 20); }
-            addFace();
+            ctx.beginPath(); ctx.arc(0, -24, 11, Math.PI, 0); ctx.fill();
+            if(d!=='back') { ctx.fillRect(-12, -24, 5, 22); ctx.fillRect(7, -24, 5, 22); }
+            else { ctx.fillRect(-11, -24, 22, 22); }
+            drawFace();
         }
+        // --- LEBRON ---
         else if (id === 'lebron') {
-            drawBody('#5c3a1e', '#fdb927', '#552583', '#fff'); // Lakers Gelb/Lila
-            if(d==='front') { ctx.fillStyle='#552583'; ctx.font='bold 10px sans-serif'; ctx.fillText('23', -6, 5); }
-            // Bart & Haare
-            ctx.fillStyle='#111';
-            ctx.beginPath(); ctx.arc(0, -22, 9, 0, Math.PI*2); ctx.stroke(); // Hairline
-            ctx.fillRect(-9, -20, 18, 8); // Bart um Kinn
-            addFace(false, true);
+            drawBodyBase('#5c3a1e', '#fdb927', '#552583', '#fff', 1.2); // Sehr Breit
+            if(d==='front') { ctx.fillStyle='#552583'; ctx.font='bold 10px sans-serif'; ctx.textAlign='center'; ctx.fillText('23', 0, 5); }
+            // Bart & Headband
+            ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(0, -22, 10, 0, Math.PI*2); ctx.stroke(); // Hairline
+            ctx.fillRect(-10, -18, 20, 10); // Vollbart
+            ctx.fillStyle='#fff'; ctx.fillRect(-10, -28, 20, 3); // Stirnband
+            drawFace(false, false); 
         }
+        // --- PAM ---
         else if (id === 'pam') {
             const skin = '#dca386';
-            // Roter Badeanzug
-            drawBody(skin, '#ff2222', skin, skin); // Beine Haut
-            ctx.fillStyle='#ff2222'; ctx.fillRect(-10, 8, 20, 6); // Hüfte
-            // Große Blonde Haare
+            drawBodyBase(skin, '#ff2222', skin, skin, 0.9); // Badeanzug
+            ctx.fillStyle='#ff2222'; ctx.fillRect(-9, 8, 18, 6); // Hüfte
+            if(d==='front') rect(-4, -14, 8, 4, skin); // Dekolleté
+            // Große Blonde Haare (80s)
             ctx.fillStyle='#ffee88';
-            ctx.beginPath(); ctx.arc(0, -26, 12, Math.PI, 0); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(-8, -20, 6, 12, 0.2, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(8, -20, 6, 12, -0.2, 0, Math.PI*2); ctx.fill();
-            addFace();
+            ctx.beginPath(); ctx.arc(0, -26, 13, Math.PI, 0); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(-9, -20, 7, 14, 0.2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(9, -20, 7, 14, -0.2, 0, Math.PI*2); ctx.fill();
+            drawFace();
         }
+        // --- DRIZZY ---
         else if (id === 'drizzy') {
-            drawBody('#ac8b66', '#222', '#000', '#fff'); // OVO
-            if(d==='front') { ctx.fillStyle='#ffd700'; ctx.beginPath(); ctx.arc(0, -4, 4, 0, Math.PI*2); ctx.fill(); } // Eule
-            // Haare & Bart
-            ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(0, -24, 9, Math.PI, 0); ctx.fill();
-            addFace(false, true);
+            drawBodyBase('#ac8b66', '#222', '#000', '#fff'); // OVO
+            if(d==='front') { 
+                fillCircle(0, -4, 5, '#ffd700'); // Eule Gold
+                fillCircle(-2, -6, 1, '#000'); fillCircle(2, -6, 1, '#000'); // Augen Eule
+            }
+            // Haare & Bart (Buzzcut)
+            ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill();
+            drawFace(false, true);
         }
+        // --- 2PAC ---
         else if (id === '2pac') {
-            drawBody('#7a4e32', '#fff', '#4466aa', '#fff'); // Weißes Tanktop, Jeans
+            drawBodyBase('#7a4e32', '#fff', '#4466aa', '#fff'); // Jeans
             // Bandana
             ctx.fillStyle='#3366cc';
-            ctx.fillRect(-10, -28, 20, 6);
-            if(d==='front' || d==='right') { ctx.beginPath(); ctx.moveTo(8, -26); ctx.lineTo(14, -30); ctx.lineTo(14, -22); ctx.fill(); }
-            addFace(false, true);
+            ctx.beginPath(); ctx.arc(0, -26, 10, Math.PI, 0); ctx.fill(); // Top
+            ctx.fillRect(-10, -28, 20, 6); // Band
+            if(d==='front' || d==='right') { 
+                ctx.beginPath(); ctx.moveTo(8, -26); ctx.lineTo(16, -32); ctx.lineTo(16, -20); ctx.fill(); // Knoten
+            }
+            drawFace(false, true);
         }
+        // --- GAGA ---
         else if (id === 'gaga') {
-            drawBody('#ffe0e0', '#0088ff', '#0088ff', '#fff'); // Blau
+            drawBodyBase('#ffe0e0', '#0088ff', '#0088ff', '#fff', 0.9);
+            if(d==='front') { rect(-1, -14, 2, 14, '#111'); } // Reißverschluss
             // Haare Blond + Schleife
             ctx.fillStyle='#eeeedd';
             ctx.beginPath(); ctx.arc(0, -24, 11, Math.PI, 0); ctx.fill();
             if(d!=='back') { ctx.fillRect(-11, -24, 6, 20); ctx.fillRect(5, -24, 6, 20); }
-            // Schleife
-            ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(-8, -36); ctx.lineTo(-8, -28); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(8, -36); ctx.lineTo(8, -28); ctx.fill();
-            addFace(true); // Brille
+            // Haarschleife
+            ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(-10, -38); ctx.lineTo(-10, -26); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(10, -38); ctx.lineTo(10, -26); ctx.fill();
+            drawFace(true); // Brille!
         }
+        // --- 007 ---
         else if (id === '007') {
-            drawBody('#f0d5be', '#444', '#444', '#000'); // Grauer Anzug
+            drawBodyBase('#f0d5be', '#444', '#444', '#000'); 
             if(d==='front') {
                 ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(-6,-14); ctx.lineTo(0,-4); ctx.lineTo(6,-14); ctx.fill();
-                ctx.fillStyle='#000'; ctx.fillRect(-2, -14, 4, 4); // Fliege
+                rect(-3, -14, 6, 4, '#000'); // Fliege
             }
-            ctx.fillStyle='#ccaa88'; ctx.beginPath(); ctx.arc(0, -24, 9, Math.PI, 0); ctx.fill();
-            addFace();
-            if(d==='side') { ctx.fillStyle='#333'; ctx.fillRect(6, 0, 8, 4); } // Waffe
+            ctx.fillStyle='#ccaa88'; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill();
+            drawFace();
+            if(d==='side') { rect(8, 2, 8, 3, '#333'); } // Waffe
         }
     }
 
@@ -298,15 +333,16 @@ export function clearLevelCache() {
     lastLevelId = null;
 }
 
+// Erzeugt das statische Hintergrundbild mit Details
 function bakeStaticLevel(levelDef) {
     const c = document.createElement('canvas');
     c.width = 15 * TILE_SIZE; c.height = 15 * TILE_SIZE;
     const ctx = c.getContext('2d');
 
-    // 1. Hintergrund (Textur)
+    // 1. Hintergrund (Vignette & Textur)
     const bgGrad = ctx.createRadialGradient(c.width/2, c.height/2, 100, c.width/2, c.height/2, c.width);
     bgGrad.addColorStop(0, levelDef.bg);
-    bgGrad.addColorStop(1, '#000000'); // Vignette
+    bgGrad.addColorStop(1, '#000000'); 
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, c.width, c.height);
 
@@ -323,21 +359,28 @@ function bakeStaticLevel(levelDef) {
                 const tile = state.grid[y][x];
 
                 if (tile === TYPES.WALL_HARD) {
+                    // Basis
                     ctx.fillStyle = levelDef.wallHard;
                     ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    // 3D Bevel
-                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
+                    // 3D Bevel (Hell oben/links, Dunkel unten/rechts)
+                    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
                     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(px, py+44, 48, 4); ctx.fillRect(px+44, py, 4, 48);
                     
                     // Struktur Details
                     if (levelDef.id === 'hell') {
-                        ctx.fillStyle = '#220000'; ctx.fillRect(px+10, py+10, 28, 28); // Innenblock
+                        ctx.fillStyle = '#220000'; ctx.fillRect(px+10, py+10, 28, 28); 
+                        ctx.strokeStyle = '#440000'; ctx.strokeRect(px+12, py+12, 24, 24);
                     } else if (levelDef.id === 'stone') {
-                        ctx.strokeStyle = '#555'; ctx.strokeRect(px+8, py+8, 32, 32);
+                        ctx.strokeStyle = '#555'; ctx.lineWidth=2; ctx.strokeRect(px+8, py+8, 32, 32);
+                        ctx.fillStyle = '#333'; ctx.fillRect(px+14, py+14, 20, 20);
+                    } else if (levelDef.id === 'jungle') {
+                        // Moos
+                        ctx.fillStyle = '#446644'; ctx.beginPath(); ctx.arc(px+10, py+10, 8, 0, Math.PI*2); ctx.fill();
                     }
                 } 
                 else if (levelDef.hasCentralFire && x===HELL_CENTER.x && y===HELL_CENTER.y) {
                     ctx.fillStyle = '#1a0000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#550000'; ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
                 }
             }
         }
@@ -389,14 +432,24 @@ export function draw(ctx, canvas) {
                 ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 
                 // Muster
-                ctx.fillStyle = lvl.wallSoftLight; // Hellere Fugen/Muster
+                ctx.fillStyle = lvl.wallSoftLight; 
                 if (lvl.id === 'hell') {
-                    ctx.fillRect(px+4, py+4, 18, 18); ctx.fillRect(px+26, py+26, 18, 18);
+                    // Lava Risse
+                    ctx.fillStyle = '#cc4400'; 
+                    ctx.beginPath(); ctx.moveTo(px+10, py+10); ctx.lineTo(px+30, py+20); ctx.lineTo(px+15, py+35); ctx.fill();
                 } else if (lvl.id === 'ice') {
-                    ctx.beginPath(); ctx.moveTo(px, py+48); ctx.lineTo(px+48, py); ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.stroke();
+                    // Eisschollen Look
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(px+4, py+4, 10, 10); ctx.fillRect(px+20, py+20, 20, 5);
+                } else if (lvl.id === 'jungle') {
+                    // Holz/Kiste
+                    ctx.fillStyle = '#664422'; ctx.fillRect(px+4, py+4, 40, 40);
+                    ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(px+4, py+4); ctx.lineTo(px+44, py+44); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(px+44, py+4); ctx.lineTo(px+4, py+44); ctx.stroke();
                 } else {
-                    ctx.fillRect(px+6, py+6, 36, 36); // Block
-                    ctx.fillStyle = lvl.wallSoft; ctx.fillRect(px+12, py+12, 24, 24); // Inner Hole
+                    // Ziegel
+                    ctx.fillRect(px+4, py+10, 18, 8); ctx.fillRect(px+26, py+10, 18, 8);
+                    ctx.fillRect(px+4, py+28, 18, 8); ctx.fillRect(px+26, py+28, 18, 8);
                 }
             }
         }
@@ -427,7 +480,7 @@ export function draw(ctx, canvas) {
     }
 }
 
-// --- DIESER EXPORT HAT GEFEHLT ---
+// Wrapper für Player.js
 export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, lastDir = {x:0, y:1}) {
     let d = 'front';
     if (lastDir.y < 0) d = 'back';
