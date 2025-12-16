@@ -17,6 +17,7 @@ function getCachedSprite(charDef, d, isCursed) {
     // --- HELPER ---
     const fillCircle = (x, y, r, col) => { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); };
     const gradient = (y1, y2, c1, c2) => { const g = ctx.createLinearGradient(0, y1, 0, y2); g.addColorStop(0, c1); g.addColorStop(1, c2); return g; };
+    const rect = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
 
     const id = charDef.id;
 
@@ -424,4 +425,24 @@ export function draw(ctx, canvas) {
     if (state.players) {
         [...state.players].sort((a,b) => a.y - b.y).forEach(p => p.draw());
     }
+}
+
+// --- DIESER EXPORT HAT GEFEHLT ---
+export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, lastDir = {x:0, y:1}) {
+    let d = 'front';
+    if (lastDir.y < 0) d = 'back';
+    else if (lastDir.x !== 0) d = 'side';
+    
+    ctx.save();
+    ctx.translate(x, y);
+    if (lastDir.x < 0) ctx.scale(-1, 1); 
+
+    // Schatten
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
+
+    const sprite = getCachedSprite(charDef, d, isCursed);
+    ctx.drawImage(sprite, -24, -24);
+    
+    ctx.restore();
 }
