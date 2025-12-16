@@ -12,262 +12,191 @@ function getCachedSprite(charDef, d, isCursed) {
     if (spriteCache[key]) return spriteCache[key];
 
     const c = document.createElement('canvas');
-    // FIX: Canvas höher (64px) für Menü-Vorschau ohne Abschneiden
+    // CANVAS HÖHER MACHEN (64px), damit Hüte/Haare Platz haben
     c.width = 48; 
     c.height = 64; 
     const ctx = c.getContext('2d');
     
-    // FIX: Mittelpunkt tiefer (24, 40)
-    ctx.translate(24, 40);
+    // STARTPUNKT SETZEN (Füße bei Y=44, Kopf wächst nach oben)
+    ctx.translate(24, 44);
 
-    // --- HELPER ---
-    const fillCircle = (x, y, r, col) => { 
-        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); 
-    };
+    // --- PIXEL ART HELPER ---
+    // Zeichnet "Pixel" Rechtecke. Keine runden Kreise!
     const rect = (x, y, w, h, col) => { 
-        ctx.fillStyle = col; ctx.fillRect(x, y, w, h); 
-    };
-    const gradient = (y1, y2, c1, c2) => { 
-        const g = ctx.createLinearGradient(0, y1, 0, y2); 
-        g.addColorStop(0, c1); g.addColorStop(1, c2); 
-        return g; 
+        ctx.fillStyle = col; 
+        ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); 
     };
 
     const id = charDef.id;
+    const bodyCol = charDef.color;
+    const accent = charDef.accent;
 
-    // ============================================================
-    // 1. ORIGINAL CHARACTERS (High Detail Restore - GARANTIERT)
-    // ============================================================
-    
-    if (id === 'lucifer') {
-        const skinGrad = gradient(-24, 10, '#ff5555', '#aa0000');
-        ctx.fillStyle = '#1a0505'; // Hufe
-        if (d==='side') { ctx.fillRect(-4, 14, 8, 10); } 
-        else { ctx.fillRect(-8, 14, 6, 10); ctx.fillRect(2, 14, 6, 10); }
-        
-        ctx.fillStyle = skinGrad;
-        ctx.beginPath(); ctx.ellipse(0, -5, 12, 18, 0, 0, Math.PI*2); ctx.fill(); // Körper Rund
-        fillCircle(0, -20, 10, skinGrad); // Kopf
-        
-        const hornGrad = gradient(-35, -20, '#ffffff', '#bbbbbb');
-        ctx.fillStyle = hornGrad;
-        if(d!=='back') {
-            ctx.beginPath(); ctx.moveTo(-6, -26); ctx.quadraticCurveTo(-14, -32, -10, -40); ctx.lineTo(-4, -28); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(6, -26); ctx.quadraticCurveTo(14, -32, 10, -40); ctx.lineTo(4, -28); ctx.fill();
+    // --- BASIS KÖRPER (8-BIT STYLE) ---
+    // Beine
+    const pantsCol = (id==='cristiano'||id==='lebron'||id==='mj') ? '#fff' : (id==='2pac'||id==='elon') ? '#345' : '#222';
+    const shoeCol = (id==='cristiano'||id==='lebron'||id==='mj') ? '#fff' : '#000';
+    const skinCol = (id==='mj'||id==='lebron'||id==='2pac'||id==='drizzy') ? '#8d5524' : '#ffccaa';
+
+    // Standard Beine
+    if (id !== 'lucifer' && id !== 'yeti') {
+        if (d === 'side') {
+            rect(-4, 0, 8, 12, pantsCol); // Bein Seite
+            rect(-4, 12, 10, 4, shoeCol); // Schuh
+        } else {
+            rect(-8, 0, 6, 12, pantsCol); rect(2, 0, 6, 12, pantsCol); // Beine
+            rect(-8, 12, 6, 4, shoeCol); rect(2, 12, 6, 4, shoeCol); // Schuhe
         }
+    }
+
+    // --- CHARAKTER SPEZIFISCH ---
+
+    if (id === 'lucifer') {
+        // Rotes Teufels-Pixel-Design
+        rect(-8, -14, 16, 24, '#e62020'); // Body
+        rect(-8, 10, 6, 6, '#000'); rect(2, 10, 6, 6, '#000'); // Hufe
+        // Kopf
+        rect(-10, -26, 20, 14, '#e62020');
+        // Hörner
+        rect(-8, -32, 2, 6, '#fff'); rect(6, -32, 2, 6, '#fff');
         if(d==='front') {
-            rect(-7, -22, 5, 4, '#ffff00'); rect(2, -22, 5, 4, '#ffff00');
-            rect(-5, -21, 2, 2, '#000'); rect(3, -21, 2, 2, '#000');
-            ctx.fillStyle='#330000'; ctx.beginPath(); ctx.arc(0, -14, 4, 0, Math.PI, false); ctx.fill(); 
+            rect(-6, -22, 4, 4, '#ff0'); rect(2, -22, 4, 4, '#ff0'); // Augen
+            rect(-4, -14, 8, 2, '#000'); // Mund
         }
     }
     else if (id === 'rambo') {
-        const skin = '#ffccaa'; const skinShadow = '#eebba0';
-        ctx.fillStyle = '#226622'; 
-        if(d==='side') { ctx.fillRect(-5, 10, 10, 14); } else { ctx.fillRect(-9, 10, 8, 14); ctx.fillRect(1, 10, 8, 14); }
-        
-        const bodyGrad = gradient(-15, 10, skin, skinShadow);
-        ctx.fillStyle = bodyGrad;
-        // Muskel-Körper (Vektor)
-        ctx.beginPath(); ctx.moveTo(-12, -18); ctx.quadraticCurveTo(-14, 0, -8, 10); ctx.lineTo(8, 10); ctx.quadraticCurveTo(14, 0, 12, -18); ctx.fill();
-        
-        ctx.strokeStyle = '#442200'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, -18); ctx.lineTo(10, 10); ctx.stroke();
-        fillCircle(0, -22, 9, skin); // Kopf
-        
-        ctx.fillStyle = '#cc0000'; ctx.fillRect(-10, -28, 20, 6); // Bandana
-        if(d==='back' || d==='side') { ctx.beginPath(); ctx.moveTo(8, -25); ctx.quadraticCurveTo(16, -20, 14, -10); ctx.lineTo(10, -22); ctx.fill(); } 
-        
-        fillCircle(0, -24, 9, '#111'); // Haare
-        if(d==='front') {
-            rect(-7, -24, 5, 4, '#fff'); rect(2, -24, 5, 4, '#fff');
-            rect(-5, -23, 2, 2, '#000'); rect(3, -23, 2, 2, '#000');
-        }
+        // Hose Grün
+        rect(-8, 0, 6, 12, '#262'); rect(2, 0, 6, 12, '#262');
+        // Oberkörper (Nackt)
+        rect(-10, -16, 20, 16, skinCol);
+        // Bandolier
+        rect(-10, -16, 2, 2, '#420'); rect(-6, -12, 2, 2, '#420'); rect(2, -4, 2, 2, '#420');
+        // Kopf
+        rect(-9, -28, 18, 12, skinCol);
+        // Schwarze Haare
+        rect(-10, -30, 20, 6, '#111');
+        if(d==='side' || d==='back') rect(-10, -28, 4, 12, '#111'); // Vokuhila
+        // Rotes Stirnband
+        rect(-10, -26, 20, 2, '#f00');
+        if(d==='side' || d==='back') rect(8, -26, 6, 2, '#f00'); // Band
+        if(d==='front') { rect(-6,-24,2,2,'#000'); rect(4,-24,2,2,'#000'); } // Augen
     }
     else if (id === 'nun') {
-        const robeGrad = gradient(-20, 20, '#333', '#000');
-        ctx.fillStyle = robeGrad;
-        ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-14, 24); ctx.lineTo(14, 24); ctx.fill();
-        fillCircle(0, -18, 7, '#ffccaa');
-        
-        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -20, 9, Math.PI, 0); ctx.lineTo(10, 0); ctx.lineTo(-10, 0); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -18, 7, Math.PI, 0); ctx.stroke();
-        
+        // Robe
+        rect(-10, -16, 20, 28, '#111');
+        // Kopf
+        rect(-8, -26, 16, 12, skinCol);
+        // Haube
+        rect(-10, -30, 20, 8, '#111'); rect(-10, -30, 2, 20, '#111'); rect(8, -30, 2, 20, '#111');
+        // Kreuz
         if(d==='front') {
-            rect(-3, -5, 6, 18, '#ffdd44'); rect(-8, 0, 16, 6, '#ffdd44');
-            rect(-4, -19, 2, 2, '#000'); rect(2, -19, 2, 2, '#000');
+            rect(-2, -8, 4, 12, '#fc0'); rect(-6, -4, 12, 4, '#fc0');
+            rect(-4,-22,2,2,'#000'); rect(2,-22,2,2,'#000');
         }
     }
     else if (id === 'yeti') {
-        const furGrad = gradient(-20, 20, '#ddffff', '#88ccff');
-        fillCircle(0, 0, 16, furGrad); // Body
-        fillCircle(-10, -10, 8, furGrad); fillCircle(10, -10, 8, furGrad);
-        fillCircle(-8, 12, 8, furGrad); fillCircle(8, 12, 8, furGrad);
-        fillCircle(0, -20, 10, furGrad); // Kopf
-        
+        rect(-12, -10, 24, 24, '#0cf'); // Body Blue
+        rect(-10, 14, 8, 4, '#0cf'); rect(2, 14, 8, 4, '#0cf'); // Feet
+        rect(-12, -26, 24, 16, '#0cf'); // Head
         if(d==='front') {
-            fillCircle(0, -18, 6, '#004488'); // Gesicht
-            rect(-4, -20, 3, 3, '#fff'); rect(1, -20, 3, 3, '#fff');
-            rect(-3, -15, 2, 3, '#fff'); rect(1, -15, 2, 3, '#fff');
+            rect(-8, -20, 16, 8, '#048'); // Face Dark
+            rect(-4, -18, 2, 2, '#fff'); rect(2, -18, 2, 2, '#fff'); // Eyes
         }
     }
-
-    // ============================================================
-    // 2. NEUE PROMIS (Hochwertiger Vektor-Stil)
-    // ============================================================
+    // --- PROMIS (PIXEL STYLE) ---
     else {
-        const drawBody = (skinColor, shirtGrad, pantsColor, shoeColor, widthMod = 1) => {
-            // Beine
-            ctx.fillStyle = pantsColor;
-            if (d === 'side') rect(-5, 12, 10, 12, pantsColor);
-            else { rect(-9 * widthMod, 12, 8 * widthMod, 12, pantsColor); rect(1 * widthMod, 12, 8 * widthMod, 12, pantsColor); }
-            // Schuhe
-            ctx.fillStyle = shoeColor;
-            if (d === 'side') rect(-5, 22, 12, 4, shoeColor);
-            else { rect(-9 * widthMod, 22, 8 * widthMod, 4, shoeColor); rect(1 * widthMod, 22, 8 * widthMod, 4, shoeColor); }
-            
-            // Torso (Trapez-Form für Vektor-Look)
-            ctx.fillStyle = shirtGrad;
-            ctx.beginPath(); 
-            ctx.moveTo(-12 * widthMod, -18); ctx.lineTo(12 * widthMod, -18); 
-            ctx.lineTo(10 * widthMod, 12); ctx.lineTo(-10 * widthMod, 12); 
-            ctx.fill();
-            
-            // Kopf
-            fillCircle(0, -22, 10, skinColor);
-            
-            // Arme (Rund)
-            if (d !== 'side') {
-                ctx.fillStyle = shirtGrad; 
-                ctx.beginPath(); ctx.ellipse(-15 * widthMod, -6, 5, 12, 0.2, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(15 * widthMod, -6, 5, 12, -0.2, 0, Math.PI*2); ctx.fill();
-                fillCircle(-16 * widthMod, 6, 4, skinColor);
-                fillCircle(16 * widthMod, 6, 4, skinColor);
-            }
-        };
-
-        const drawFace = (glasses=false, beard=false) => {
-            if (d !== 'front') return;
-            if (!glasses) {
-                fillCircle(-4, -22, 3, '#fff'); fillCircle(4, -22, 3, '#fff');
-                fillCircle(-4, -22, 1.5, '#000'); fillCircle(4, -22, 1.5, '#000');
-            } else {
-                ctx.fillStyle = '#111'; ctx.fillRect(-9, -25, 18, 6); // Brille
-            }
-            if (beard) {
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.beginPath(); ctx.arc(0, -22, 10, 0.5, 2.6); ctx.lineTo(0, -18); ctx.fill();
-            }
-        };
-
-        if (id === 'cristiano') {
-            const jersey = gradient(-14, 12, '#ff3333', '#cc0000');
-            drawBody('#d2b48c', jersey, '#fff', '#fff');
-            if (d === 'front') { ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('7', 0, 5); }
-            ctx.fillStyle = '#221100'; ctx.beginPath(); ctx.arc(0, -25, 11, Math.PI, 0); ctx.fill(); // Haare
-            ctx.fillRect(-10, -32, 20, 8); 
-            drawFace();
+        // Torso
+        rect(-10, -16, 20, 16, bodyCol); 
+        // Kopf
+        rect(-8, -28, 16, 12, skinCol);
+        
+        // Arme
+        if (d !== 'side') {
+            rect(-14, -14, 4, 12, bodyCol); // Links
+            rect(10, -14, 4, 12, bodyCol);  // Rechts
+            rect(-14, -2, 4, 4, skinCol);   // Hand L
+            rect(10, -2, 4, 4, skinCol);    // Hand R
         }
-        else if (id === 'hitman') {
-            const suit = gradient(-14, 12, '#333', '#000');
-            drawBody('#ffe0bd', suit, '#111', '#000');
-            if (d === 'front') {
-                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-6, -18); ctx.lineTo(6, -18); ctx.lineTo(0, -6); ctx.fill();
-                rect(-2, -16, 4, 14, '#cc0000');
-            }
-            drawFace();
-            if (d === 'back') { rect(-3, -20, 6, 2, '#000'); }
-        }
-        else if (id === 'elon') {
-            const shirt = gradient(-14, 12, '#222', '#111');
-            drawBody('#f0d5be', shirt, '#111', '#333');
-            if (d === 'front') {
-                ctx.fillStyle = '#888'; ctx.beginPath(); ctx.moveTo(-6, -4); ctx.lineTo(6, -4); ctx.lineTo(0, -12); ctx.fill(); 
-            }
-            ctx.fillStyle = '#332211'; ctx.beginPath(); ctx.arc(0, -25, 11, Math.PI, 0); ctx.fill(); 
-            drawFace();
+
+        // --- DETAILS ---
+        if (id === 'pam') {
+            // Roter Badeanzug
+            rect(-9, 0, 18, 6, '#f00'); // Hüfte
+            if(d==='front') rect(-4, -12, 8, 6, skinCol); // Ausschnitt
+            // Riesige Blonde Haare (Blocky)
+            rect(-12, -34, 24, 8, '#fe8'); // Top
+            rect(-14, -28, 6, 16, '#fe8'); // Seite L
+            rect(8, -28, 6, 16, '#fe8');   // Seite R
         }
         else if (id === 'mj') {
-            const jacket = gradient(-14, 12, '#222', '#000');
-            drawBody('#8d5524', jacket, '#111', '#000', 0.9);
-            rect(-9, 20, 8, 2, '#fff'); rect(1, 20, 8, 2, '#fff'); // Socken
-            if (d === 'front') {
-                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-4, -18); ctx.lineTo(4, -18); ctx.lineTo(0, -10); ctx.fill();
-                rect(13, 4, 6, 6, '#fff'); // Handschuh
-            }
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(0, -30, 14, 3, 0, 0, Math.PI*2); ctx.fill(); // Hut Krempe
-            rect(-9, -38, 18, 8, '#111'); // Hut Top
-            rect(-9, -34, 18, 2, '#fff'); // Hut Band
-            drawFace();
-        }
-        else if (id === 'dua') {
-            const skin = '#f0d5be';
-            drawBody(skin, '#111', '#111', '#111', 0.9);
-            rect(-10, -4, 20, 6, skin); // Bauchfrei
-            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, -24, 11, Math.PI, 0); ctx.fill(); // Haare
-            if(d!=='back') { rect(-12, -24, 6, 22, '#000'); rect(6, -24, 6, 22, '#000'); }
-            else rect(-11, -24, 22, 22, '#000');
-            drawFace();
+            // Hut
+            rect(-10, -32, 20, 4, '#111'); // Krempe
+            rect(-8, -38, 16, 6, '#111');  // Top
+            rect(-8, -34, 16, 2, '#fff');  // Band
+            if(d==='front') rect(10, 0, 4, 4, '#fff'); // Handschuh
         }
         else if (id === 'lebron') {
-            const jersey = gradient(-14, 12, '#fdb927', '#552583');
-            drawBody('#5c3a1e', jersey, '#552583', '#fff', 1.1);
-            if (d === 'front') { ctx.fillStyle = '#552583'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign='center'; ctx.fillText('23', 0, 5); }
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -23, 10, 0, Math.PI*2); ctx.stroke(); // Hairline
-            rect(-10, -20, 20, 10, '#111'); // Bart
-            rect(-10, -28, 20, 3, '#fff'); // Stirnband
-            drawFace();
+            rect(-8, -30, 16, 4, '#111'); // Haare
+            rect(-8, -26, 16, 2, '#fff'); // Stirnband
+            if(d==='front') {
+                rect(-8, -18, 16, 6, '#111'); // Bart
+                rect(-4, -8, 8, 6, '#528'); // Nummer Block
+            }
         }
-        else if (id === 'pam') {
-            const skin = '#dca386';
-            const swim = gradient(-20, 12, '#ff4444', '#cc0000');
-            drawBody(skin, swim, skin, skin, 0.9); 
-            ctx.fillStyle = swim; rect(-9, 10, 18, 6, swim); // Hüfte
-            if(d==='front') rect(-4, -14, 8, 6, skin); 
-            ctx.fillStyle = '#ffee88'; 
-            ctx.beginPath(); ctx.arc(0, -26, 14, Math.PI, 0); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(-10, -20, 8, 16, 0.2, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(10, -20, 8, 16, -0.2, 0, Math.PI*2); ctx.fill();
-            drawFace();
+        else if (id === 'cristiano') {
+            rect(-8, -32, 16, 6, '#210'); // Haare
+            if(d==='front') { rect(-2, -10, 4, 8, '#fff'); } // Nr 7
         }
-        else if (id === 'drizzy') {
-            const hoodie = gradient(-20, 12, '#333', '#111');
-            drawBody('#ac8b66', hoodie, '#222', '#fff');
-            if (d === 'front') { fillCircle(0, -4, 5, '#ffd700'); } // Eule
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill(); 
-            drawFace(false, true); // Bart
+        else if (id === 'dua') {
+            rect(-10, -4, 20, 4, skinCol); // Bauchfrei
+            // Schwarze lange Haare
+            rect(-10, -32, 20, 6, '#000');
+            rect(-12, -28, 4, 16, '#000'); rect(8, -28, 4, 16, '#000');
         }
         else if (id === '2pac') {
-            drawBody('#7a4e32', '#fff', '#4466aa', '#fff'); 
-            ctx.fillStyle = '#3366cc'; rect(-10, -28, 20, 6, '#3366cc');
-            if (d === 'front') { ctx.beginPath(); ctx.moveTo(8, -26); ctx.lineTo(16, -32); ctx.lineTo(16, -20); ctx.fill(); }
-            drawFace(false, true);
+            // Bandana
+            rect(-9, -30, 18, 4, '#36c');
+            rect(8, -28, 4, 4, '#36c'); // Knoten
+            rect(-8, -14, 16, 14, '#fff'); // Tanktop
         }
         else if (id === 'gaga') {
-            const suit = gradient(-20, 12, '#0088ff', '#0044aa');
-            drawBody('#ffe0e0', suit, suit, '#fff', 0.9);
-            ctx.fillStyle = '#eeeedd'; ctx.beginPath(); ctx.arc(0, -24, 12, Math.PI, 0); ctx.fill();
-            if (d!=='back') { rect(-12, -24, 6, 22, '#eeeedd'); rect(6, -24, 6, 22, '#eeeedd'); }
-            ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(-10, -38); ctx.lineTo(-10, -26); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(10, -38); ctx.lineTo(10, -26); ctx.fill();
-            drawFace(true); // Brille
+            // Haare + Schleife
+            rect(-10, -34, 20, 8, '#eed');
+            rect(-4, -40, 8, 6, '#eed'); // Schleife
+            if(d==='front') rect(-8, -24, 16, 4, '#111'); // Brille
+        }
+        else if (id === 'hitman') {
+            if(d==='front') {
+                rect(-4, -16, 8, 16, '#fff'); // Hemd
+                rect(-2, -14, 4, 12, '#c00'); // Krawatte
+            }
+            if(d==='back') rect(-2, -22, 4, 2, '#000'); // Barcode
         }
         else if (id === '007') {
-            const suit = gradient(-20, 12, '#555', '#333');
-            drawBody('#f0d5be', suit, '#333', '#000');
-            if (d === 'front') {
-                ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(-6,-18); ctx.lineTo(0,-8); ctx.lineTo(6,-18); ctx.fill();
-                rect(-3, -16, 6, 4, '#000'); 
+            if(d==='front') {
+                rect(-4, -16, 8, 16, '#fff'); // Hemd
+                rect(-2, -14, 4, 2, '#000'); // Fliege
             }
-            ctx.fillStyle='#ccaa88'; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill(); 
-            drawFace();
-            if (d === 'side') { rect(8, 2, 8, 4, '#333'); } // Waffe
+        }
+        else if (id === 'drizzy') {
+            rect(-8, -30, 16, 4, '#111'); // Haare
+            if(d==='front') rect(-2, -8, 4, 4, '#fd0'); // Eule
+        }
+        else if (id === 'elon') {
+            if(d==='front') {
+               rect(-4, -10, 8, 2, '#888'); rect(-2, -8, 4, 2, '#888'); // Logo
+            }
+        }
+
+        // Gesicht (Generic)
+        if(d==='front' && id!=='gaga') {
+            rect(-5,-24,2,2,'#000'); rect(3,-24,2,2,'#000'); // Pixel Augen
         }
     }
 
     if (isCursed) { 
         ctx.globalCompositeOperation = 'source-atop'; 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; 
-        ctx.fillRect(-25, -35, 50, 60); 
+        ctx.fillRect(0, 0, 48, 64); 
         ctx.globalCompositeOperation = 'source-over'; 
     }
     
@@ -275,7 +204,7 @@ function getCachedSprite(charDef, d, isCursed) {
     return c;
 }
 
-// --- LEVEL CACHING ---
+// --- LEVEL CACHING (Original Code restored) ---
 let cachedLevelCanvas = null;
 let lastLevelId = null;
 
@@ -294,7 +223,7 @@ function bakeStaticLevel(levelDef) {
     ctx.fillStyle = levelDef.bg;
     ctx.fillRect(0, 0, c.width, c.height);
 
-    // 2. Boden-Details (Hell/Ice)
+    // 2. Boden-Details
     if (levelDef.id === 'hell') {
          ctx.fillStyle = 'rgba(80, 60, 60, 0.2)';
          for (let y = 0; y < GRID_H; y++) {
@@ -317,13 +246,12 @@ function bakeStaticLevel(levelDef) {
     for(let i=0; i<=GRID_H; i++) { ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(c.width, i*TILE_SIZE); }
     ctx.stroke();
 
-    // 4. Statische Elemente (Wände, Boden-Tiles)
+    // 4. Statische Elemente
     for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
             const tile = state.grid[y][x];
 
-            // Hard Walls (Unzerstörbar)
             if (tile === TYPES.WALL_HARD) {
                 if (levelDef.id === 'ice') {
                     ctx.fillStyle = '#4466ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
@@ -347,7 +275,6 @@ function bakeStaticLevel(levelDef) {
                     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
                 }
             } 
-            // Boden-Objekte (Wasser, Brücken, Öl, Pads)
             else if (tile === TYPES.WATER) {
                 ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
@@ -367,7 +294,6 @@ function bakeStaticLevel(levelDef) {
                 ctx.beginPath(); ctx.ellipse(cx + 12, cy + 12, 4, 2, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
             }
 
-            // Spezial-Pads (Boost, Direction)
             if ((levelDef.id === 'hell' || levelDef.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
                 ctx.fillStyle = '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 ctx.fillStyle = '#ff0000'; ctx.fillRect(px + 20, py + 8, 8, 32);
@@ -391,7 +317,6 @@ function bakeStaticLevel(levelDef) {
         }
     }
 
-    // Hell Center Fire Pit (Static Base)
     if (levelDef.hasCentralFire) {
         const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
         ctx.fillStyle = '#0a0505'; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
@@ -411,13 +336,16 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     else if (dir.x !== 0) d = 'side';
     if (dir.x < 0) ctx.scale(-1, 1); 
 
+    // Schatten
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
     const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
     const sprite = getCachedSprite(charDef, d, showCursedEffect);
     
-    ctx.drawImage(sprite, -24, -40);
+    // Offset angepasst für 48x64 Canvas (Mitte bei 24, 44)
+    ctx.drawImage(sprite, -24, -44);
+    
     ctx.restore();
 }
 
@@ -444,7 +372,7 @@ export function drawItem(ctx, type, x, y) {
     ctx.fillStyle = '#442222'; ctx.fillRect(x+pad, y+pad, size, size);
     ctx.strokeStyle = '#ff8888'; ctx.lineWidth = 2; ctx.strokeRect(x+pad, y+pad, size, size);
     const cx = x + TILE_SIZE/2; const cy = y + TILE_SIZE/2;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '24px sans-serif';
     switch(type) {
         case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('💣', cx, cy); break; 
         case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('🔥', cx, cy); break; 
@@ -455,17 +383,15 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
-// --- OPTIMIERTE DRAW LOOP ---
 export function draw(ctx, canvas) {
-    if (!state.currentLevel) return;
-
+    // 1. Hintergrund
     if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
         cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
         lastLevelId = state.currentLevel.id;
     }
     ctx.drawImage(cachedLevelCanvas, 0, 0);
 
-    // Hell Center Fire Pit (Dynamic Part)
+    // 2. Center Fire
     if (state.currentLevel.hasCentralFire) {
         const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
         const centerX = cx + TILE_SIZE/2; const centerY = cy + TILE_SIZE/2;
@@ -489,7 +415,7 @@ export function draw(ctx, canvas) {
         }
     }
 
-    // Soft Walls & Items
+    // 3. Grid Loop (Soft Walls & Items)
     for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
@@ -539,5 +465,7 @@ export function draw(ctx, canvas) {
 
     drawAllParticles(ctx);
 
-    state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
+    if (state.players) {
+        state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
+    }
 }
