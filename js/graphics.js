@@ -6,22 +6,21 @@ import { drawAllParticles } from './render_particles.js';
 const spriteCache = {};
 
 function getCachedSprite(charDef, d, isCursed) {
-    // Safety
     if (!charDef) return document.createElement('canvas');
 
     const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
     if (spriteCache[key]) return spriteCache[key];
 
     const c = document.createElement('canvas');
-    // WICHTIG: Höheres Canvas für Hüte/Haare
+    // WICHTIG: Höheres Canvas für Hüte/Haare (64px)
     c.width = 48; 
     c.height = 64; 
     const ctx = c.getContext('2d');
     
-    // WICHTIG: Mittelpunkt tiefer setzen
+    // WICHTIG: Mittelpunkt tiefer setzen (24, 40), damit nach oben Platz ist
     ctx.translate(24, 40);
 
-    // --- HELPER FUNKTIONEN (JETZT SICHER DEFINIERT) ---
+    // --- HELPER FUNKTIONEN (Sicher definiert) ---
     const fillCircle = (x, y, r, col) => { 
         ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); 
     };
@@ -39,19 +38,21 @@ function getCachedSprite(charDef, d, isCursed) {
     const id = charDef.id;
 
     // ============================================================
-    // 1. ORIGINAL CHARACTERS (Original Vektor-Stil)
+    // 1. ORIGINAL CHARACTERS (High Detail / Vektor-Stil)
     // ============================================================
     
     if (id === 'lucifer') {
         const skinGrad = gradient(-24, 10, '#ff5555', '#aa0000');
-        ctx.fillStyle = '#1a0505'; // Hufe
+        // Beine (Hufe)
+        ctx.fillStyle = '#1a0505'; 
         if (d==='side') { ctx.fillRect(-4, 14, 8, 10); } 
         else { ctx.fillRect(-8, 14, 6, 10); ctx.fillRect(2, 14, 6, 10); }
-        
+        // Körper (Rund)
         ctx.fillStyle = skinGrad;
-        ctx.beginPath(); ctx.ellipse(0, -5, 12, 18, 0, 0, Math.PI*2); ctx.fill(); // Körper
-        fillCircle(0, -20, 10, skinGrad); // Kopf
-        
+        ctx.beginPath(); ctx.ellipse(0, -5, 12, 18, 0, 0, Math.PI*2); ctx.fill(); 
+        // Kopf
+        fillCircle(0, -20, 10, skinGrad);
+        // Hörner (Kurven)
         const hornGrad = gradient(-35, -20, '#ffffff', '#bbbbbb');
         ctx.fillStyle = hornGrad;
         if(d!=='back') {
@@ -66,14 +67,17 @@ function getCachedSprite(charDef, d, isCursed) {
     }
     else if (id === 'rambo') {
         const skin = '#ffccaa'; const skinShadow = '#eebba0';
-        ctx.fillStyle = '#226622'; 
+        ctx.fillStyle = '#226622'; // Camo Hose
         if(d==='side') { ctx.fillRect(-5, 10, 10, 14); } else { ctx.fillRect(-9, 10, 8, 14); ctx.fillRect(1, 10, 8, 14); }
         
+        // Muskel-Körper (Verlauf)
         const bodyGrad = gradient(-15, 10, skin, skinShadow);
         ctx.fillStyle = bodyGrad;
         ctx.beginPath(); ctx.moveTo(-12, -18); ctx.quadraticCurveTo(-14, 0, -8, 10); ctx.lineTo(8, 10); ctx.quadraticCurveTo(14, 0, 12, -18); ctx.fill();
         
+        // Bandolier
         ctx.strokeStyle = '#442200'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, -18); ctx.lineTo(10, 10); ctx.stroke();
+        
         fillCircle(0, -22, 9, skin); // Kopf
         
         ctx.fillStyle = '#cc0000'; ctx.fillRect(-10, -28, 20, 6); // Bandana
@@ -88,22 +92,23 @@ function getCachedSprite(charDef, d, isCursed) {
     else if (id === 'nun') {
         const robeGrad = gradient(-20, 20, '#333', '#000');
         ctx.fillStyle = robeGrad;
-        ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-14, 24); ctx.lineTo(14, 24); ctx.fill();
-        fillCircle(0, -18, 7, '#ffccaa');
+        ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-14, 24); ctx.lineTo(14, 24); ctx.fill(); // Robe
+        fillCircle(0, -18, 7, '#ffccaa'); // Kopf
         
+        // Haube
         ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -20, 9, Math.PI, 0); ctx.lineTo(10, 0); ctx.lineTo(-10, 0); ctx.fill();
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -18, 7, Math.PI, 0); ctx.stroke();
         
         if(d==='front') {
-            rect(-3, -5, 6, 18, '#ffdd44'); rect(-8, 0, 16, 6, '#ffdd44');
+            rect(-3, -5, 6, 18, '#ffdd44'); rect(-8, 0, 16, 6, '#ffdd44'); // Kreuz
             rect(-4, -19, 2, 2, '#000'); rect(2, -19, 2, 2, '#000');
         }
     }
     else if (id === 'yeti') {
         const furGrad = gradient(-20, 20, '#ddffff', '#88ccff');
         fillCircle(0, 0, 16, furGrad); // Body
-        fillCircle(-10, -10, 8, furGrad); fillCircle(10, -10, 8, furGrad);
-        fillCircle(-8, 12, 8, furGrad); fillCircle(8, 12, 8, furGrad);
+        fillCircle(-10, -10, 8, furGrad); fillCircle(10, -10, 8, furGrad); // Schultern
+        fillCircle(-8, 12, 8, furGrad); fillCircle(8, 12, 8, furGrad); // Beine
         fillCircle(0, -20, 10, furGrad); // Kopf
         
         if(d==='front') {
@@ -126,7 +131,7 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.fillStyle = shoeColor;
             if (d === 'side') rect(-5, 22, 12, 4, shoeColor);
             else { rect(-9 * widthMod, 22, 8 * widthMod, 4, shoeColor); rect(1 * widthMod, 22, 8 * widthMod, 4, shoeColor); }
-            // Torso (Trapez)
+            // Torso (Trapezform für Schultern)
             ctx.fillStyle = shirtGrad;
             ctx.beginPath(); 
             ctx.moveTo(-12 * widthMod, -18); ctx.lineTo(12 * widthMod, -18); 
@@ -134,7 +139,7 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.fill();
             // Kopf
             fillCircle(0, -22, 10, skinColor);
-            // Arme
+            // Arme (Rund)
             if (d !== 'side') {
                 ctx.fillStyle = shirtGrad; 
                 ctx.beginPath(); ctx.ellipse(-15 * widthMod, -6, 5, 12, 0.2, 0, Math.PI*2); ctx.fill();
@@ -150,7 +155,7 @@ function getCachedSprite(charDef, d, isCursed) {
                 fillCircle(-4, -22, 3, '#fff'); fillCircle(4, -22, 3, '#fff');
                 fillCircle(-4, -22, 1.5, '#000'); fillCircle(4, -22, 1.5, '#000');
             } else {
-                ctx.fillStyle = '#111'; ctx.fillRect(-9, -25, 18, 6);
+                ctx.fillStyle = '#111'; ctx.fillRect(-9, -25, 18, 6); // Brille
             }
             if (beard) {
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -400,7 +405,6 @@ export function draw(ctx, canvas) {
     }
     ctx.drawImage(cachedLevelCanvas, 0, 0);
 
-    // Dynamische Objekte (Items, Soft Walls)
     for (let y = 0; y < 15; y++) {
         for (let x = 0; x < 15; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
@@ -417,20 +421,13 @@ export function draw(ctx, canvas) {
                 // Muster
                 ctx.fillStyle = lvl.wallSoftLight; 
                 if (lvl.id === 'hell') {
-                    // Lava Risse
-                    ctx.fillStyle = '#cc4400'; 
                     ctx.beginPath(); ctx.moveTo(px+10, py+10); ctx.lineTo(px+30, py+20); ctx.lineTo(px+15, py+35); ctx.fill();
                 } else if (lvl.id === 'ice') {
-                    // Eisschollen Look
-                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                    ctx.fillRect(px+4, py+4, 10, 10); ctx.fillRect(px+20, py+20, 20, 5);
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(px+4, py+4, 10, 10); ctx.fillRect(px+20, py+20, 20, 5);
                 } else if (lvl.id === 'jungle') {
-                    // Holz/Kiste
                     ctx.fillStyle = '#664422'; ctx.fillRect(px+4, py+4, 40, 40);
-                    ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(px+4, py+4); ctx.lineTo(px+44, py+44); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(px+44, py+4); ctx.lineTo(px+4, py+44); ctx.stroke();
+                    ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(px+4, py+4); ctx.lineTo(px+44, py+44); ctx.stroke(); ctx.beginPath(); ctx.moveTo(px+44, py+4); ctx.lineTo(px+4, py+44); ctx.stroke();
                 } else {
-                    // Ziegel
                     ctx.fillRect(px+4, py+10, 18, 8); ctx.fillRect(px+26, py+10, 18, 8);
                     ctx.fillRect(px+4, py+28, 18, 8); ctx.fillRect(px+26, py+28, 18, 8);
                 }
@@ -438,7 +435,6 @@ export function draw(ctx, canvas) {
         }
     }
 
-    // Bomben
     state.bombs.forEach(b => {
         const bx = b.px + 24; const by = b.py + 24;
         const pulse = 1 + Math.sin(Date.now() * 0.015) * 0.1;
@@ -468,12 +464,11 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, lastDi
     ctx.translate(x, y);
     if (lastDir.x < 0) ctx.scale(-1, 1); 
 
-    // Schatten
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
     const sprite = getCachedSprite(charDef, d, isCursed);
-    // WICHTIG: Offset anpassen für 48x64 Canvas (Mitte bei 24,40)
+    // Draw offset to handle taller sprites
     ctx.drawImage(sprite, -24, -40);
     
     ctx.restore();
