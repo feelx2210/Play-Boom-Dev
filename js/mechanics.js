@@ -4,29 +4,13 @@ import { createFloatingText, isSolid } from './utils.js';
 
 const DIRS = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
 
-// Helper: Trümmer
-function spawnDebris(x, y, count, color, speed = 2, size = 3) {
-    const cx = x * TILE_SIZE + TILE_SIZE/2;
-    const cy = y * TILE_SIZE + TILE_SIZE/2;
-    for(let i=0; i<count; i++) {
-        state.particles.push({ 
-            x: cx, y: cy, 
-            vx: (Math.random()-0.5) * speed, 
-            vy: (Math.random()-0.5) * speed, 
-            life: 30 + Math.random() * 30, 
-            color: color, 
-            size: Math.random() * size 
-        });
-    }
-}
-
-// --- UPDATE LOOPS (Ausgelagert aus game.js) ---
+// --- UPDATE LOOPS (NEU: Aus game.js ausgelagert) ---
 
 export function updateHellFire() {
     if (!state.currentLevel.hasCentralFire) return;
 
     if (!state.hellFireActive) { 
-        // Aktivierung prüfen (wenn Feuer das Zentrum trifft)
+        // Aktivierung prüfen
         if (state.particles.some(p => p.isFire && p.gx === HELL_CENTER.x && p.gy === HELL_CENTER.y)) { 
             state.hellFireActive = true; 
             state.hellFirePhase = 'WARNING'; 
@@ -49,7 +33,6 @@ export function updateHellFire() {
 
 export function updateIce() {
     if (state.currentLevel.id !== 'ice') return;
-    
     state.iceTimer++; 
     if (state.iceTimer > 1200) { 
         state.iceSpawnCountdown--; 
@@ -72,7 +55,6 @@ export function updateBombs() {
             const dirPad = DIRECTION_PADS.find(p => p.x === b.gx && p.y === b.gy);
             if (dirPad && (b.rollDir.x !== dirPad.dir.x || b.rollDir.y !== dirPad.dir.y)) {
                 const centerX = b.gx * TILE_SIZE; const centerY = b.gy * TILE_SIZE;
-                // Wenn nah genug am Zentrum des Pads -> Abbiegen
                 if ((b.px - centerX) ** 2 + (b.py - centerY) ** 2 < 25) { 
                     b.px = centerX; b.py = centerY; 
                     b.rollDir = dirPad.dir; 
@@ -95,12 +77,12 @@ export function updateBombs() {
                 if (nextGx < 0 || nextGx >= GRID_W || nextGy < 0 || nextGy >= GRID_H) collision = true;
                 else if (state.grid[nextGy][nextGx] === TYPES.WALL_HARD || state.grid[nextGy][nextGx] === TYPES.WALL_SOFT || state.grid[nextGy][nextGx] === TYPES.BOMB) collision = true;
                 
-                // Spieler-Kollision
+                // Spieler-Kollision (darf rauslaufen, aber nicht rein)
                 if (!collision) { 
                     const bRect = { l: b.px, r: b.px + TILE_SIZE, t: b.py, b: b.py + TILE_SIZE }; 
                     const hitPlayer = state.players.find(p => { 
                         if (!p.alive) return false; 
-                        if (b.walkableIds.includes(p.id)) return false; // Darf noch "rauslaufen"
+                        if (b.walkableIds.includes(p.id)) return false; 
                         const size = TILE_SIZE * 0.7; const offset = (TILE_SIZE - size) / 2; 
                         const pRect = { l: p.x + offset, r: p.x + size + offset, t: p.y + offset, b: p.y + size + offset }; 
                         return (bRect.l < pRect.r && bRect.r > pRect.l && bRect.t < pRect.b && bRect.b > pRect.t); 
@@ -110,12 +92,21 @@ export function updateBombs() {
                 
                 if (collision) { 
                     b.isRolling = false; 
-                    // Zurück aufs Grid snappen
+                    // Snap to Grid
                     b.gx = Math.round(b.px / TILE_SIZE); b.gy = Math.round(b.py / TILE_SIZE); 
-                    // Wenn Feld besetzt, einen Schritt zurück
-                    let occupied = state.players.some(p => { if (!p.alive) return false; const pGx = Math.round(p.x / TILE_SIZE); const pGy = Math.round(p.y / TILE_SIZE); return pGx === b.gx && pGy === b.gy && !b.walkableIds.includes(p.id); }); 
-                    if (state.grid[b.gy][b.gx] !== TYPES.EMPTY && state.grid[b.gy][b.gx] !== TYPES.OIL && state.grid[b.gy][b.gx] !== TYPES.WATER && state.grid[b.gy][b.gx] !== TYPES.BRIDGE) { b.gx -= b.rollDir.x; b.gy -= b.rollDir.y; } 
-                    else if (occupied) { b.gx -= b.rollDir.x; b.gy -= b.rollDir.y; } 
+                    
+                    // Wenn Feld besetzt/blockiert, Schritt zurück
+                    let occupied = state.players.some(p => { 
+                        if (!p.alive) return false; 
+                        const pGx = Math.round(p.x / TILE_SIZE); const pGy = Math.round(p.y / TILE_SIZE); 
+                        return pGx === b.gx && pGy === b.gy && !b.walkableIds.includes(p.id); 
+                    }); 
+                    
+                    if (state.grid[b.gy][b.gx] !== TYPES.EMPTY && state.grid[b.gy][b.gx] !== TYPES.OIL && state.grid[b.gy][b.gx] !== TYPES.WATER && state.grid[b.gy][b.gx] !== TYPES.BRIDGE) { 
+                        b.gx -= b.rollDir.x; b.gy -= b.rollDir.y; 
+                    } else if (occupied) { 
+                        b.gx -= b.rollDir.x; b.gy -= b.rollDir.y; 
+                    } 
                     
                     b.px = b.gx * TILE_SIZE; b.py = b.gy * TILE_SIZE; 
                     b.underlyingTile = state.grid[b.gy][b.gx]; 
@@ -126,7 +117,6 @@ export function updateBombs() {
             }
         }
         
-        // Walkable IDs aufräumen (wenn Spieler die Bombe verlassen hat)
         b.walkableIds = b.walkableIds.filter(pid => { 
             const p = state.players.find(pl => pl.id === pid); 
             if (!p) return false; 
@@ -147,14 +137,14 @@ export function updateParticles() {
     for (let i = state.particles.length - 1; i >= 0; i--) {
         let p = state.particles[i]; 
         p.life--; 
-        if (p.text) p.y += p.vy; // Floating Text bewegt sich
+        if (p.text) p.y += p.vy; 
         
         if (p.isFire) {
-            // Feuer Hitbox vs Spieler
             const fireX = p.gx * TILE_SIZE; const fireY = p.gy * TILE_SIZE; const tolerance = 6; 
             const fkLeft = fireX + tolerance; const fkRight = fireX + TILE_SIZE - tolerance; 
             const fkTop = fireY + tolerance; const fkBottom = fireY + TILE_SIZE - tolerance;
             
+            // Spieler Hit
             state.players.forEach(pl => { 
                 if (!pl.alive) return; 
                 const hurtSize = 24; 
@@ -164,7 +154,7 @@ export function updateParticles() {
                 if (plLeft < fkRight && plRight > fkLeft && plTop < fkBottom && plBottom > fkTop) pl.inFire = true; 
             });
             
-            // Kettenreaktion Bomben
+            // Bomben Kettenreaktion
             const hitBombIndex = state.bombs.findIndex(b => b.gx === p.gx && b.gy === p.gy); 
             if (hitBombIndex !== -1) { 
                 const chainedBomb = state.bombs[hitBombIndex]; 
@@ -175,14 +165,13 @@ export function updateParticles() {
                         chainedBomb.py = chainedBomb.gy * TILE_SIZE; 
                         chainedBomb.underlyingTile = state.grid[chainedBomb.gy][chainedBomb.gx]; 
                     } 
-                    chainedBomb.timer = 0; // Sofort zünden
+                    chainedBomb.timer = 0; 
                 } 
             }
         }
         
-        // Gefrier-Effekt Ende
         if (p.type === 'freezing' && p.life <= 0) { 
-            state.grid[p.gy][p.gx] = TYPES.WALL_SOFT; // Eis wird zur Wand
+            state.grid[p.gy][p.gx] = TYPES.WALL_SOFT; 
             if (Math.random() < 0.3) { 
                 const itemPool = [ITEMS.BOMB_UP, ITEMS.BOMB_UP, ITEMS.BOMB_UP, ITEMS.RANGE_UP, ITEMS.RANGE_UP, ITEMS.RANGE_UP, ITEMS.SPEED_UP, ITEMS.SPEED_UP, ITEMS.SKULL, ITEMS.ROLLING, ITEMS.NAPALM]; 
                 state.items[p.gy][p.gx] = itemPool[Math.floor(Math.random() * itemPool.length)]; 
@@ -215,7 +204,22 @@ export function handleInfection() {
     }
 }
 
-// --- BASIS MECHANIKEN ---
+// --- HELPER ---
+
+function spawnDebris(x, y, count, color, speed = 2, size = 3) {
+    const cx = x * TILE_SIZE + TILE_SIZE/2;
+    const cy = y * TILE_SIZE + TILE_SIZE/2;
+    for(let i=0; i<count; i++) {
+        state.particles.push({ 
+            x: cx, y: cy, 
+            vx: (Math.random()-0.5) * speed, 
+            vy: (Math.random()-0.5) * speed, 
+            life: 30 + Math.random() * 30, 
+            color: color, 
+            size: Math.random() * size 
+        });
+    }
+}
 
 export function triggerHellFire() {
     const duration = 100; 

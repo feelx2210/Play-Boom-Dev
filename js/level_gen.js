@@ -43,7 +43,7 @@ export function initLevel() {
         state.items.push(itemRow);
     }
 
-    // 2. Level-Spezifische Anpassungen
+    // 2. Level-Spezifische Anpassungen (Öl)
     if (state.currentLevel.id === 'hell') {
         OIL_PADS.forEach(oil => { 
             if(state.grid[oil.y][oil.x] !== TYPES.WALL_HARD) {

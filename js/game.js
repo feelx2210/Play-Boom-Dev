@@ -4,7 +4,7 @@ import { draw, clearLevelCache } from './graphics.js';
 import { Player } from './player.js';
 import { endGame, showMenu, handleMenuInput, togglePause } from './ui.js';
 import { killPlayer, updateHellFire, updateIce, updateBombs, updateParticles, handleInfection } from './mechanics.js';
-import { initLevel } from './level_gen.js'; // NEU
+import { initLevel } from './level_gen.js'; 
 import { InputHandler } from './InputHandler.js'; 
 
 const canvas = document.getElementById('gameCanvas');
@@ -84,7 +84,7 @@ window.startGame = function() {
     state.hellFireTimer = 0; state.hellFirePhase = 'IDLE'; state.hellFireActive = false; 
     state.iceTimer = 0; state.iceSpawnCountdown = 1200; 
 
-    // --- NEU: Level Generator aufrufen ---
+    // Level Generierung (jetzt extern)
     initLevel();
 
     // Spieler erstellen
@@ -115,7 +115,7 @@ function update() {
     
     state.players.forEach(p => p.inFire = false);
     
-    // Mechanics aus mechanics.js aufrufen
+    // Updates aus mechanics.js
     updateHellFire();
     updateIce();
     updateBombs();
