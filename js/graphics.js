@@ -12,12 +12,12 @@ function getCachedSprite(charDef, d, isCursed) {
     if (spriteCache[key]) return spriteCache[key];
 
     const c = document.createElement('canvas');
-    // Canvas höher für Hüte/Haare (64px)
+    // FIX: Canvas höher (64px) für Menü-Vorschau ohne Abschneiden
     c.width = 48; 
     c.height = 64; 
     const ctx = c.getContext('2d');
     
-    // Mittelpunkt tiefer setzen (24, 40), damit nach oben Platz ist
+    // FIX: Mittelpunkt tiefer (24, 40)
     ctx.translate(24, 40);
 
     // --- HELPER ---
@@ -36,7 +36,7 @@ function getCachedSprite(charDef, d, isCursed) {
     const id = charDef.id;
 
     // ============================================================
-    // 1. ORIGINAL CHARACTERS (Original Vektor-Stil)
+    // 1. ORIGINAL CHARACTERS (High Detail Restore - GARANTIERT)
     // ============================================================
     
     if (id === 'lucifer') {
@@ -46,7 +46,7 @@ function getCachedSprite(charDef, d, isCursed) {
         else { ctx.fillRect(-8, 14, 6, 10); ctx.fillRect(2, 14, 6, 10); }
         
         ctx.fillStyle = skinGrad;
-        ctx.beginPath(); ctx.ellipse(0, -5, 12, 18, 0, 0, Math.PI*2); ctx.fill(); // Körper
+        ctx.beginPath(); ctx.ellipse(0, -5, 12, 18, 0, 0, Math.PI*2); ctx.fill(); // Körper Rund
         fillCircle(0, -20, 10, skinGrad); // Kopf
         
         const hornGrad = gradient(-35, -20, '#ffffff', '#bbbbbb');
@@ -68,6 +68,7 @@ function getCachedSprite(charDef, d, isCursed) {
         
         const bodyGrad = gradient(-15, 10, skin, skinShadow);
         ctx.fillStyle = bodyGrad;
+        // Muskel-Körper (Vektor)
         ctx.beginPath(); ctx.moveTo(-12, -18); ctx.quadraticCurveTo(-14, 0, -8, 10); ctx.lineTo(8, 10); ctx.quadraticCurveTo(14, 0, 12, -18); ctx.fill();
         
         ctx.strokeStyle = '#442200'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-10, -18); ctx.lineTo(10, 10); ctx.stroke();
@@ -111,7 +112,7 @@ function getCachedSprite(charDef, d, isCursed) {
     }
 
     // ============================================================
-    // 2. NEUE PROMIS (Detaillierter Vektor-Stil)
+    // 2. NEUE PROMIS (Hochwertiger Vektor-Stil)
     // ============================================================
     else {
         const drawBody = (skinColor, shirtGrad, pantsColor, shoeColor, widthMod = 1) => {
@@ -123,14 +124,17 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.fillStyle = shoeColor;
             if (d === 'side') rect(-5, 22, 12, 4, shoeColor);
             else { rect(-9 * widthMod, 22, 8 * widthMod, 4, shoeColor); rect(1 * widthMod, 22, 8 * widthMod, 4, shoeColor); }
-            // Torso (Trapez)
+            
+            // Torso (Trapez-Form für Vektor-Look)
             ctx.fillStyle = shirtGrad;
             ctx.beginPath(); 
             ctx.moveTo(-12 * widthMod, -18); ctx.lineTo(12 * widthMod, -18); 
             ctx.lineTo(10 * widthMod, 12); ctx.lineTo(-10 * widthMod, 12); 
             ctx.fill();
+            
             // Kopf
             fillCircle(0, -22, 10, skinColor);
+            
             // Arme (Rund)
             if (d !== 'side') {
                 ctx.fillStyle = shirtGrad; 
@@ -352,7 +356,6 @@ function bakeStaticLevel(levelDef) {
                 ctx.fillStyle = '#8b5a2b'; ctx.fillRect(px+2, py, 44, TILE_SIZE);
                 ctx.strokeStyle = '#5c3c1e'; ctx.lineWidth = 2; for(let i=0; i<TILE_SIZE; i+=8) { ctx.beginPath(); ctx.moveTo(px+2, py+i); ctx.lineTo(px+46, py+i); ctx.stroke(); }
             } else if (tile === TYPES.OIL) {
-                // Öl-Pfütze (Static Part)
                 const cx = px + TILE_SIZE / 2; const cy = py + TILE_SIZE / 2;
                 ctx.fillStyle = '#7a6a6a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 ctx.fillStyle = '#050202'; ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE*0.38, TILE_SIZE*0.32, Math.PI*0.1, 0, Math.PI*2); ctx.fill();
@@ -374,7 +377,6 @@ function bakeStaticLevel(levelDef) {
                 ctx.beginPath(); ctx.moveTo(px+2, py+24); ctx.lineTo(px+10, py+18); ctx.lineTo(px+10, py+30); ctx.fill(); 
                 ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
             }
-            
             const dirPad = DIRECTION_PADS.find(p => p.x === x && p.y === y);
             if (dirPad) {
                 const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
@@ -415,9 +417,7 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
     const sprite = getCachedSprite(charDef, d, showCursedEffect);
     
-    // Draw with offset for new taller sprite format (48x64)
     ctx.drawImage(sprite, -24, -40);
-    
     ctx.restore();
 }
 
@@ -457,17 +457,14 @@ export function drawItem(ctx, type, x, y) {
 
 // --- OPTIMIERTE DRAW LOOP ---
 export function draw(ctx, canvas) {
-    // 1. Hintergrund aus Cache (ODER neu erstellen, wenn nötig)
+    if (!state.currentLevel) return;
+
     if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
-        // Falls Cache fehlt oder Level gewechselt -> Neu baken!
-        // Wichtig: Das passiert NACHDEM game.js das Grid initialisiert hat.
         cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
         lastLevelId = state.currentLevel.id;
     }
-    // Zeichne das statische Bild (Hintergrund, Hard Walls, Boden)
     ctx.drawImage(cachedLevelCanvas, 0, 0);
 
-    // 2. Dynamische Elemente
     // Hell Center Fire Pit (Dynamic Part)
     if (state.currentLevel.hasCentralFire) {
         const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
@@ -492,17 +489,15 @@ export function draw(ctx, canvas) {
         }
     }
 
-    // Soft Walls & Items & Bombs
+    // Soft Walls & Items
     for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
             const item = state.items[y][x];
             const tile = state.grid[y][x];
 
-            // Items (nur wenn keine Soft Wall drauf ist)
             if (item !== ITEMS.NONE && tile !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
 
-            // Soft Walls (Beweglich/Zerstörbar)
             if (tile === TYPES.WALL_SOFT) {
                 if (state.currentLevel.id === 'ice') {
                     ctx.fillStyle = '#88ccff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
@@ -528,7 +523,7 @@ export function draw(ctx, canvas) {
         }
     }
 
-    // Bomben (über allem Grid-Kram)
+    // Bomben
     state.bombs.forEach(b => {
         const px = b.px; const py = b.py; const scale = 1 + Math.sin(Date.now() / 100) * 0.1;
         let baseColor = '#444444'; if (state.currentLevel.id === 'jungle') baseColor = '#000000';
