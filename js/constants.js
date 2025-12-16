@@ -48,7 +48,18 @@ export const CHARACTERS = [
     { id: 'rambo', name: 'Rambo', color: '#44aa44', accent: '#aa0000' }, 
     { id: 'lucifer', name: 'Lucifer', color: '#ff0000', accent: '#000000' }, 
     { id: 'nun', name: 'Nun', color: '#eeeeee', accent: '#000000' }, 
-    { id: 'yeti', name: 'Yeti', color: '#00ccff', accent: '#ffffff' }
+    { id: 'yeti', name: 'Yeti', color: '#00ccff', accent: '#ffffff' },
+    // Dummies
+    { id: 'ninja', name: 'Ninja', color: '#111111', accent: '#555555' },
+    { id: 'punk', name: 'Punk', color: '#ff00ff', accent: '#00ff00' },
+    { id: 'alien', name: 'Alien', color: '#00ff00', accent: '#004400' },
+    { id: 'robot', name: 'Robot', color: '#888888', accent: '#00ffff' },
+    { id: 'knight', name: 'Knight', color: '#aaaaaa', accent: '#333333' },
+    { id: 'wizard', name: 'Wizard', color: '#442288', accent: '#ffff00' },
+    { id: 'diver', name: 'Diver', color: '#000088', accent: '#ff8800' },
+    { id: 'chef', name: 'Chef', color: '#ffffff', accent: '#cc0000' },
+    { id: 'cowboy', name: 'Cowboy', color: '#885522', accent: '#ffffaa' },
+    { id: 'king', name: 'King', color: '#ffcc00', accent: '#aa0000' }
 ];
 
 export const LEVELS = {

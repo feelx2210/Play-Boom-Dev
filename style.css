@@ -35,7 +35,6 @@ body {
     width: 100vw; height: 100vh; height: 100dvh;
     margin: 0; overflow: hidden; 
     
-    /* Touch & Selection Fixes */
     touch-action: none; 
     user-select: none;
     -webkit-user-select: none;
@@ -76,16 +75,31 @@ h2 {
     text-align: center; width: 100%; 
 }
 
-/* --- OPTION CARDS (Desktop Default) --- */
+/* --- OPTION CARDS (CAROUSEL) --- */
 .selection-grid {
-    display: flex; flex-direction: row; justify-content: center;
+    display: flex; flex-direction: row; justify-content: center; align-items: center; /* Center Items + Arrows */
     gap: var(--gap-desktop); margin-bottom: 20px; padding: 10px; width: 100%;
     transition: 0.2s; border: 2px solid transparent;
 }
 
+/* NEU: Navigation Arrows */
+.nav-arrow {
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 10px;
+    user-select: none;
+    transition: transform 0.1s, color 0.1s;
+    /* Damit sie auch auf Mobile gut klickbar sind */
+    width: 30px; height: 30px; 
+    display: flex; align-items: center; justify-content: center;
+}
+.nav-arrow:hover { color: #fff; transform: scale(1.2); }
+.nav-arrow:active { transform: scale(0.9); }
+
 /* Desktop Active States */
-.selection-grid.active-group { border: 2px dashed var(--c-text); background: rgba(50, 50, 0, 0.3); opacity: 1; }
-.selection-grid.inactive-group { border: 2px solid transparent; opacity: 0.5; }
+.menu-section.active-group .selection-grid { border: 2px dashed var(--c-text); background: rgba(50, 50, 0, 0.3); opacity: 1; }
+.menu-section.inactive-group .selection-grid { border: 2px solid transparent; opacity: 0.5; }
 
 .option-card {
     border: 2px solid #555; padding: 10px; cursor: pointer; text-align: center;
@@ -104,7 +118,7 @@ h2 {
 .card-label { font-size: 10px; color: var(--c-text-dim); margin-top: 5px; text-transform: uppercase; }
 
 /* Hide Mobile Elements on Desktop */
-.nav-arrow, .mobile-label { display: none; }
+.mobile-label { display: none; }
 
 /* --- BUTTONS --- */
 .menu-footer { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; }
@@ -114,7 +128,7 @@ button.main-btn {
     font-family: inherit; font-size: 20px; cursor: pointer;
     box-shadow: 4px 4px 0 var(--c-shadow); border: 4px solid transparent; 
     display: block; margin: 0;
-    pointer-events: auto; /* Buttons sollen klickbar bleiben */
+    pointer-events: auto;
 }
 button.main-btn:hover { background: #ff4444; transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--c-shadow); }
 button.main-btn:active { transform: translate(0, 0); box-shadow: 0 0 0; }
@@ -132,7 +146,7 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 #ui-layer { 
     position: absolute; top: 10px; left: 10px; right: 10px; display: flex; 
     pointer-events: none; z-index: 10;
-    user-select: none; -webkit-user-select: none; /* HUD darf nicht markiert werden */
+    user-select: none; -webkit-user-select: none;
 }
 
 #pause-btn { 
@@ -142,33 +156,13 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
     cursor: pointer; z-index: 100; pointer-events: auto; 
 }
 
-/* NEU: Smarte UI-Positionierung je nach Orientierung */
-
-/* Portrait: Hier wird meist links/rechts abgeschnitten (Zoom auf Breite). 
-   Oben ist die Wand aber sichtbar. 
-   -> Horizontal einrücken (55px), Vertikal oben lassen (10px). */
 @media (orientation: portrait) {
-    #game-container.mobile-zoomed #ui-layer {
-        top: 10px; 
-        left: 55px; 
-    }
-    #game-container.mobile-zoomed #pause-btn {
-        top: 10px;
-        right: 55px;
-    }
+    #game-container.mobile-zoomed #ui-layer { top: 10px; left: 55px; }
+    #game-container.mobile-zoomed #pause-btn { top: 10px; right: 55px; }
 }
-
-/* Landscape: Hier wird meist oben/unten abgeschnitten (Zoom auf Höhe).
-   -> Vertikal nach unten schieben (55px), Horizontal normal lassen (10px). */
 @media (orientation: landscape) {
-    #game-container.mobile-zoomed #ui-layer {
-        top: 55px; 
-        left: 10px; 
-    }
-    #game-container.mobile-zoomed #pause-btn {
-        top: 55px;
-        right: 10px;
-    }
+    #game-container.mobile-zoomed #ui-layer { top: 55px; left: 10px; }
+    #game-container.mobile-zoomed #pause-btn { top: 55px; right: 10px; }
 }
 
 .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; color: #fff; font-size: 14px; display: flex; gap: 15px; }
@@ -178,7 +172,7 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 .control-row { display: flex; justify-content: space-between; color: var(--c-text-dim); }
 .key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; width: 180px; text-align: center; pointer-events: auto; }
 
-/* --- MOBILE CONTROLS (GAME BOY STYLE) --- */
+/* --- MOBILE CONTROLS --- */
 #mobile-controls {
     display: none; position: fixed; z-index: 1000; pointer-events: none;
     left: 0; right: 0; bottom: 10px; height: 180px;
@@ -187,7 +181,6 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 }
 #mobile-controls.hidden { display: none !important; }
 
-/* D-Pad */
 #dpad-area { pointer-events: auto; width: 150px; height: 150px; position: relative; display: flex; justify-content: center; align-items: center; }
 #dpad-cross { width: 140px; height: 140px; position: relative; filter: drop-shadow(2px 4px 0 #222); }
 
@@ -198,7 +191,6 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
     box-shadow: inset 1px 1px 2px rgba(255,255,255,0.3);
 }
 
-/* CSS Triangles for Arrows */
 .dpad-key::after { content: ''; display: block; width: 0; height: 0; border-style: solid; }
 .dpad-up { top: 0; left: 47px; border-radius: 5px 5px 0 0; }
 .dpad-up::after { border-width: 0 10px 16px 10px; border-color: transparent transparent #000 transparent; margin-bottom: 4px; }
@@ -221,7 +213,6 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 .dpad-left.active::after { border-color: transparent #fff transparent transparent; }
 .dpad-right.active::after { border-color: transparent transparent transparent #fff; }
 
-/* Action Buttons */
 #action-area { pointer-events: auto; position: relative; width: 160px; height: 160px; }
 .control-btn {
     position: absolute; border-radius: 50%;
@@ -248,7 +239,7 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 
 @media (pointer: coarse) { #mobile-controls { display: flex; } }
 
-/* === MOBILE PORTRAIT LAYOUT (1x4 GRID) === */
+/* === MOBILE PORTRAIT LAYOUT === */
 @media (orientation: portrait) {
     body { justify-content: flex-start; }
     #game-container { margin-top: 0 !important; transform-origin: top center !important; }
@@ -263,32 +254,30 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
     h1 { font-size: 32px; margin: 0 0 10px 0; flex-shrink: 0; }
     h2 { font-size: 14px; margin: 0 0 5px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* 1x4 GRID Layout */
+    /* MOBILE GRID ADJUSTMENT for Carousel
+       Auf Mobile zeigen wir auch das Karussell mit Pfeilen
+    */
     .selection-grid { 
-        display: grid !important; 
-        grid-template-columns: repeat(4, 1fr); 
-        gap: var(--gap-mobile); width: 95%; margin: 0 auto; padding: 0;
+        display: flex !important; 
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 5px !important; width: 95%; margin: 0 auto; padding: 0;
         border: none !important; background: transparent !important;
     }
 
+    /* Cards kleiner auf Mobile */
     .option-card { 
-        display: flex !important; width: auto; padding: 5px; margin: 0;
-        transform: scale(0.9); transform-origin: center top;
+        display: flex !important; width: 60px !important; padding: 5px; margin: 0;
+        transform: scale(0.9); transform-origin: center center;
     }
     
     .option-card:not(.selected) { opacity: 0.6; filter: grayscale(80%); }
-
-    .option-card.selected {
-        opacity: 1; transform: scale(1.05); border-width: 2px; z-index: 2; filter: none;
-    }
+    .option-card.selected { opacity: 1; transform: scale(1.1); border-width: 2px; z-index: 2; filter: none; }
     
-    .preview-canvas {
-        width: 100%; height: auto; max-width: 50px; 
-        object-fit: contain; margin-bottom: 5px;
-    }
-
+    .preview-canvas { width: 100%; height: auto; max-width: 40px; margin-bottom: 2px; }
     .card-label { display: block !important; font-size: 8px; margin-top: 2px; }
-    .mobile-label, .nav-arrow { display: none !important; }
+    .nav-arrow { font-size: 20px; padding: 5px; width: 20px; }
 
     .menu-footer { width: 100%; margin-top: 15px; }
     button.main-btn { width: 80%; padding: 15px; font-size: 20px; }
