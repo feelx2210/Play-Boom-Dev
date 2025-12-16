@@ -1,203 +1,189 @@
-import { TILE_SIZE, TYPES, LEVELS, HELL_CENTER, CHARACTERS, BOMB_MODES, ITEMS, BOOST_PADS, DIRECTION_PADS, OIL_PADS } from './constants.js'; // Imports angepasst
+import { TILE_SIZE, TYPES, ITEMS, BOOST_PADS, DIRECTION_PADS, OIL_PADS, HELL_CENTER, BOMB_MODES, CHARACTERS } from './constants.js';
 import { state } from './state.js';
 
-// --- CHARACTER DRAWING ---
-export function drawCharacter(ctx, p) {
-    const x = p.x + TILE_SIZE/2;
-    const y = p.y + TILE_SIZE/2;
-    // Fallback falls charDef fehlt
-    const charDef = p.charDef || CHARACTERS[0];
+// --- MAIN DRAW FUNCTION ---
+// Diese Funktion fehlte und wird von game.js aufgerufen
+export function draw(ctx, canvas) {
+    // 1. Hintergrund & Level
+    drawLevel(ctx);
     
-    // Bestimme die Blickrichtung
-    let dirKey = 'down';
-    if (p.lastDir.x > 0) dirKey = 'right';
-    else if (p.lastDir.x < 0) dirKey = 'left';
-    else if (p.lastDir.y < 0) dirKey = 'up';
-    else if (p.lastDir.y > 0) dirKey = 'down';
-
-    // Animations-Frame (0, 1, 2)
-    const frameIndex = Math.floor(p.step) % 3;
-
-    drawProceduralCharacter(ctx, x, y, charDef, dirKey, frameIndex, p.isDead);
+    // 2. Objekte (Wände, Items, Bomben)
+    drawObjects(ctx);
+    
+    // 3. Spieler
+    // Die Spieler zeichnen sich selbst (via player.js -> p.draw()), 
+    // was wiederum drawCharacterSprite hier aufruft.
+    if (state.players) {
+        state.players.forEach(p => p.draw());
+    }
+    
+    // 4. Partikel & Effekte
+    drawParticles(ctx);
 }
 
-// Draw preview for menu
-export function drawCharacterSprite(ctx, x, y, charDef, isSelected = false, lastDir = {x:0, y:1}) {
-    // Für das Menü simulieren wir einen Frame
-    drawProceduralCharacter(ctx, x, y, charDef, 'down', 0, false);
+// Dummy für Cache-Clear (wird von game.js aufgerufen)
+export function clearLevelCache() {
+    // Da wir prozedural zeichnen, brauchen wir keinen Cache-Clear.
+    // Die Funktion muss aber existieren, damit game.js nicht abstürzt.
 }
 
+// --- CHARACTER DRAWING ---
 
+// Wrapper für player.js Aufrufe
+// player.js ruft auf: drawCharacterSprite(ctx, x, y, charDef, isCursed, lastDir)
+export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, lastDir = {x:0, y:1}) {
+    // Richtung bestimmen
+    let dir = 'down';
+    if (lastDir.x > 0) dir = 'right';
+    else if (lastDir.x < 0) dir = 'left';
+    else if (lastDir.y < 0) dir = 'up';
+
+    // Animation: Wir nutzen die globale Zeit für den Schritt-Zyklus
+    // Da player.js den "bob" (Hüpfen) im Y-Wert schon drin hat, wirkt es lebendig.
+    // Wir variieren zusätzlich die Beine basierend auf der Zeit.
+    const frame = Math.floor(Date.now() / 150) % 2; 
+
+    // Prozedurales Zeichnen aufrufen
+    drawProceduralCharacter(ctx, x, y, charDef, dir, frame, false);
+}
+
+// Die eigentliche Zeichenlogik für die Promis
 function drawProceduralCharacter(ctx, x, y, charDef, dir, frame, isDead) {
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(x, y); // x,y ist die Mitte des Sprites
+    
     if (isDead) ctx.globalAlpha = 0.5;
 
-    const id = charDef.id;
-    const bodyColor = charDef.color;
-    const accentColor = charDef.accent;
+    // Fallback falls charDef undefiniert (Startbildschirm Fehlervermeidung)
+    const id = charDef ? charDef.id : 'rambo';
+    const bodyColor = charDef ? charDef.color : '#44aa44';
 
-    // --- BASIS KÖRPER FORM ---
-    // Beine Animation
-    ctx.fillStyle = (id === 'pam' || id === 'dua') ? '#ffccaa' : '#222'; // Hautfarbe Beine bei Pam/Dua, sonst Hose/Schuhe dunkel
+    // --- BASIS KÖRPER ---
     
-    if (id === 'cristiano' || id === 'lebron') ctx.fillStyle = '#fff'; // Weiße Socken/Schuhe
+    // Beine / Hose
+    ctx.fillStyle = (id === 'pam' || id === 'dua') ? '#ffccaa' : '#222'; // Haut bei Pam/Dua, sonst dunkel
+    if (id === 'cristiano' || id === 'lebron') ctx.fillStyle = '#fff'; // Weiße Stutzen/Schuhe
     if (id === '2pac' || id === 'elon') ctx.fillStyle = '#334455'; // Jeans
-    if (id === 'rambo') ctx.fillStyle = '#334433'; 
-    if (id === 'yeti') ctx.fillStyle = '#ddddff'; 
-    if (id === 'mj') ctx.fillStyle = '#111'; // Schwarze Hose
-
-    // Beine zeichnen
-    if (frame % 2 === 0) {
-        ctx.fillRect(-8, 6, 6, 10); // Links
-        ctx.fillRect(2, 6, 6, 10);  // Rechts
+    if (id === 'mj') ctx.fillStyle = '#111'; // Schwarze Anzughose
+    
+    // Bein-Animation
+    if (frame === 0) {
+        ctx.fillRect(-8, 6, 6, 10); // Bein L
+        ctx.fillRect(2, 6, 6, 10);  // Bein R
     } else {
-        ctx.fillRect(-8, 4, 6, 10);
-        ctx.fillRect(2, 8, 6, 8);
+        ctx.fillRect(-8, 5, 6, 9);
+        ctx.fillRect(2, 7, 6, 9);
     }
 
-    // Oberkörper (Shirt/Anzug)
+    // Oberkörper
     ctx.fillStyle = bodyColor;
     
-    // Spezielle Körperformen
+    // Spezielle Torsos
     if (id === 'pam' || id === 'dua' || id === 'gaga') {
-        // Weiblicher Torso (etwas schmaler)
-        ctx.fillRect(-10, -14, 20, 20);
+        ctx.fillRect(-10, -14, 20, 20); // Schmaler / Weiblich
     } else {
-        // Standard Torso
-        ctx.fillRect(-12, -14, 24, 20);
+        ctx.fillRect(-12, -14, 24, 20); // Breit / Männlich
     }
 
-    // --- DETAILS JE NACH CHARAKTER ---
-
+    // --- OBERKÖRPER DETAILS ---
+    
+    // Anzug (Hitman, 007, MJ) - Weißes Hemd Dreieck
     if (id === 'hitman' || id === '007' || id === 'mj') {
-        // Anzug Details (Weißes Hemd Dreieck)
         ctx.fillStyle = '#fff';
         ctx.beginPath(); ctx.moveTo(-4, -14); ctx.lineTo(4, -14); ctx.lineTo(0, -6); ctx.fill();
         // Krawatte
-        if (id === 'hitman') { ctx.fillStyle = '#ff0000'; ctx.fillRect(-1, -14, 2, 8); } // Rote Krawatte
-        if (id === '007') { ctx.fillStyle = '#333'; ctx.fillRect(-1, -14, 2, 8); } // Dunkle Krawatte
+        if (id === 'hitman') { ctx.fillStyle = '#ff0000'; ctx.fillRect(-1, -14, 2, 8); }
+        if (id === '007') { ctx.fillStyle = '#333'; ctx.fillRect(-1, -14, 2, 8); }
     }
 
-    if (id === 'cristiano') {
-        // Nr 7 (ganz grob)
-        if (dir === 'down') {
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(-2, -10, 4, 1); ctx.fillRect(1, -10, 1, 6); // Eine 7
+    // Trikots (CR7, Lebron)
+    if (dir === 'down') { // Nur von vorne sichtbar
+        if (id === 'cristiano') {
+            ctx.fillStyle = '#fff'; // Nr 7 Andeutung
+            ctx.fillRect(-2, -10, 4, 1); ctx.fillRect(1, -10, 1, 6); 
+        }
+        if (id === 'lebron') {
+            ctx.fillStyle = '#fdb927'; // Lakers Gold Nummer
+            ctx.fillRect(-4, -10, 8, 8);
         }
     }
     
-    if (id === 'lebron') {
-        // Trikot Nummer / Lakers Lila
-        if (dir === 'down') {
-            ctx.fillStyle = '#fdb927'; // Gold
-            ctx.fillRect(-4, -10, 8, 8); // Block
-        }
-    }
-
+    // 2Pac Unterhemd
     if (id === '2pac') {
-        // Weißes Unterhemd (Tanktop)
         ctx.fillStyle = '#fff';
         ctx.fillRect(-8, -14, 16, 18);
     }
 
     // --- KOPF ---
-    let skinColor = '#ffccaa'; // Standard
+    let skinColor = '#ffccaa'; // Standard Haut
     if (id === 'lucifer') skinColor = '#ff0000';
     if (id === 'yeti') skinColor = '#eeeeff';
-    if (id === 'mj' || id === 'lebron' || id === '2pac' || id === 'drizzy') skinColor = '#8d5524'; // Dunkle Haut
+    if (id === 'mj' || id === 'lebron' || id === '2pac' || id === 'drizzy') skinColor = '#8d5524'; // Dunkel
 
     ctx.fillStyle = skinColor;
-    ctx.fillRect(-9, -26, 18, 12); // Kopf Basis
+    ctx.fillRect(-9, -26, 18, 12); // Kopf
 
-    // --- HAARE / KOPFBEDECKUNG ---
+    // --- HAARE & KOPFBEDECKUNG ---
 
-    // Frisuren Logik
-    if (id === 'hitman' || id === 'lebron' || id === '2pac') {
-        // Glatze oder sehr kurz -> Nichts oder wenig
-        if (id === 'lebron') {
-            ctx.fillStyle = '#111'; // Bart / Kurze Haare
-            ctx.fillRect(-9, -26, 18, 3); // Hairline
-            ctx.fillRect(-9, -18, 18, 4); // Bart
-        }
-    } 
-    else if (id === 'mj') {
-        // Hut (Fedora)
+    if (id === 'mj') {
+        // Fedora Hut
         ctx.fillStyle = '#111';
         ctx.fillRect(-12, -28, 24, 4); // Krempe
-        ctx.fillRect(-9, -32, 18, 6);  // Top
-        // Haarsträhne
-        ctx.fillStyle = '#000';
-        ctx.fillRect(4, -24, 2, 6);
+        ctx.fillRect(-9, -32, 18, 6);  // Krone
+        ctx.fillStyle = '#fff'; // Socke/Handschuh Detail? Nein, Haarsträhne
+        ctx.fillStyle = '#000'; ctx.fillRect(4, -24, 2, 6);
     }
     else if (id === '2pac') {
-        // Bandana
-        ctx.fillStyle = '#3366cc'; // Blaues Bandana
-        ctx.fillRect(-10, -28, 20, 6); // Stirnband
-        ctx.fillRect(6, -26, 4, 4); // Knoten rechts
+        // Bandana (Blau)
+        ctx.fillStyle = '#3366cc';
+        ctx.fillRect(-10, -28, 20, 6); 
+        ctx.fillRect(6, -26, 4, 4); // Knoten
     }
     else if (id === 'dua' || id === 'pam' || id === 'gaga') {
         // Lange Haare
-        ctx.fillStyle = (id === 'pam' || id === 'gaga') ? '#ffeeaa' : '#111'; // Blond oder Schwarz
-        ctx.fillRect(-10, -30, 20, 8); // Oben
-        ctx.fillRect(-11, -26, 4, 18); // Seite L
-        ctx.fillRect(7, -26, 4, 18);  // Seite R
+        ctx.fillStyle = (id === 'pam' || id === 'gaga') ? '#ffeeaa' : '#111';
+        ctx.fillRect(-10, -30, 20, 8); // Top
+        ctx.fillRect(-11, -26, 4, 18); // Links
+        ctx.fillRect(7, -26, 4, 18);   // Rechts
     }
-    else if (id === 'drizzy') {
-        // Kurze Haare + Bart
-        ctx.fillStyle = '#111';
-        ctx.fillRect(-9, -28, 18, 4);
+    else if (id === 'lebron') {
+        ctx.fillStyle = '#111'; 
+        ctx.fillRect(-9, -26, 18, 3); // Hairline
         ctx.fillRect(-9, -18, 18, 4); // Bart
     }
-    else if (id === 'elon') {
-        // Elon Frisur
-        ctx.fillStyle = '#332211';
-        ctx.fillRect(-9, -28, 18, 5);
-        if (dir === 'right') ctx.fillRect(4, -28, 4, 4);
-    }
-    else if (id === 'cristiano') {
-        // Gestylt
-        ctx.fillStyle = '#221100';
-        ctx.fillRect(-9, -29, 18, 5);
+    else if (id === 'drizzy') {
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-9, -28, 18, 4); // Kurz
+        ctx.fillRect(-9, -18, 18, 4); // Bart
     }
     else if (id === 'rambo') {
-        // Stirnband rot + Schwarze Haare
-        ctx.fillStyle = '#111';
-        ctx.fillRect(-10, -29, 20, 10); // Haare wild
-        ctx.fillStyle = '#ff0000';
-        ctx.fillRect(-10, -26, 20, 3); // Band
+        ctx.fillStyle = '#111'; ctx.fillRect(-10, -29, 20, 10);
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(-10, -26, 20, 3); // Bandana Rot
     }
     else if (id === 'nun') {
-        // Nonnenhaube
-        ctx.fillStyle = '#111';
-        ctx.fillRect(-10, -30, 20, 12);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(-9, -28, 18, 4); // Weißer Rand
+        ctx.fillStyle = '#111'; ctx.fillRect(-10, -30, 20, 12);
+        ctx.fillStyle = '#fff'; ctx.fillRect(-9, -28, 18, 4);
+    }
+    else if (id === 'hitman') {
+        // Glatze -> Nichts zeichnen
     }
     else {
-        // Standard Haare (007, etc)
-        ctx.fillStyle = (id === '007') ? '#ccaa88' : '#332200'; // Blond für Bond
+        // Standard Frisur (Elon, CR7, 007, etc)
+        ctx.fillStyle = (id === '007') ? '#ccaa88' : '#221100';
         ctx.fillRect(-9, -29, 18, 5);
     }
 
-    // --- GESICHT (AUGEN) ---
+    // --- GESICHT ---
     ctx.fillStyle = '#000';
     let eyeOff = 0;
     if (dir === 'left') eyeOff = -3;
     if (dir === 'right') eyeOff = 3;
-    
-    // Sonnenbrille?
-    if (id === '2pac' || id === 'hitman' || id === '007') {
-        // Nein, aber vielleicht coole Augen.
-        // Hitman Barcode hinten? Zu klein.
-    }
-    
+
+    // Brille bei Gaga
     if (id === 'gaga') {
-        // Pokerface Brille?
-        ctx.fillStyle = '#111';
         ctx.fillRect(-6 + eyeOff, -22, 12, 4);
     } else {
-        // Normale Augen
+        // Augen
         ctx.fillRect(-5 + eyeOff, -22, 2, 2);
         ctx.fillRect(3 + eyeOff, -22, 2, 2);
     }
@@ -205,7 +191,24 @@ function drawProceduralCharacter(ctx, x, y, charDef, dir, frame, isDead) {
     ctx.restore();
 }
 
-// --- LEVEL DRAWING ---
+// --- LEVEL PREVIEW (Für Menü) ---
+export function drawLevelPreview(ctx, w, h, level) {
+    ctx.fillStyle = level.bg; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = level.wallHard; 
+    const s = w/15;
+    ctx.fillRect(0, 0, w, s); ctx.fillRect(0, h-s, w, s);
+    ctx.fillRect(0, 0, s, h); ctx.fillRect(w-s, 0, s, h);
+    
+    ctx.fillStyle = level.wallSoft;
+    ctx.fillRect(w/2 - s, h/2 - s, s*2, s*2);
+    
+    if(level.id === 'hell') {
+        ctx.fillStyle = 'rgba(255,0,0,0.5)';
+        ctx.beginPath(); ctx.arc(w/2, h/2, w/3, 0, Math.PI*2); ctx.fill();
+    }
+}
+
+// --- LEVEL DRAWING (Hintergrund) ---
 export function drawLevel(ctx) {
     const level = state.currentLevel;
     if(!level) return;
@@ -213,27 +216,26 @@ export function drawLevel(ctx) {
     ctx.fillStyle = level.bg;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Grid Lines
+    // Grid
     ctx.strokeStyle = level.grid;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for(let i=0; i<=15; i++) { // GRID_W/H Hardcoded or imported
-        ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, 15*TILE_SIZE);
-    }
     for(let i=0; i<=15; i++) {
-        ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(15*TILE_SIZE, i*TILE_SIZE);
+        const p = i * TILE_SIZE;
+        ctx.moveTo(p, 0); ctx.lineTo(p, 15*TILE_SIZE);
+        ctx.moveTo(0, p); ctx.lineTo(15*TILE_SIZE, p);
     }
     ctx.stroke();
 
-    // Pads
+    // Spezial-Pads (Hell/Ice/Jungle)
     if (level.id === 'hell' || level.id === 'ice') {
-        ctx.fillStyle = level.glow;
-        if (level.id === 'ice') ctx.fillStyle = '#00ffff';
+        ctx.fillStyle = (level.id === 'ice') ? '#00ffff' : level.glow;
         BOOST_PADS.forEach(p => {
             ctx.globalAlpha = 0.4;
             ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             ctx.globalAlpha = 1;
-            ctx.strokeStyle = level.glow; ctx.lineWidth = 3;
+            ctx.strokeStyle = (level.id === 'ice') ? '#00ffff' : level.glow; 
+            ctx.lineWidth = 3;
             ctx.strokeRect(p.x*TILE_SIZE+4, p.y*TILE_SIZE+4, TILE_SIZE-8, TILE_SIZE-8);
         });
     }
@@ -248,7 +250,6 @@ export function drawLevel(ctx) {
             ctx.moveTo(cx - p.dir.x*10, cy - p.dir.y*10);
             ctx.lineTo(cx + p.dir.x*10, cy + p.dir.y*10);
             ctx.stroke();
-            // Pfeilspitze vereinfacht
             ctx.beginPath(); ctx.arc(cx + p.dir.x*10, cy + p.dir.y*10, 3, 0, Math.PI*2); ctx.fill();
         });
     }
@@ -268,18 +269,18 @@ export function drawLevel(ctx) {
     }
 }
 
-// --- OBJECTS & PARTICLES (Items, Walls, Bombs) ---
+// --- OBJECTS (Walls, Items, Bombs) ---
 export function drawObjects(ctx) {
     if(!state.grid) return;
-    
+    const level = state.currentLevel;
+
     for(let y=0; y<15; y++) {
         for(let x=0; x<15; x++) {
             const tile = state.grid[y][x];
             const item = state.items[y][x];
             const X = x*TILE_SIZE, Y = y*TILE_SIZE;
-            const level = state.currentLevel;
 
-            // Water / Bridge
+            // River / Bridge
             if (level.hasRiver && tile === TYPES.WATER) {
                 ctx.fillStyle = '#3366cc'; ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
             }
@@ -293,7 +294,6 @@ export function drawObjects(ctx) {
                 ctx.fillStyle = level.wallHard;
                 ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
                 ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(X, Y+TILE_SIZE-4, TILE_SIZE, 4);
-                // 3D Effekt Light
                 ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(X, Y, TILE_SIZE, 4); ctx.fillRect(X, Y, 4, TILE_SIZE);
             } 
             else if (tile === TYPES.WALL_SOFT) {
@@ -301,11 +301,8 @@ export function drawObjects(ctx) {
                 ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
                 ctx.fillStyle = level.wallSoftLight;
                 ctx.fillRect(X+4, Y+4, TILE_SIZE-8, TILE_SIZE-8);
-                // Ziegel-Muster
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillRect(X, Y+12, TILE_SIZE, 2);
-                ctx.fillRect(X, Y+36, TILE_SIZE, 2);
-                ctx.fillRect(X+24, Y+12, 2, 24);
+                ctx.fillRect(X, Y+12, TILE_SIZE, 2); ctx.fillRect(X, Y+36, TILE_SIZE, 2); ctx.fillRect(X+24, Y+12, 2, 24);
             }
 
             // Items
@@ -318,7 +315,7 @@ export function drawObjects(ctx) {
                 else if (item === ITEMS.NAPALM) { color='#ff0000'; text='☢️'; }
                 else if (item === ITEMS.ROLLING) { color='#888888'; text='🎳'; }
                 
-                // Item Background Bubble
+                // Schwebe-Effekt
                 const floatY = Math.sin(Date.now() * 0.005) * 3;
                 ctx.shadowColor = color; ctx.shadowBlur = 10;
                 ctx.fillStyle = 'rgba(20,20,20,0.8)';
@@ -333,10 +330,11 @@ export function drawObjects(ctx) {
 
     // Bombs
     state.bombs.forEach(b => {
-        const bx = b.px + TILE_SIZE/2, by = b.py + TILE_SIZE/2; // Nutzen px/py für Smoothness bei Rolling
+        // px/py nutzen für flüssige Bewegung bei Rolling Bombs
+        const bx = b.px + TILE_SIZE/2; 
+        const by = b.py + TILE_SIZE/2;
         
-        // Pulsieren kurz vor Explosion
-        const timePercent = b.timer / 200; // ca 200 ticks
+        const timePercent = b.timer / 200;
         const pulseSpeed = timePercent < 0.3 ? 0.8 : 0.2;
         const pulse = 1 + Math.sin(Date.now() * 0.01 * (1/pulseSpeed)) * 0.1;
         
@@ -348,15 +346,15 @@ export function drawObjects(ctx) {
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.beginPath(); ctx.ellipse(bx, by+10, 16, 6, 0, 0, Math.PI*2); ctx.fill();
 
-        // Bomb Body
+        // Bombe
         ctx.fillStyle = color;
         ctx.beginPath(); ctx.arc(bx, by, (TILE_SIZE/2.5)*pulse, 0, Math.PI*2); ctx.fill();
         
-        // Highlight
+        // Glanz
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.beginPath(); ctx.arc(bx-6, by-6, 6*pulse, 0, Math.PI*2); ctx.fill();
 
-        // Zünder / Icons
+        // Icons
         if (b.napalm) {
             ctx.fillStyle = '#ffcc00'; ctx.font='12px sans-serif'; ctx.textAlign='center'; 
             ctx.fillText('☢', bx, by+4);
@@ -366,7 +364,7 @@ export function drawObjects(ctx) {
              ctx.beginPath(); ctx.moveTo(bx, by-6); ctx.lineTo(bx, by+6); ctx.stroke();
         }
         
-        // Lunte (wackelt)
+        // Lunte
         const wickX = bx + Math.sin(Date.now()*0.02)*2;
         ctx.strokeStyle = '#aa8855'; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.moveTo(bx, by-15); ctx.lineTo(wickX, by-22); ctx.stroke();
@@ -377,19 +375,15 @@ export function drawObjects(ctx) {
     });
 }
 
+// --- PARTICLES ---
 export function drawParticles(ctx) {
     state.particles.forEach(p => {
         ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
         
         if (p.isFire) {
-             // Feuer Effekt
              const size = TILE_SIZE * (0.6 + (p.life/p.maxLife)*0.4);
-             // Farbe variiert von Weiß (Kern) zu Gelb zu Rot
-             const lifeP = p.life / p.maxLife;
-             let color = p.isNapalm ? `rgba(50, 255, 50, ${lifeP})` : `rgba(255, ${Math.floor(lifeP*255)}, 0, ${lifeP})`;
-             if(p.isNapalm) color = `rgb(${Math.floor(50+Math.random()*100)}, ${Math.floor(200+Math.random()*55)}, 50)`; // Giftgrün für Napalm? Oder Lila? Constant sagt Rot. Machen wir es heiß.
-             if(p.isNapalm) color = `rgb(255, ${Math.floor(Math.random()*100)}, 0)`; // Napalm Glut
-
+             let color = p.isNapalm ? `rgb(255, ${Math.floor(Math.random()*100)}, 0)` : `rgba(255, ${Math.floor((p.life/p.maxLife)*255)}, 0, ${p.life/p.maxLife})`;
+             
              ctx.fillStyle = color;
              ctx.fillRect(p.gx*TILE_SIZE + (TILE_SIZE-size)/2, p.gy*TILE_SIZE + (TILE_SIZE-size)/2, size, size);
              
@@ -404,7 +398,7 @@ export function drawParticles(ctx) {
     });
     ctx.globalAlpha = 1;
     
-    // Hell Center Effekt
+    // Central Fire Effect
     if (state.currentLevel.hasCentralFire) {
         const center = { x: (HELL_CENTER.x+0.5)*TILE_SIZE, y: (HELL_CENTER.y+0.5)*TILE_SIZE };
         if (state.hellFirePhase === 'WARNING') {
@@ -420,21 +414,5 @@ export function drawParticles(ctx) {
              ctx.fillStyle = grad;
              ctx.beginPath(); ctx.arc(center.x, center.y, size, 0, Math.PI*2); ctx.fill();
         }
-    }
-}
-
-export function drawLevelPreview(ctx, w, h, level) {
-    ctx.fillStyle = level.bg; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = level.wallHard; 
-    const s = w/15;
-    ctx.fillRect(0, 0, w, s); ctx.fillRect(0, h-s, w, s);
-    ctx.fillRect(0, 0, s, h); ctx.fillRect(w-s, 0, s, h);
-    
-    ctx.fillStyle = level.wallSoft;
-    ctx.fillRect(w/2 - s, h/2 - s, s*2, s*2);
-    
-    if(level.id === 'hell') {
-        ctx.fillStyle = 'rgba(255,0,0,0.5)';
-        ctx.beginPath(); ctx.arc(w/2, h/2, w/3, 0, Math.PI*2); ctx.fill();
     }
 }
