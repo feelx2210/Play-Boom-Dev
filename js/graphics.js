@@ -1,418 +1,503 @@
-import { TILE_SIZE, TYPES, ITEMS, BOOST_PADS, DIRECTION_PADS, OIL_PADS, HELL_CENTER, BOMB_MODES, CHARACTERS } from './constants.js';
+import { TILE_SIZE, TYPES, ITEMS, BOOST_PADS, DIRECTION_PADS, OIL_PADS, HELL_CENTER, BOMB_MODES } from './constants.js';
 import { state } from './state.js';
+import { drawAllParticles } from './render_particles.js';
 
-// --- MAIN DRAW FUNCTION ---
-// Diese Funktion fehlte und wird von game.js aufgerufen
-export function draw(ctx, canvas) {
-    // 1. Hintergrund & Level
-    drawLevel(ctx);
+// --- SPRITE CACHING ---
+// Wir speichern die generierten Bilder zwischen, damit das Spiel flüssig läuft.
+const spriteCache = {};
+
+function getCachedSprite(charDef, d, isCursed) {
+    const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
+    if (spriteCache[key]) return spriteCache[key];
+
+    const c = document.createElement('canvas');
+    c.width = 48; c.height = 48;
+    const ctx = c.getContext('2d');
     
-    // 2. Objekte (Wände, Items, Bomben)
-    drawObjects(ctx);
-    
-    // 3. Spieler
-    // Die Spieler zeichnen sich selbst (via player.js -> p.draw()), 
-    // was wiederum drawCharacterSprite hier aufruft.
-    if (state.players) {
-        state.players.forEach(p => p.draw());
-    }
-    
-    // 4. Partikel & Effekte
-    drawParticles(ctx);
-}
+    // Zentrieren: 0,0 ist nun die Mitte des Charakters (24,24)
+    ctx.translate(24, 24);
 
-// Dummy für Cache-Clear (wird von game.js aufgerufen)
-export function clearLevelCache() {
-    // Da wir prozedural zeichnen, brauchen wir keinen Cache-Clear.
-    // Die Funktion muss aber existieren, damit game.js nicht abstürzt.
-}
+    // --- HELPER FÜR PIXEL-STYLE ---
+    const rect = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+    const circle = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); };
 
-// --- CHARACTER DRAWING ---
+    // --- CHARAKTER ZEICHENLOGIK ---
+    const id = charDef.id;
 
-// Wrapper für player.js Aufrufe
-// player.js ruft auf: drawCharacterSprite(ctx, x, y, charDef, isCursed, lastDir)
-export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, lastDir = {x:0, y:1}) {
-    // Richtung bestimmen
-    let dir = 'down';
-    if (lastDir.x > 0) dir = 'right';
-    else if (lastDir.x < 0) dir = 'left';
-    else if (lastDir.y < 0) dir = 'up';
-
-    // Animation: Wir nutzen die globale Zeit für den Schritt-Zyklus
-    // Da player.js den "bob" (Hüpfen) im Y-Wert schon drin hat, wirkt es lebendig.
-    // Wir variieren zusätzlich die Beine basierend auf der Zeit.
-    const frame = Math.floor(Date.now() / 150) % 2; 
-
-    // Prozedurales Zeichnen aufrufen
-    drawProceduralCharacter(ctx, x, y, charDef, dir, frame, false);
-}
-
-// Die eigentliche Zeichenlogik für die Promis
-function drawProceduralCharacter(ctx, x, y, charDef, dir, frame, isDead) {
-    ctx.save();
-    ctx.translate(x, y); // x,y ist die Mitte des Sprites
-    
-    if (isDead) ctx.globalAlpha = 0.5;
-
-    // Fallback falls charDef undefiniert (Startbildschirm Fehlervermeidung)
-    const id = charDef ? charDef.id : 'rambo';
-    const bodyColor = charDef ? charDef.color : '#44aa44';
-
-    // --- BASIS KÖRPER ---
-    
-    // Beine / Hose
-    ctx.fillStyle = (id === 'pam' || id === 'dua') ? '#ffccaa' : '#222'; // Haut bei Pam/Dua, sonst dunkel
-    if (id === 'cristiano' || id === 'lebron') ctx.fillStyle = '#fff'; // Weiße Stutzen/Schuhe
-    if (id === '2pac' || id === 'elon') ctx.fillStyle = '#334455'; // Jeans
-    if (id === 'mj') ctx.fillStyle = '#111'; // Schwarze Anzughose
-    
-    // Bein-Animation
-    if (frame === 0) {
-        ctx.fillRect(-8, 6, 6, 10); // Bein L
-        ctx.fillRect(2, 6, 6, 10);  // Bein R
-    } else {
-        ctx.fillRect(-8, 5, 6, 9);
-        ctx.fillRect(2, 7, 6, 9);
-    }
-
-    // Oberkörper
-    ctx.fillStyle = bodyColor;
-    
-    // Spezielle Torsos
-    if (id === 'pam' || id === 'dua' || id === 'gaga') {
-        ctx.fillRect(-10, -14, 20, 20); // Schmaler / Weiblich
-    } else {
-        ctx.fillRect(-12, -14, 24, 20); // Breit / Männlich
-    }
-
-    // --- OBERKÖRPER DETAILS ---
-    
-    // Anzug (Hitman, 007, MJ) - Weißes Hemd Dreieck
-    if (id === 'hitman' || id === '007' || id === 'mj') {
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.moveTo(-4, -14); ctx.lineTo(4, -14); ctx.lineTo(0, -6); ctx.fill();
-        // Krawatte
-        if (id === 'hitman') { ctx.fillStyle = '#ff0000'; ctx.fillRect(-1, -14, 2, 8); }
-        if (id === '007') { ctx.fillStyle = '#333'; ctx.fillRect(-1, -14, 2, 8); }
-    }
-
-    // Trikots (CR7, Lebron)
-    if (dir === 'down') { // Nur von vorne sichtbar
-        if (id === 'cristiano') {
-            ctx.fillStyle = '#fff'; // Nr 7 Andeutung
-            ctx.fillRect(-2, -10, 4, 1); ctx.fillRect(1, -10, 1, 6); 
+    // 1. ORIGINAL CHARACTERS (Wiederhergestellt)
+    if (id === 'lucifer') {
+        const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
+        if (d === 'side') { rect(2, 12, 6, 10, cDark); rect(2, 20, 6, 4, cHoof); rect(-6, 12, 6, 10, cBase); rect(-6, 20, 6, 4, cHoof); } 
+        else { rect(-8, 12, 6, 10, cBase); rect(2, 12, 6, 10, cBase); rect(-8, 20, 6, 4, cHoof); rect(2, 20, 6, 4, cHoof); }
+        const bodyGrad = ctx.createLinearGradient(0, -20, 0, 10); bodyGrad.addColorStop(0, '#ff4444'); bodyGrad.addColorStop(1, '#aa0000'); ctx.fillStyle = bodyGrad; ctx.fillRect(-8, -18, 16, 30);
+        if (d === 'front') { rect(-1, -14, 2, 16, cDark); rect(-7, -8, 6, 2, cDark); rect(1, -8, 6, 2, cDark); rect(-9, -18, 4, 4, cLite); rect(5, -18, 4, 4, cLite); }
+        const headGrad = ctx.createLinearGradient(0, -24, 0, -10); headGrad.addColorStop(0, '#ff5555'); headGrad.addColorStop(1, '#cc0000'); ctx.fillStyle = headGrad; ctx.fillRect(-9, -24, 18, 15); ctx.fillRect(-6, -10, 12, 4);
+        
+        // Hörner
+        ctx.fillStyle = '#ddd';
+        if (d === 'front' || d === 'back') { 
+            ctx.beginPath(); ctx.moveTo(-7, -24); ctx.quadraticCurveTo(-18, -30, -14, -38); ctx.lineTo(-5, -26); ctx.fill(); 
+            ctx.beginPath(); ctx.moveTo(7, -24); ctx.quadraticCurveTo(18, -30, 14, -38); ctx.lineTo(5, -26); ctx.fill(); 
         }
-        if (id === 'lebron') {
-            ctx.fillStyle = '#fdb927'; // Lakers Gold Nummer
-            ctx.fillRect(-4, -10, 8, 8);
+        if (d === 'front') { 
+            rect(-8, -20, 5, 4, '#ffff00'); rect(3, -20, 5, 4, '#ffff00'); // Augen
+            rect(-6, -19, 2, 2, '#000'); rect(5, -19, 2, 2, '#000'); 
+            ctx.fillStyle = '#440000'; ctx.beginPath(); ctx.moveTo(-6, -10); ctx.quadraticCurveTo(0, -6, 6, -10); ctx.lineTo(0, -8); ctx.fill(); // Mund
         }
-    }
-    
-    // 2Pac Unterhemd
-    if (id === '2pac') {
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(-8, -14, 16, 18);
-    }
-
-    // --- KOPF ---
-    let skinColor = '#ffccaa'; // Standard Haut
-    if (id === 'lucifer') skinColor = '#ff0000';
-    if (id === 'yeti') skinColor = '#eeeeff';
-    if (id === 'mj' || id === 'lebron' || id === '2pac' || id === 'drizzy') skinColor = '#8d5524'; // Dunkel
-
-    ctx.fillStyle = skinColor;
-    ctx.fillRect(-9, -26, 18, 12); // Kopf
-
-    // --- HAARE & KOPFBEDECKUNG ---
-
-    if (id === 'mj') {
-        // Fedora Hut
-        ctx.fillStyle = '#111';
-        ctx.fillRect(-12, -28, 24, 4); // Krempe
-        ctx.fillRect(-9, -32, 18, 6);  // Krone
-        ctx.fillStyle = '#fff'; // Socke/Handschuh Detail? Nein, Haarsträhne
-        ctx.fillStyle = '#000'; ctx.fillRect(4, -24, 2, 6);
-    }
-    else if (id === '2pac') {
-        // Bandana (Blau)
-        ctx.fillStyle = '#3366cc';
-        ctx.fillRect(-10, -28, 20, 6); 
-        ctx.fillRect(6, -26, 4, 4); // Knoten
-    }
-    else if (id === 'dua' || id === 'pam' || id === 'gaga') {
-        // Lange Haare
-        ctx.fillStyle = (id === 'pam' || id === 'gaga') ? '#ffeeaa' : '#111';
-        ctx.fillRect(-10, -30, 20, 8); // Top
-        ctx.fillRect(-11, -26, 4, 18); // Links
-        ctx.fillRect(7, -26, 4, 18);   // Rechts
-    }
-    else if (id === 'lebron') {
-        ctx.fillStyle = '#111'; 
-        ctx.fillRect(-9, -26, 18, 3); // Hairline
-        ctx.fillRect(-9, -18, 18, 4); // Bart
-    }
-    else if (id === 'drizzy') {
-        ctx.fillStyle = '#111';
-        ctx.fillRect(-9, -28, 18, 4); // Kurz
-        ctx.fillRect(-9, -18, 18, 4); // Bart
-    }
+    } 
     else if (id === 'rambo') {
-        ctx.fillStyle = '#111'; ctx.fillRect(-10, -29, 20, 10);
-        ctx.fillStyle = '#ff0000'; ctx.fillRect(-10, -26, 20, 3); // Bandana Rot
+        const cGreen = '#226622'; const cSkin = '#ffccaa'; const cBandana = '#dd0000';
+        if(d==='side') { rect(-5, 12, 8, 8, cGreen); rect(-5, 20, 9, 4, '#111'); } else { rect(-10, 12, 8, 8, cGreen); rect(2, 12, 8, 8, cGreen); rect(-10, 20, 8, 4, '#111'); rect(2, 20, 8, 4, '#111'); }
+        rect(-12, -20, 24, 32, '#448844'); // Body Camo
+        rect(-10, -16, 6, 4, '#113311'); rect(4, -8, 6, 4, '#113311'); 
+        
+        if (d === 'front') { 
+            rect(-19, -18, 7, 18, cSkin); rect(12, -18, 7, 18, cSkin); // Arme
+            rect(-10, -26, 20, 16, cSkin); // Kopf
+            rect(-12, -26, 24, 6, cBandana); rect(10, -24, 6, 6, cBandana); // Bandana
+            rect(-8, -18, 7, 7, '#fff'); rect(1, -18, 7, 7, '#fff'); // Augen Weiß
+            rect(-5, -16, 2, 2, '#000'); rect(3, -16, 2, 2, '#000'); // Pupillen
+            rect(-10, -14, 20, 4, 'rgba(0,0,0,0.1)'); // Bartschatten
+        }
     }
     else if (id === 'nun') {
-        ctx.fillStyle = '#111'; ctx.fillRect(-10, -30, 20, 12);
-        ctx.fillStyle = '#fff'; ctx.fillRect(-9, -28, 18, 4);
+        rect(-7, 14, 6, 4, '#111'); rect(1, 14, 6, 4, '#111'); // Schuhe
+        ctx.fillStyle = '#222'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(-16, 14); ctx.lineTo(16, 14); ctx.fill(); // Robe
+        
+        if (d === 'front') {
+            rect(-3, -6, 6, 16, '#ffdd44'); rect(-8, -2, 16, 6, '#ffdd44'); // Goldkreuz
+            circle(0, -16, 7, '#ffccaa'); // Gesicht
+            rect(-4, -17, 2, 2, '#000'); rect(2, -17, 2, 2, '#000'); // Augen
+            ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(0, -19, 10, Math.PI, 0); ctx.fill(); // Haube
+        }
     }
-    else if (id === 'hitman') {
-        // Glatze -> Nichts zeichnen
+    else if (id === 'yeti') {
+        const fur = '#00ccff'; const furDark = '#0088bb';
+        rect(-16, -24, 32, 36, fur); // Body
+        rect(-10, 12, 8, 10, furDark); rect(2, 12, 8, 10, furDark); // Beine
+        if (d === 'front') {
+            rect(-22, -16, 8, 26, fur); rect(14, -16, 8, 26, fur); // Arme
+            rect(-12, -20, 24, 14, '#005599'); // Gesichtshintergrund
+            rect(-8, -17, 6, 6, '#fff'); rect(2, -17, 6, 6, '#fff'); // Augen
+            rect(-6, -16, 2, 2, '#000'); rect(4, -16, 2, 2, '#000');
+            rect(-6, -8, 3, 4, '#fff'); rect(3, -8, 3, 4, '#fff'); // Zähne
+        }
     }
+
+    // 2. NEUE PROMI-CHARAKTERE (Detaillierte Pixel-Karikaturen)
     else {
-        // Standard Frisur (Elon, CR7, 007, etc)
-        ctx.fillStyle = (id === '007') ? '#ccaa88' : '#221100';
-        ctx.fillRect(-9, -29, 18, 5);
+        // Basis-Setup für Menschen
+        const drawHuman = (skin, pants, shirt, shoes) => {
+            // Beine
+            if (d === 'side') {
+                rect(-4, 12, 8, 12, pants); rect(-4, 20, 10, 4, shoes);
+            } else {
+                rect(-9, 12, 8, 12, pants); rect(1, 12, 8, 12, pants);
+                rect(-9, 20, 8, 4, shoes); rect(1, 20, 8, 4, shoes);
+            }
+            // Torso
+            rect(-11, -14, 22, 26, shirt);
+            // Kopf
+            rect(-9, -26, 18, 14, skin);
+            // Arme (Front/Back)
+            if (d !== 'side') {
+                rect(-17, -12, 6, 18, shirt); rect(-17, 2, 6, 4, skin); // Links
+                rect(11, -12, 6, 18, shirt); rect(11, 2, 6, 4, skin);   // Rechts
+            }
+        };
+
+        const drawFace = (eyes = true, beard = false, glasses = false) => {
+            if (d !== 'front') return;
+            if (eyes && !glasses) {
+                rect(-5, -20, 3, 3, '#fff'); rect(2, -20, 3, 3, '#fff'); // Augapfel
+                rect(-4, -20, 2, 2, '#000'); rect(3, -20, 2, 2, '#000'); // Pupille
+            }
+            if (glasses) {
+                rect(-7, -21, 14, 4, '#111'); // Brille
+            }
+            if (beard) {
+                rect(-9, -16, 18, 4, 'rgba(0,0,0,0.2)'); // Bartschatten
+                rect(-3, -14, 6, 2, '#000'); // Goatee
+            }
+        };
+
+        // --- CRISTIANO ---
+        if (id === 'cristiano') {
+            const skin = '#d2b48c'; 
+            drawHuman(skin, '#fff', '#da291c', '#fff'); // Weiß Hose, Rot Trikot (ManUtd/Portugal)
+            if (d === 'front') {
+                rect(-2, -8, 4, 10, '#fff'); // "7"
+                rect(-2, -8, 6, 2, '#fff');
+            }
+            drawFace(true, false);
+            // Haare: Gestylt
+            rect(-10, -30, 20, 6, '#221100'); rect(4, -30, 2, 2, '#221100');
+            rect(-2, -18, 4, 2, '#fff'); // Zähne/Grinsen
+        }
+
+        // --- HITMAN ---
+        else if (id === 'hitman') {
+            drawHuman('#ffe0bd', '#111', '#111', '#000'); // Anzug schwarz
+            // Weißes Hemd V
+            if (d === 'front') {
+                ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(-6,-14); ctx.lineTo(6,-14); ctx.lineTo(0,-4); ctx.fill();
+                rect(-2, -14, 4, 12, '#cc0000'); // Rote Krawatte
+            }
+            drawFace(true);
+            // Glatze -> Keine Haare
+            if (d === 'back') {
+                rect(-2, -20, 4, 2, '#000'); // Barcode
+            }
+            // Pistolen
+            rect(-19, 0, 4, 8, '#999'); rect(15, 0, 4, 8, '#999');
+        }
+
+        // --- ELON ---
+        else if (id === 'elon') {
+            drawHuman('#f0d5be', '#222', '#111', '#333'); // Alles schwarz/dunkel
+            if (d === 'front') {
+                // Cybertruck Logo (Dreieck)
+                ctx.fillStyle='#888'; ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(5,0); ctx.lineTo(0,-6); ctx.fill();
+            }
+            drawFace(true);
+            // Haare: Braun, leicht wellig
+            rect(-10, -28, 20, 6, '#443322'); 
+        }
+
+        // --- MJ ---
+        else if (id === 'mj') {
+            const skin = '#8d5524';
+            drawHuman(skin, '#111', '#111', '#000'); // Anzug
+            // Weiße Socken
+            rect(-9, 18, 8, 2, '#fff'); rect(1, 18, 8, 2, '#fff');
+            // Weißes Shirt V
+            if (d === 'front') {
+                ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(-4,-14); ctx.lineTo(4,-14); ctx.lineTo(0,-8); ctx.fill();
+                // Handschuh (Rechts)
+                rect(11, 2, 6, 6, '#fff');
+            }
+            drawFace(true);
+            // Hut
+            rect(-12, -28, 24, 4, '#111'); // Krempe
+            rect(-9, -34, 18, 8, '#111');  // Top
+            rect(-9, -30, 18, 2, '#fff');  // Weißes Band
+            // Locke
+            rect(4, -24, 2, 6, '#000');
+        }
+
+        // --- DUA ---
+        else if (id === 'dua') {
+            const skin = '#f0d5be';
+            // Haut zeigen (Bauchfrei)
+            drawHuman(skin, '#111', '#111', '#111'); // Shorts/Top
+            rect(-11, -2, 22, 6, skin); // Bauch
+            drawFace(true);
+            // Lange schwarze Haare
+            rect(-10, -30, 20, 8, '#000');
+            rect(-12, -24, 4, 20, '#000'); rect(8, -24, 4, 20, '#000');
+        }
+
+        // --- LEBRON ---
+        else if (id === 'lebron') {
+            const skin = '#5c3a1e';
+            drawHuman(skin, '#fdb927', '#552583', '#fff'); // Lakers Gelb/Lila
+            // Trikot Details
+            if (d === 'front') {
+                rect(-5, -8, 10, 8, '#fdb927'); // "23" Block
+            }
+            drawFace(true, true); // Mit Bart
+            // Haare & Headband
+            rect(-9, -28, 18, 4, '#111');
+            rect(-10, -26, 20, 2, '#fff'); // Headband
+        }
+
+        // --- PAM ---
+        else if (id === 'pam') {
+            const skin = '#dca386'; // Gebräunt
+            // Badeanzug Rot
+            rect(-9, 12, 8, 12, skin); rect(1, 12, 8, 12, skin); // Beine nackt
+            rect(-11, -14, 22, 26, '#ff2222'); // Anzug
+            // Dekolleté
+            if (d === 'front') {
+                rect(-4, -14, 8, 4, skin);
+            }
+            drawFace(true);
+            // Riesige blonde Haare
+            rect(-12, -32, 24, 10, '#ffeeaa');
+            rect(-14, -24, 6, 20, '#ffeeaa'); rect(8, -24, 6, 20, '#ffeeaa');
+        }
+
+        // --- DRIZZY ---
+        else if (id === 'drizzy') {
+            const skin = '#ac8b66';
+            drawHuman(skin, '#333', '#000', '#fff'); // OVO Style
+            // Eule Logo
+            if (d === 'front') {
+                circle(0, -4, 4, '#ffd700'); 
+            }
+            drawFace(true, true); // Bart
+            // Haare kurz
+            rect(-9, -28, 18, 4, '#111');
+        }
+
+        // --- 2PAC ---
+        else if (id === '2pac') {
+            const skin = '#7a4e32';
+            drawHuman(skin, '#4466aa', '#fff', '#ddd'); // Jeans, Unterhemd weiß
+            // Unterhemd Ausschnitt
+            if (d === 'front') {
+                rect(-4, -14, 8, 4, skin);
+            }
+            drawFace(true, true);
+            // Bandana (Blau)
+            rect(-10, -28, 20, 6, '#3366cc');
+            rect(6, -26, 4, 4, '#3366cc'); // Knoten
+        }
+
+        // --- GAGA ---
+        else if (id === 'gaga') {
+            const skin = '#ffe0e0';
+            drawHuman(skin, '#0099ff', '#0099ff', '#fff'); // Pokerface Blau
+            // Ausschnitt / Design
+            if (d === 'front') {
+                rect(-2, -14, 4, 14, '#111'); // Reißverschluss
+            }
+            drawFace(false, false, true); // Brille!
+            // Haare: Blond mit Schleife
+            rect(-10, -32, 20, 10, '#eeeedd');
+            rect(-4, -36, 8, 4, '#eeeedd'); // Bow
+        }
+
+        // --- 007 ---
+        else if (id === '007') {
+            drawHuman('#f0d5be', '#333', '#333', '#000'); // Grauer Anzug
+            if (d === 'front') {
+                ctx.fillStyle='#fff'; ctx.beginPath(); ctx.moveTo(-6,-14); ctx.lineTo(6,-14); ctx.lineTo(0,-4); ctx.fill();
+                rect(-2, -14, 4, 4, '#000'); // Fliege
+            }
+            drawFace(true);
+            // Haare: Blond/Braun (Craig)
+            rect(-10, -28, 20, 5, '#ccaa88');
+            // Waffe
+            if (d === 'side') rect(6, 4, 6, 2, '#333');
+        }
     }
 
-    // --- GESICHT ---
-    ctx.fillStyle = '#000';
-    let eyeOff = 0;
-    if (dir === 'left') eyeOff = -3;
-    if (dir === 'right') eyeOff = 3;
-
-    // Brille bei Gaga
-    if (id === 'gaga') {
-        ctx.fillRect(-6 + eyeOff, -22, 12, 4);
-    } else {
-        // Augen
-        ctx.fillRect(-5 + eyeOff, -22, 2, 2);
-        ctx.fillRect(3 + eyeOff, -22, 2, 2);
+    // Curse Effect Overlay (Blinken)
+    if (isCursed) { 
+        ctx.globalCompositeOperation = 'source-atop'; 
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; 
+        ctx.fillRect(-24, -24, 48, 48); 
+        ctx.globalCompositeOperation = 'source-over'; 
     }
 
-    ctx.restore();
+    spriteCache[key] = c;
+    return c;
 }
 
-// --- LEVEL PREVIEW (Für Menü) ---
-export function drawLevelPreview(ctx, w, h, level) {
-    ctx.fillStyle = level.bg; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = level.wallHard; 
-    const s = w/15;
-    ctx.fillRect(0, 0, w, s); ctx.fillRect(0, h-s, w, s);
-    ctx.fillRect(0, 0, s, h); ctx.fillRect(w-s, 0, s, h);
-    
-    ctx.fillStyle = level.wallSoft;
-    ctx.fillRect(w/2 - s, h/2 - s, s*2, s*2);
-    
-    if(level.id === 'hell') {
-        ctx.fillStyle = 'rgba(255,0,0,0.5)';
-        ctx.beginPath(); ctx.arc(w/2, h/2, w/3, 0, Math.PI*2); ctx.fill();
-    }
+// --- LEVEL CACHING ---
+let cachedLevelCanvas = null;
+let lastLevelId = null;
+
+export function clearLevelCache() {
+    cachedLevelCanvas = null;
+    lastLevelId = null;
 }
 
-// --- LEVEL DRAWING (Hintergrund) ---
-export function drawLevel(ctx) {
-    const level = state.currentLevel;
-    if(!level) return;
+// Erstellt das statische Level-Bild einmalig (Performance!)
+function bakeStaticLevel(levelDef) {
+    const c = document.createElement('canvas');
+    c.width = 15 * TILE_SIZE; // GRID_W
+    c.height = 15 * TILE_SIZE; // GRID_H
+    const ctx = c.getContext('2d');
 
-    ctx.fillStyle = level.bg;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    // 1. Hintergrund
+    ctx.fillStyle = levelDef.bg;
+    ctx.fillRect(0, 0, c.width, c.height);
 
-    // Grid
-    ctx.strokeStyle = level.grid;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for(let i=0; i<=15; i++) {
-        const p = i * TILE_SIZE;
-        ctx.moveTo(p, 0); ctx.lineTo(p, 15*TILE_SIZE);
-        ctx.moveTo(0, p); ctx.lineTo(15*TILE_SIZE, p);
-    }
+    // 2. Grid Lines
+    ctx.strokeStyle = levelDef.grid; ctx.lineWidth = 1; ctx.beginPath();
+    for(let i=0; i<=15; i++) { ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, c.height); }
+    for(let i=0; i<=15; i++) { ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(c.width, i*TILE_SIZE); }
     ctx.stroke();
 
-    // Spezial-Pads (Hell/Ice/Jungle)
-    if (level.id === 'hell' || level.id === 'ice') {
-        ctx.fillStyle = (level.id === 'ice') ? '#00ffff' : level.glow;
-        BOOST_PADS.forEach(p => {
-            ctx.globalAlpha = 0.4;
-            ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            ctx.globalAlpha = 1;
-            ctx.strokeStyle = (level.id === 'ice') ? '#00ffff' : level.glow; 
-            ctx.lineWidth = 3;
-            ctx.strokeRect(p.x*TILE_SIZE+4, p.y*TILE_SIZE+4, TILE_SIZE-8, TILE_SIZE-8);
-        });
-    }
+    // 3. Statische Elemente (Hard Walls, Boden)
+    // Wir iterieren über das Grid (state.grid muss existieren)
+    if (state.grid) {
+        for (let y = 0; y < 15; y++) {
+            for (let x = 0; x < 15; x++) {
+                const px = x * TILE_SIZE; const py = y * TILE_SIZE;
+                const tile = state.grid[y][x];
 
-    if (level.id === 'jungle') {
-        DIRECTION_PADS.forEach(p => {
-            ctx.fillStyle = 'rgba(50, 200, 50, 0.4)';
-            ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            ctx.strokeStyle = '#44aa44';
-            ctx.beginPath();
-            const cx = (p.x+0.5)*TILE_SIZE, cy = (p.y+0.5)*TILE_SIZE;
-            ctx.moveTo(cx - p.dir.x*10, cy - p.dir.y*10);
-            ctx.lineTo(cx + p.dir.x*10, cy + p.dir.y*10);
-            ctx.stroke();
-            ctx.beginPath(); ctx.arc(cx + p.dir.x*10, cy + p.dir.y*10, 3, 0, Math.PI*2); ctx.fill();
-        });
-    }
-
-    if (level.id === 'stone') {
-        ctx.fillStyle = 'rgba(20, 20, 20, 0.6)';
-        OIL_PADS.forEach(p => {
-            ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            for(let i=0; i<3; i++) {
-                 ctx.beginPath();
-                 ctx.arc(p.x*TILE_SIZE + Math.random()*TILE_SIZE, p.y*TILE_SIZE + Math.random()*TILE_SIZE, 2+Math.random()*3, 0, Math.PI*2);
-                 ctx.fill();
+                // HARD WALLS (Statisch)
+                if (tile === TYPES.WALL_HARD) {
+                    ctx.fillStyle = levelDef.wallHard;
+                    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    // 3D Effekt
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(px, py+TILE_SIZE-4, TILE_SIZE, 4);
+                    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(px, py, TILE_SIZE, 4);
+                    
+                    // Level Details
+                    if (levelDef.id === 'hell') {
+                        ctx.fillStyle = '#111'; ctx.fillRect(px+6, py+6, 4, 4); ctx.fillRect(px+38, py+38, 4, 4);
+                    }
+                } 
+                // SPEZIAL PADS (Statisch)
+                else if ((levelDef.id === 'hell' || levelDef.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
+                    ctx.fillStyle = (levelDef.id==='ice') ? '#004488' : '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = levelDef.glow; ctx.lineWidth=2; ctx.strokeRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
+                }
+                // DIRECTION PADS
+                else if (DIRECTION_PADS.some(p => p.x === x && p.y === y)) {
+                    const dirPad = DIRECTION_PADS.find(p => p.x === x && p.y === y);
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#aaa'; 
+                    // Pfeil zeichnen (vereinfacht)
+                    const cx = px+TILE_SIZE/2, cy=py+TILE_SIZE/2;
+                    ctx.beginPath(); ctx.arc(cx + dirPad.dir.x*10, cy + dirPad.dir.y*10, 4, 0, Math.PI*2); ctx.fill();
+                }
+                // HELL CENTER
+                else if (levelDef.hasCentralFire && x===HELL_CENTER.x && y===HELL_CENTER.y) {
+                    ctx.fillStyle = '#1a0505'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                }
             }
-            ctx.fillStyle = 'rgba(20, 20, 20, 0.6)';
-        });
+        }
     }
+    return c;
 }
 
-// --- OBJECTS (Walls, Items, Bombs) ---
-export function drawObjects(ctx) {
+// --- MAIN DRAW FUNCTION ---
+export function draw(ctx, canvas) {
+    if (!state.currentLevel) return;
+
+    // 1. Hintergrund (Cached)
+    if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
+        cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
+        lastLevelId = state.currentLevel.id;
+    }
+    ctx.drawImage(cachedLevelCanvas, 0, 0);
+
+    // 2. Dynamische Objekte (Soft Walls, Items, Bomben)
+    drawDynamicObjects(ctx);
+
+    // 3. Spieler
+    if (state.players) {
+        // Sortieren nach Y für korrekte Überlappung
+        const sorted = [...state.players].sort((a,b) => a.y - b.y);
+        sorted.forEach(p => p.draw());
+    }
+
+    // 4. Partikel
+    drawAllParticles(ctx);
+}
+
+function drawDynamicObjects(ctx) {
     if(!state.grid) return;
     const level = state.currentLevel;
 
     for(let y=0; y<15; y++) {
         for(let x=0; x<15; x++) {
+            const px = x * TILE_SIZE; const py = y * TILE_SIZE;
             const tile = state.grid[y][x];
             const item = state.items[y][x];
-            const X = x*TILE_SIZE, Y = y*TILE_SIZE;
-
-            // River / Bridge
-            if (level.hasRiver && tile === TYPES.WATER) {
-                ctx.fillStyle = '#3366cc'; ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
-            }
-            else if (level.hasRiver && tile === TYPES.BRIDGE) {
-                 ctx.fillStyle = '#664422'; ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
-                 ctx.fillStyle = '#442211';
-                 for(let i=0; i<4; i++) ctx.fillRect(X+i*12, Y, 2, TILE_SIZE);
-            }
-            // Walls
-            else if (tile === TYPES.WALL_HARD) {
-                ctx.fillStyle = level.wallHard;
-                ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(X, Y+TILE_SIZE-4, TILE_SIZE, 4);
-                ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(X, Y, TILE_SIZE, 4); ctx.fillRect(X, Y, 4, TILE_SIZE);
-            } 
-            else if (tile === TYPES.WALL_SOFT) {
-                ctx.fillStyle = level.wallSoft;
-                ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = level.wallSoftLight;
-                ctx.fillRect(X+4, Y+4, TILE_SIZE-8, TILE_SIZE-8);
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillRect(X, Y+12, TILE_SIZE, 2); ctx.fillRect(X, Y+36, TILE_SIZE, 2); ctx.fillRect(X+24, Y+12, 2, 24);
-            }
 
             // Items
             if (item !== ITEMS.NONE && tile !== TYPES.WALL_SOFT) {
-                let color = '#fff', text = '?';
-                if (item === ITEMS.BOMB_UP) { color='#444444'; text='💣'; }
-                else if (item === ITEMS.RANGE_UP) { color='#ff4400'; text='🔥'; }
-                else if (item === ITEMS.SPEED_UP) { color='#0088ff'; text='⚡'; }
-                else if (item === ITEMS.SKULL) { color='#ff00ff'; text='☠️'; }
-                else if (item === ITEMS.NAPALM) { color='#ff0000'; text='☢️'; }
-                else if (item === ITEMS.ROLLING) { color='#888888'; text='🎳'; }
+                // Item Hintergrund
+                const floatY = Math.sin(Date.now()*0.005)*2;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.beginPath(); ctx.arc(px+24, py+24+floatY, 16, 0, Math.PI*2); ctx.fill();
                 
-                // Schwebe-Effekt
-                const floatY = Math.sin(Date.now() * 0.005) * 3;
-                ctx.shadowColor = color; ctx.shadowBlur = 10;
-                ctx.fillStyle = 'rgba(20,20,20,0.8)';
-                ctx.beginPath(); ctx.arc(X+TILE_SIZE/2, Y+TILE_SIZE/2 + floatY, TILE_SIZE/2.5, 0, Math.PI*2); ctx.fill();
-                ctx.shadowBlur = 0;
-                
-                ctx.fillStyle = color; ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(text, X+TILE_SIZE/2, Y+TILE_SIZE/2 + floatY + 2);
+                // Icon
+                ctx.font = '20px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+                let txt = '?'; let col = '#fff';
+                if (item === ITEMS.BOMB_UP) { txt='💣'; col='#444'; }
+                else if (item === ITEMS.RANGE_UP) { txt='🔥'; col='#f40'; }
+                else if (item === ITEMS.SPEED_UP) { txt='⚡'; col='#08f'; }
+                else if (item === ITEMS.SKULL) { txt='☠️'; col='#f0f'; }
+                else if (item === ITEMS.NAPALM) { txt='☢️'; col='#f00'; }
+                else if (item === ITEMS.ROLLING) { txt='🎳'; col='#fff'; }
+                ctx.fillStyle = col; ctx.fillText(txt, px+24, py+24+floatY);
+            }
+
+            // Soft Walls
+            if (tile === TYPES.WALL_SOFT) {
+                ctx.fillStyle = level.wallSoft;
+                ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = level.wallSoftLight;
+                ctx.fillRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
+                // Detail
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(px+22, py+4, 4, TILE_SIZE-8);
+                ctx.fillRect(px+4, py+22, TILE_SIZE-8, 4);
             }
         }
     }
 
-    // Bombs
+    // Bomben
     state.bombs.forEach(b => {
-        // px/py nutzen für flüssige Bewegung bei Rolling Bombs
-        const bx = b.px + TILE_SIZE/2; 
-        const by = b.py + TILE_SIZE/2;
+        const bx = b.px + 24; const by = b.py + 24;
+        const pulse = 1 + Math.sin(Date.now() * 0.01) * 0.1;
         
-        const timePercent = b.timer / 200;
-        const pulseSpeed = timePercent < 0.3 ? 0.8 : 0.2;
-        const pulse = 1 + Math.sin(Date.now() * 0.01 * (1/pulseSpeed)) * 0.1;
-        
-        let color = '#222';
-        if (b.napalm) color = '#aa0000';
-        if (b.isRolling) color = '#555577';
-
         // Schatten
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.beginPath(); ctx.ellipse(bx, by+10, 16, 6, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(bx, by+10, 14, 5, 0, 0, Math.PI*2); ctx.fill();
 
-        // Bombe
-        ctx.fillStyle = color;
-        ctx.beginPath(); ctx.arc(bx, by, (TILE_SIZE/2.5)*pulse, 0, Math.PI*2); ctx.fill();
-        
+        // Körper
+        let col = '#333';
+        if (b.napalm) col = '#a00';
+        if (b.isRolling) col = '#557';
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(bx, by, 18*pulse, 0, Math.PI*2); ctx.fill();
+
         // Glanz
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.beginPath(); ctx.arc(bx-6, by-6, 6*pulse, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(bx-5, by-5, 6, 0, Math.PI*2); ctx.fill();
 
-        // Icons
-        if (b.napalm) {
-            ctx.fillStyle = '#ffcc00'; ctx.font='12px sans-serif'; ctx.textAlign='center'; 
-            ctx.fillText('☢', bx, by+4);
-        } else if (b.isRolling) {
-             ctx.strokeStyle = '#fff'; ctx.lineWidth=2;
-             ctx.beginPath(); ctx.moveTo(bx-6, by); ctx.lineTo(bx+6, by); ctx.stroke();
-             ctx.beginPath(); ctx.moveTo(bx, by-6); ctx.lineTo(bx, by+6); ctx.stroke();
-        }
+        // Icon/Lunte
+        if (b.napalm) { ctx.fillStyle='#fc0'; ctx.font='12px sans-serif'; ctx.fillText('☢', bx, by+4); }
         
-        // Lunte
-        const wickX = bx + Math.sin(Date.now()*0.02)*2;
-        ctx.strokeStyle = '#aa8855'; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(bx, by-15); ctx.lineTo(wickX, by-22); ctx.stroke();
-        
-        // Funke
-        ctx.fillStyle = `hsl(${Math.random()*60}, 100%, 50%)`;
-        ctx.beginPath(); ctx.arc(wickX, by-22, 3, 0, Math.PI*2); ctx.fill();
+        const wx = bx + Math.sin(Date.now()*0.02)*3;
+        ctx.strokeStyle = '#a85'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(bx, by-15); ctx.lineTo(wx, by-22); ctx.stroke();
+        ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(wx, by-22, 2, 0, Math.PI*2); ctx.fill();
     });
+
+    // Hell Center Effekt (Active)
+    if (state.currentLevel.hasCentralFire && state.hellFireActive) {
+        const cx = HELL_CENTER.x * TILE_SIZE + 24; const cy = HELL_CENTER.y * TILE_SIZE + 24;
+        const size = (state.hellFirePhase === 'WARNING') ? 40 : 60;
+        const col = (state.hellFirePhase === 'WARNING') ? 'rgba(255,0,0,0.3)' : 'rgba(255,100,0,0.8)';
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(cx, cy, size * (0.8 + Math.random()*0.2), 0, Math.PI*2); ctx.fill();
+    }
 }
 
-// --- PARTICLES ---
-export function drawParticles(ctx) {
-    state.particles.forEach(p => {
-        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-        
-        if (p.isFire) {
-             const size = TILE_SIZE * (0.6 + (p.life/p.maxLife)*0.4);
-             let color = p.isNapalm ? `rgb(255, ${Math.floor(Math.random()*100)}, 0)` : `rgba(255, ${Math.floor((p.life/p.maxLife)*255)}, 0, ${p.life/p.maxLife})`;
-             
-             ctx.fillStyle = color;
-             ctx.fillRect(p.gx*TILE_SIZE + (TILE_SIZE-size)/2, p.gy*TILE_SIZE + (TILE_SIZE-size)/2, size, size);
-             
-             // Core
-             ctx.fillStyle = '#ffffaa';
-             ctx.fillRect(p.gx*TILE_SIZE + TILE_SIZE/2 - 5, p.gy*TILE_SIZE + TILE_SIZE/2 - 5, 10, 10);
-        } else {
-             // Debris / Smoke
-             ctx.fillStyle = p.color || '#fff';
-             ctx.beginPath(); ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI*2); ctx.fill();
-        }
-    });
-    ctx.globalAlpha = 1;
+// Wrapper für Player.js
+export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, lastDir = {x:0, y:1}) {
+    let d = 'front';
+    if (lastDir.y < 0) d = 'back';
+    else if (lastDir.x !== 0) d = 'side';
     
-    // Central Fire Effect
-    if (state.currentLevel.hasCentralFire) {
-        const center = { x: (HELL_CENTER.x+0.5)*TILE_SIZE, y: (HELL_CENTER.y+0.5)*TILE_SIZE };
-        if (state.hellFirePhase === 'WARNING') {
-             ctx.globalAlpha = 0.3 + Math.sin(Date.now()*0.02)*0.2;
-             ctx.fillStyle = '#ff0000';
-             ctx.beginPath(); ctx.arc(center.x, center.y, TILE_SIZE*2, 0, Math.PI*2); ctx.fill();
-        } else if (state.hellFirePhase === 'ACTIVE') {
-             const size = TILE_SIZE*3 * (0.9 + Math.random()*0.1);
-             const grad = ctx.createRadialGradient(center.x, center.y, size*0.2, center.x, center.y, size);
-             grad.addColorStop(0, '#ffff00');
-             grad.addColorStop(0.5, '#ff4400');
-             grad.addColorStop(1, 'rgba(255,0,0,0)');
-             ctx.fillStyle = grad;
-             ctx.beginPath(); ctx.arc(center.x, center.y, size, 0, Math.PI*2); ctx.fill();
-        }
-    }
+    // Side Flipping
+    ctx.save();
+    ctx.translate(x, y);
+    if (lastDir.x < 0) ctx.scale(-1, 1); // Spiegeln für links
+
+    const sprite = getCachedSprite(charDef, d, isCursed);
+    // Sprite ist 48x48, wir zeichnen es zentriert bei 0,0 (durch translate)
+    ctx.drawImage(sprite, -24, -24);
+    
+    ctx.restore();
+}
+
+// Level Preview für Menü
+export function drawLevelPreview(ctx, w, h, levelDef) {
+    ctx.fillStyle = levelDef.bg; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = levelDef.wallHard; 
+    const s = w/5; // Grobe Blöcke
+    ctx.fillRect(0, 0, w, s); ctx.fillRect(0, h-s, w, s);
+    ctx.fillRect(0, 0, s, h); ctx.fillRect(w-s, 0, s, h);
+    ctx.fillStyle = levelDef.wallSoft;
+    ctx.fillRect(w/2 - s/2, h/2 - s/2, s, s);
 }
