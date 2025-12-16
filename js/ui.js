@@ -4,7 +4,7 @@ import { drawCharacterSprite, drawLevelPreview } from './graphics.js';
 
 let remappingAction = null;
 let settingsIndex = 0; 
-let carouselInterval = null; // Für Long-Click auf Pfeile
+let carouselInterval = null; 
 
 // --- HUD UPDATE ---
 export function updateHud(player) {
@@ -44,15 +44,14 @@ function changeSelection(type, dir) {
     initMenu(); 
 }
 
-// Helper für Long-Click (Maus/Touch)
 function setupArrowEvents(el, type, dir) {
     const startScroll = (e) => {
-        e.preventDefault(); // Verhindert Doppelfeuer bei Touch
-        changeSelection(type, dir); // Erster Klick sofort
+        e.preventDefault(); 
+        changeSelection(type, dir); 
         if (carouselInterval) clearInterval(carouselInterval);
         carouselInterval = setInterval(() => {
             changeSelection(type, dir);
-        }, 150); // Speed des Karussells
+        }, 150); 
     };
     
     const stopScroll = () => {
@@ -77,7 +76,6 @@ export function initMenu() {
     const startBtn = document.getElementById('start-game-btn');
     const footer = document.querySelector('.menu-footer');
     
-    // Settings Button
     let settingsBtn = document.getElementById('settings-btn-main');
     if (!settingsBtn) {
         const oldBtns = footer.querySelectorAll('.btn-secondary');
@@ -94,29 +92,21 @@ export function initMenu() {
     settingsBtn.style.border = "2px solid transparent";
     settingsBtn.style.marginTop = "15px";
 
-    // --- CAROUSEL RENDER LOGIC ---
-    
-    // Wir rendern nicht ALLES neu, sondern aktualisieren nur den Inhalt der Grid-Container,
-    // um die Event-Listener der Pfeile nicht zu zerstören, falls wir sie hier einmalig aufbauen.
-    // ABER: Um es einfach zu halten, bauen wir das Karussell jedes Mal neu auf, da setInterval global ist.
-
     charContainer.innerHTML = '';
     levelContainer.innerHTML = '';
     
     updateMobileLabels();
 
-    // Visual States
     charContainer.parentElement.classList.remove('active-group', 'inactive-group');
     levelContainer.classList.remove('active-group', 'inactive-group');
     startBtn.classList.remove('focused');
     settingsBtn.classList.remove('focused');
     settingsBtn.style.borderColor = "transparent"; 
 
-    // Focus Highlighting
-    if (state.menuState === 0) { // Char
+    if (state.menuState === 0) { 
         charContainer.parentElement.classList.add('active-group'); 
         levelContainer.classList.add('inactive-group');
-    } else if (state.menuState === 1) { // Level
+    } else if (state.menuState === 1) { 
         charContainer.parentElement.classList.add('inactive-group'); 
         levelContainer.classList.add('active-group');
     } else if (state.menuState === 2) { 
@@ -130,17 +120,11 @@ export function initMenu() {
         settingsBtn.style.borderColor = "#ffffff"; 
     }
 
-    // --- CHARACTER CAROUSEL ---
-    // Wir bauen 3 Teile: Linker Pfeil, Grid (4 Items), Rechter Pfeil
-    // Wir nutzen das existierende 'char-select' DIV als Grid und manipulieren den Wrapper 'menu-section' vielleicht besser nicht zu oft.
-    // Besser: Wir fügen die Pfeile direkt in 'char-select' ein, aber stylen es anders.
-    
-    // Helper zum Rendern einer Karte
+    // Helper Card Creation
     const createCard = (type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
         
-        // Klick auf Karte selektiert diesen Char direkt
         div.onclick = (e) => {
             e.stopPropagation();
             if (type === 'char') {
@@ -154,10 +138,22 @@ export function initMenu() {
         };
 
         const pCanvas = document.createElement('canvas'); 
-        pCanvas.width=48; pCanvas.height=48; pCanvas.className='preview-canvas';
+        pCanvas.className = 'preview-canvas';
         const ctx = pCanvas.getContext('2d');
-        if (type === 'char') drawCharacterSprite(ctx, 24, 36, data);
-        else drawLevelPreview(ctx, 48, 48, data);
+
+        if (type === 'char') {
+            // FIX: Höheres Canvas für Charaktere (64px statt 48px), damit Hüte passen
+            pCanvas.width = 48; 
+            pCanvas.height = 64; 
+            // Zeichne bei Y=40, das ist der definierte Ankerpunkt in graphics.js
+            drawCharacterSprite(ctx, 24, 40, data);
+        } else {
+            // Level bleiben quadratisch
+            pCanvas.width = 48; 
+            pCanvas.height = 48; 
+            drawLevelPreview(ctx, 48, 48, data);
+        }
+
         div.appendChild(pCanvas);
         const label = document.createElement('div');
         label.className = 'card-label'; label.innerText = data.name;
@@ -165,32 +161,23 @@ export function initMenu() {
         return div;
     };
 
-    // --- CHARACTERS ---
-    // Wir zeigen 4 Charaktere an.
-    // Damit der ausgewählte nicht immer links klebt, zeigen wir: [Selected-1, Selected, Selected+1, Selected+2]
-    // (modulo Länge).
-    
+    // --- CHARACTER CAROUSEL ---
     const charLen = CHARACTERS.length;
     const charIndicesToShow = [];
-    // Start-Offset berechnen, damit 'selected' an 2. Stelle (Index 1) ist, wenn möglich.
-    // Offset = selected - 1
     const offset = state.selectedCharIndex - 1;
     
     for(let i=0; i<4; i++) {
-        // Modulo für negative und positive Wraps
         let idx = (offset + i) % charLen;
         if (idx < 0) idx += charLen;
         charIndicesToShow.push(idx);
     }
 
-    // Pfeil Links
     const leftArrow = document.createElement('div');
     leftArrow.className = 'nav-arrow left';
     leftArrow.innerText = '◀';
     setupArrowEvents(leftArrow, 'char', -1);
     charContainer.appendChild(leftArrow);
 
-    // Cards
     charIndicesToShow.forEach(idx => {
         const char = CHARACTERS[idx];
         const isSel = (idx === state.selectedCharIndex);
@@ -198,20 +185,13 @@ export function initMenu() {
         charContainer.appendChild(card);
     });
 
-    // Pfeil Rechts
     const rightArrow = document.createElement('div');
     rightArrow.className = 'nav-arrow right';
     rightArrow.innerText = '▶';
     setupArrowEvents(rightArrow, 'char', 1);
     charContainer.appendChild(rightArrow);
 
-
     // --- LEVELS ---
-    // Levels rendern wir vorerst alle, da es nur wenige sind (4). 
-    // Falls es mehr werden, müsste hier auch ein Karussell hin.
-    // Die existierende Logik rendert einfach alle in den Container.
-    // Wir passen das Grid Layout in CSS an.
-    
     const levelKeys = Object.keys(LEVELS);
     levelKeys.forEach((key, idx) => { 
         const isSel = (key === state.selectedLevelKey);
@@ -224,27 +204,25 @@ export function initMenu() {
 export function handleMenuInput(code) {
     if (state.menuState === 4 || state.menuState === 5) return;
 
-    if (state.menuState === 0) { // Char
+    if (state.menuState === 0) { 
         if (code === 'ArrowLeft') changeSelection('char', -1);
         else if (code === 'ArrowRight') changeSelection('char', 1);
         else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 1; initMenu(); }
-    } else if (state.menuState === 1) { // Level
+    } else if (state.menuState === 1) { 
         if (code === 'ArrowLeft') changeSelection('level', -1);
         else if (code === 'ArrowRight') changeSelection('level', 1);
         else if (code === 'Enter' || code === 'Space' || code === 'ArrowDown') { state.menuState = 2; initMenu(); }
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 0; initMenu(); }
-    } else if (state.menuState === 2) { // Start Btn
+    } else if (state.menuState === 2) { 
         if (code === 'Enter' || code === 'Space') { if (window.startGame) window.startGame(); }
         else if (code === 'ArrowDown') { state.menuState = 3; initMenu(); } 
         else if (code === 'ArrowUp' || code === 'Escape') { state.menuState = 1; initMenu(); }
-    } else if (state.menuState === 3) { // Settings Btn
+    } else if (state.menuState === 3) { 
         if (code === 'Enter' || code === 'Space') { showSettings(); }
         else if (code === 'ArrowUp') { state.menuState = 2; initMenu(); } 
         else if (code === 'Escape') { state.menuState = 1; initMenu(); }
     }
 }
-
-// ... Rest der Settings Logik bleibt unverändert ...
 
 function handleSettingsInput(code) {
     if (code === 'ArrowUp') {
@@ -279,7 +257,7 @@ export function showSettings() {
     settingsMenu.id = 'settings-menu';
     settingsMenu.className = 'screen'; 
     
-    state.menuState = 4; // Settings Mode
+    state.menuState = 4; 
     settingsIndex = 0; 
 
     settingsMenu.innerHTML = `
@@ -321,7 +299,6 @@ export function showSettings() {
     bindMouse('btn-back', 3, true);
 }
 
-// --- STATS SCREEN ---
 export function showStatistics() {
     try {
         const oldSet = document.getElementById('settings-menu');
@@ -331,7 +308,7 @@ export function showStatistics() {
         statsMenu.id = 'stats-menu';
         statsMenu.className = 'screen';
         
-        state.menuState = 5; // Stats Mode
+        state.menuState = 5; 
 
         const s = state.statistics;
         
@@ -440,7 +417,6 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
-    // Aufräumen
     const oldSet = document.getElementById('settings-menu');
     if (oldSet) oldSet.remove();
     const oldStats = document.getElementById('stats-menu');
