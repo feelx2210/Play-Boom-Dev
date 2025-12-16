@@ -6,21 +6,22 @@ import { drawAllParticles } from './render_particles.js';
 const spriteCache = {};
 
 function getCachedSprite(charDef, d, isCursed) {
+    // Safety
     if (!charDef) return document.createElement('canvas');
 
     const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
     if (spriteCache[key]) return spriteCache[key];
 
     const c = document.createElement('canvas');
-    // FIX: Canvas höher (64px), damit Hüte/Haare nicht abgeschnitten werden
+    // WICHTIG: Höheres Canvas für Hüte/Haare
     c.width = 48; 
     c.height = 64; 
     const ctx = c.getContext('2d');
     
-    // FIX: Mittelpunkt tiefer setzen (24, 40), damit nach oben Platz für Köpfe ist
+    // WICHTIG: Mittelpunkt tiefer setzen
     ctx.translate(24, 40);
 
-    // --- HELPER FUNKTIONEN (Sicher definiert) ---
+    // --- HELPER FUNKTIONEN (JETZT SICHER DEFINIERT) ---
     const fillCircle = (x, y, r, col) => { 
         ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); 
     };
@@ -113,7 +114,7 @@ function getCachedSprite(charDef, d, isCursed) {
     }
 
     // ============================================================
-    // 2. NEUE PROMIS (Angepasster Vektor-Stil)
+    // 2. NEUE PROMIS (Detaillierter Vektor-Stil)
     // ============================================================
     else {
         const drawBody = (skinColor, shirtGrad, pantsColor, shoeColor, widthMod = 1) => {
@@ -149,7 +150,7 @@ function getCachedSprite(charDef, d, isCursed) {
                 fillCircle(-4, -22, 3, '#fff'); fillCircle(4, -22, 3, '#fff');
                 fillCircle(-4, -22, 1.5, '#000'); fillCircle(4, -22, 1.5, '#000');
             } else {
-                rect(-9, -25, 18, 6, '#111');
+                ctx.fillStyle = '#111'; ctx.fillRect(-9, -25, 18, 6);
             }
             if (beard) {
                 ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -192,15 +193,16 @@ function getCachedSprite(charDef, d, isCursed) {
                 ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-4, -18); ctx.lineTo(4, -18); ctx.lineTo(0, -10); ctx.fill();
                 rect(13, 4, 6, 6, '#fff'); // Handschuh
             }
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(0, -30, 14, 3, 0, 0, Math.PI*2); ctx.fill(); 
-            rect(-9, -38, 18, 8, '#111'); rect(-9, -34, 18, 2, '#fff');
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(0, -30, 14, 3, 0, 0, Math.PI*2); ctx.fill(); // Hut Krempe
+            rect(-9, -38, 18, 8, '#111'); // Hut Top
+            rect(-9, -34, 18, 2, '#fff'); // Hut Band
             drawFace();
         }
         else if (id === 'dua') {
             const skin = '#f0d5be';
             drawBody(skin, '#111', '#111', '#111', 0.9);
             rect(-10, -4, 20, 6, skin); // Bauchfrei
-            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, -24, 11, Math.PI, 0); ctx.fill(); 
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, -24, 11, Math.PI, 0); ctx.fill(); // Haare
             if(d!=='back') { rect(-12, -24, 6, 22, '#000'); rect(6, -24, 6, 22, '#000'); }
             else rect(-11, -24, 22, 22, '#000');
             drawFace();
@@ -209,8 +211,9 @@ function getCachedSprite(charDef, d, isCursed) {
             const jersey = gradient(-14, 12, '#fdb927', '#552583');
             drawBody('#5c3a1e', jersey, '#552583', '#fff', 1.1);
             if (d === 'front') { ctx.fillStyle = '#552583'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign='center'; ctx.fillText('23', 0, 5); }
-            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -23, 10, 0, Math.PI*2); ctx.stroke();
-            rect(-10, -20, 20, 10, '#111'); rect(-10, -28, 20, 3, '#fff');
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -23, 10, 0, Math.PI*2); ctx.stroke(); // Hairline
+            rect(-10, -20, 20, 10, '#111'); // Bart
+            rect(-10, -28, 20, 3, '#fff'); // Stirnband
             drawFace();
         }
         else if (id === 'pam') {
@@ -230,7 +233,7 @@ function getCachedSprite(charDef, d, isCursed) {
             drawBody('#ac8b66', hoodie, '#222', '#fff');
             if (d === 'front') { fillCircle(0, -4, 5, '#ffd700'); } // Eule
             ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill(); 
-            drawFace(false, true); 
+            drawFace(false, true); // Bart
         }
         else if (id === '2pac') {
             drawBody('#7a4e32', '#fff', '#4466aa', '#fff'); 
@@ -245,7 +248,7 @@ function getCachedSprite(charDef, d, isCursed) {
             if (d!=='back') { rect(-12, -24, 6, 22, '#eeeedd'); rect(6, -24, 6, 22, '#eeeedd'); }
             ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(-10, -38); ctx.lineTo(-10, -26); ctx.fill();
             ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(10, -38); ctx.lineTo(10, -26); ctx.fill();
-            drawFace(true); 
+            drawFace(true); // Brille
         }
         else if (id === '007') {
             const suit = gradient(-20, 12, '#555', '#333');
@@ -256,7 +259,7 @@ function getCachedSprite(charDef, d, isCursed) {
             }
             ctx.fillStyle='#ccaa88'; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill(); 
             drawFace();
-            if (d === 'side') { rect(8, 2, 8, 4, '#333'); } 
+            if (d === 'side') { rect(8, 2, 8, 4, '#333'); } // Waffe
         }
     }
 
@@ -290,8 +293,26 @@ function bakeStaticLevel(levelDef) {
     bgGrad.addColorStop(0, levelDef.bg); bgGrad.addColorStop(1, '#000000'); 
     ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, c.width, c.height);
 
+    // Details im Boden (Punkte, Sterne, etc.)
+    if (levelDef.id === 'hell') {
+         ctx.fillStyle = 'rgba(80, 60, 60, 0.2)';
+         for (let y = 0; y < GRID_H; y++) {
+            for (let x = 0; x < GRID_W; x++) {
+                if (Math.random() < 0.2) ctx.fillRect(x * TILE_SIZE + Math.random()*40, y * TILE_SIZE + Math.random()*40, 3, 3);
+            }
+         }
+    } else if (levelDef.id === 'ice') {
+        for (let i = 0; i < 50; i++) {
+             let sx = (Math.sin(i * 123.45) * 43758.5453) % 1 * c.width;
+             let sy = (Math.cos(i * 678.90) * 12345.6789) % 1 * c.height;
+             if (sx < 0) sx *= -1; if (sy < 0) sy *= -1;
+             ctx.fillStyle = i % 2 === 0 ? '#6688aa' : '#ffffff'; ctx.fillRect(sx, sy, 2, 2);
+        }
+    }
+
     ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
-    for(let i=0; i<=15; i++) { ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, c.height); ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(c.width, i*TILE_SIZE); }
+    for(let i=0; i<=GRID_W; i++) { ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, c.height); }
+    for(let i=0; i<=GRID_H; i++) { ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(c.width, i*TILE_SIZE); }
     ctx.stroke();
 
     if (state.grid) {
@@ -300,6 +321,7 @@ function bakeStaticLevel(levelDef) {
                 const px = x * TILE_SIZE; const py = y * TILE_SIZE;
                 const tile = state.grid[y][x];
 
+                // Hard Walls
                 if (tile === TYPES.WALL_HARD) {
                     ctx.fillStyle = levelDef.wallHard;
                     ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
@@ -316,7 +338,50 @@ function bakeStaticLevel(levelDef) {
                         ctx.fillStyle = '#446644'; ctx.beginPath(); ctx.arc(px+10, py+10, 8, 0, Math.PI*2); ctx.fill();
                     }
                 } 
-                else if (levelDef.hasCentralFire && x===HELL_CENTER.x && y===HELL_CENTER.y) {
+                // Wasser / Boden-Objekte
+                else if (tile === TYPES.WATER) {
+                    ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
+                } else if (tile === TYPES.BRIDGE) {
+                    ctx.fillStyle = '#4a3b2a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#8b5a2b'; ctx.fillRect(px+2, py, 44, TILE_SIZE);
+                    ctx.strokeStyle = '#5c3c1e'; ctx.lineWidth = 2; for(let i=0; i<TILE_SIZE; i+=8) { ctx.beginPath(); ctx.moveTo(px+2, py+i); ctx.lineTo(px+46, py+i); ctx.stroke(); }
+                } else if (tile === TYPES.OIL) {
+                    const cx = px + TILE_SIZE / 2; const cy = py + TILE_SIZE / 2;
+                    ctx.fillStyle = '#7a6a6a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#050202'; ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE*0.38, TILE_SIZE*0.32, Math.PI*0.1, 0, Math.PI*2); ctx.fill();
+                    const varyX = (x % 5 - 2) * 3; const varyY = (y % 5 - 2) * 3;
+                    ctx.beginPath(); ctx.arc(cx - 12 + varyX, cy + 8 + varyY, 10, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + 10 - varyY, cy - 10 + varyX, 9, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
+                    ctx.beginPath(); ctx.ellipse(cx - 8, cy - 12, 10, 5, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(cx + 12, cy + 12, 4, 2, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+                }
+
+                // Pads
+                if ((levelDef.id === 'hell' || levelDef.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
+                    ctx.fillStyle = '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#ff0000'; ctx.fillRect(px + 20, py + 8, 8, 32);
+                    ctx.beginPath(); ctx.moveTo(px+24, py+2); ctx.lineTo(px+30, py+10); ctx.lineTo(px+18, py+10); ctx.fill(); 
+                    ctx.beginPath(); ctx.moveTo(px+24, py+46); ctx.lineTo(px+30, py+38); ctx.lineTo(px+18, py+38); ctx.fill(); 
+                    ctx.fillRect(px + 8, py + 20, 32, 8);
+                    ctx.beginPath(); ctx.moveTo(px+2, py+24); ctx.lineTo(px+10, py+18); ctx.lineTo(px+10, py+30); ctx.fill(); 
+                    ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
+                }
+                const dirPad = DIRECTION_PADS.find(p => p.x === x && p.y === y);
+                if (dirPad) {
+                    const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = '#aaaaaa'; ctx.beginPath(); const size = 8; 
+                    if (dirPad.dir.y === -1) { ctx.moveTo(cx, cy - size - 2); ctx.lineTo(cx - size, cy + size - 2); ctx.lineTo(cx + size, cy + size - 2); } 
+                    else if (dirPad.dir.x === 1) { ctx.moveTo(cx + size + 2, cy); ctx.lineTo(cx - size + 2, cy - size); ctx.lineTo(cx - size + 2, cy + size); } 
+                    else if (dirPad.dir.y === 1) { ctx.moveTo(cx, cy + size + 2); ctx.lineTo(cx - size, cy - size + 2); ctx.lineTo(cx + size, cy - size + 2); } 
+                    else if (dirPad.dir.x === -1) { ctx.moveTo(cx - size - 2, cy); ctx.lineTo(cx + size - 2, cy - size); ctx.lineTo(cx + size - 2, cy + size); }
+                    ctx.fill();
+                }
+                
+                // HELL CENTER
+                if (levelDef.hasCentralFire && x===HELL_CENTER.x && y===HELL_CENTER.y) {
                     ctx.fillStyle = '#1a0000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = '#550000'; ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
                 }
@@ -335,6 +400,7 @@ export function draw(ctx, canvas) {
     }
     ctx.drawImage(cachedLevelCanvas, 0, 0);
 
+    // Dynamische Objekte (Items, Soft Walls)
     for (let y = 0; y < 15; y++) {
         for (let x = 0; x < 15; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
@@ -347,15 +413,24 @@ export function draw(ctx, canvas) {
                 const lvl = state.currentLevel;
                 ctx.fillStyle = lvl.wallSoft;
                 ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                
+                // Muster
                 ctx.fillStyle = lvl.wallSoftLight; 
                 if (lvl.id === 'hell') {
+                    // Lava Risse
+                    ctx.fillStyle = '#cc4400'; 
                     ctx.beginPath(); ctx.moveTo(px+10, py+10); ctx.lineTo(px+30, py+20); ctx.lineTo(px+15, py+35); ctx.fill();
                 } else if (lvl.id === 'ice') {
-                    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(px+4, py+4, 10, 10); ctx.fillRect(px+20, py+20, 20, 5);
+                    // Eisschollen Look
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(px+4, py+4, 10, 10); ctx.fillRect(px+20, py+20, 20, 5);
                 } else if (lvl.id === 'jungle') {
+                    // Holz/Kiste
                     ctx.fillStyle = '#664422'; ctx.fillRect(px+4, py+4, 40, 40);
-                    ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(px+4, py+4); ctx.lineTo(px+44, py+44); ctx.stroke(); ctx.beginPath(); ctx.moveTo(px+44, py+4); ctx.lineTo(px+4, py+44); ctx.stroke();
+                    ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(px+4, py+4); ctx.lineTo(px+44, py+44); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(px+44, py+4); ctx.lineTo(px+4, py+44); ctx.stroke();
                 } else {
+                    // Ziegel
                     ctx.fillRect(px+4, py+10, 18, 8); ctx.fillRect(px+26, py+10, 18, 8);
                     ctx.fillRect(px+4, py+28, 18, 8); ctx.fillRect(px+26, py+28, 18, 8);
                 }
@@ -363,6 +438,7 @@ export function draw(ctx, canvas) {
         }
     }
 
+    // Bomben
     state.bombs.forEach(b => {
         const bx = b.px + 24; const by = b.py + 24;
         const pulse = 1 + Math.sin(Date.now() * 0.015) * 0.1;
@@ -392,24 +468,33 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, lastDi
     ctx.translate(x, y);
     if (lastDir.x < 0) ctx.scale(-1, 1); 
 
+    // Schatten
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
     const sprite = getCachedSprite(charDef, d, isCursed);
-    // Draw offset to handle taller sprites
+    // WICHTIG: Offset anpassen für 48x64 Canvas (Mitte bei 24,40)
     ctx.drawImage(sprite, -24, -40);
     
     ctx.restore();
 }
 
 export function drawLevelPreview(ctx, w, h, levelDef) {
+    const tileSize = w / 3; 
     ctx.fillStyle = levelDef.bg; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = levelDef.wallHard; 
-    const s = w/5;
-    ctx.fillRect(0, 0, w, s); ctx.fillRect(0, h-s, w, s);
-    ctx.fillRect(0, 0, s, h); ctx.fillRect(w-s, 0, s, h);
-    ctx.fillStyle = levelDef.wallSoft;
-    ctx.fillRect(w/2 - s/2, h/2 - s/2, s, s);
+    const drawBlock = (x, y, type) => {
+        const px = x * tileSize; const py = y * tileSize;
+        if (type === TYPES.WALL_HARD) {
+             ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, tileSize, tileSize);
+             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(px+tileSize-2, py, 2, tileSize); ctx.fillRect(px, py+tileSize-2, tileSize, 2);
+        } else if (type === TYPES.WALL_SOFT) {
+             ctx.fillStyle = levelDef.wallSoft; ctx.fillRect(px, py, tileSize, tileSize);
+             ctx.fillStyle = levelDef.wallSoftLight; ctx.fillRect(px+2, py+2, tileSize-4, tileSize-4);
+        }
+    };
+    drawBlock(0, 0, TYPES.WALL_HARD); drawBlock(1, 0, TYPES.WALL_SOFT); drawBlock(2, 0, TYPES.WALL_HARD);
+    drawBlock(0, 1, TYPES.WALL_SOFT); drawBlock(2, 1, TYPES.WALL_SOFT);
+    drawBlock(0, 2, TYPES.WALL_HARD); drawBlock(1, 2, TYPES.WALL_SOFT); drawBlock(2, 2, TYPES.WALL_HARD);
 }
 
 export function drawItem(ctx, type, x, y) {
