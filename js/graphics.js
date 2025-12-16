@@ -1,339 +1,440 @@
-import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER, DIRECTION_PADS } from './constants.js';
+import { TILE_SIZE, TYPES, LEVELS, HELL_CENTER, CHARACTERS, BOMB_MODES, ITEMS, BOOST_PADS, DIRECTION_PADS, OIL_PADS } from './constants.js'; // Imports angepasst
 import { state } from './state.js';
-import { drawAllParticles } from './render_particles.js';
 
-// --- SPRITE CACHING (Characters) ---
-const spriteCache = {};
-
-function getCachedSprite(charDef, d, isCursed) {
-    const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
-    if (spriteCache[key]) return spriteCache[key];
-
-    const c = document.createElement('canvas');
-    c.width = 48; c.height = 48;
-    const ctx = c.getContext('2d');
-    ctx.translate(24, 24);
-
-    // Charakter-Zeichenlogik (Identisch zum Original)
-    if (charDef.id === 'lucifer') {
-        const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
-        if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
-        else { ctx.fillStyle = cBase; ctx.fillRect(-8, 12, 6, 10); ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-8, 20, 6, 4); ctx.fillRect(2, 20, 6, 4); }
-        const bodyGrad = ctx.createLinearGradient(0, -20, 0, 10); bodyGrad.addColorStop(0, '#ff4444'); bodyGrad.addColorStop(1, '#aa0000'); ctx.fillStyle = bodyGrad; ctx.fillRect(-8, -18, 16, 30);
-        if (d === 'front') { ctx.fillStyle = cDark; ctx.fillRect(-1, -14, 2, 16); ctx.fillRect(-7, -8, 6, 2); ctx.fillRect(1, -8, 6, 2); ctx.fillStyle = cLite; ctx.fillRect(-9, -18, 4, 4); ctx.fillRect(5, -18, 4, 4); }
-        const headGrad = ctx.createLinearGradient(0, -24, 0, -10); headGrad.addColorStop(0, '#ff5555'); headGrad.addColorStop(1, '#cc0000'); ctx.fillStyle = headGrad; ctx.fillRect(-9, -24, 18, 15); ctx.fillRect(-6, -10, 12, 4);
-        const hornGrad = ctx.createLinearGradient(0, -35, 0, -20); hornGrad.addColorStop(0, '#ffffff'); hornGrad.addColorStop(1, '#bbbbbb'); ctx.fillStyle = hornGrad;
-        if (d === 'front') { ctx.fillStyle = cBase; ctx.beginPath(); ctx.moveTo(-10, -20); ctx.lineTo(-16, -24); ctx.lineTo(-10, -16); ctx.fill(); ctx.beginPath(); ctx.moveTo(10, -20); ctx.lineTo(16, -24); ctx.lineTo(10, -16); ctx.fill(); ctx.fillStyle = hornGrad; ctx.beginPath(); ctx.moveTo(-7, -24); ctx.quadraticCurveTo(-18, -30, -14, -38); ctx.lineTo(-5, -26); ctx.fill(); ctx.beginPath(); ctx.moveTo(7, -24); ctx.quadraticCurveTo(18, -30, 14, -38); ctx.lineTo(5, -26); ctx.fill(); ctx.fillStyle = '#ffff00'; ctx.fillRect(-8, -20, 5, 4); ctx.fillRect(3, -20, 5, 4); ctx.fillStyle = '#000'; ctx.fillRect(-6, -19, 2, 2); ctx.fillRect(5, -19, 2, 2); ctx.fillStyle = cDark; ctx.fillRect(-2, -16, 4, 2); ctx.fillStyle = '#440000'; ctx.beginPath(); ctx.moveTo(-6, -10); ctx.quadraticCurveTo(0, -6, 6, -10); ctx.lineTo(0, -8); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(-5, -10, 2, 2); ctx.fillRect(3, -10, 2, 2); ctx.fillStyle = cBase; ctx.fillRect(-14, -16, 5, 18); ctx.fillRect(9, -16, 5, 18); ctx.fillStyle = cDark; ctx.fillRect(-14, -2, 5, 4); ctx.fillRect(9, -2, 5, 4); } 
-        else if (d === 'back') { ctx.fillStyle = cDark; ctx.fillRect(-4, -18, 8, 30); ctx.fillStyle = '#ddd'; ctx.beginPath(); ctx.moveTo(-7, -24); ctx.quadraticCurveTo(-18, -30, -14, -38); ctx.lineTo(-5, -26); ctx.fill(); ctx.beginPath(); ctx.moveTo(7, -24); ctx.quadraticCurveTo(18, -30, 14, -38); ctx.lineTo(5, -26); ctx.fill(); ctx.strokeStyle = '#aa0000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 8); ctx.quadraticCurveTo(16, 22, 8, 30); ctx.stroke(); ctx.fillStyle = '#aa0000'; ctx.beginPath(); ctx.moveTo(8, 30); ctx.lineTo(12, 34); ctx.lineTo(4, 34); ctx.fill(); ctx.fillStyle = cBase; ctx.fillRect(-14, -16, 5, 18); ctx.fillRect(9, -16, 5, 18); } 
-        else if (d === 'side') { ctx.fillStyle = hornGrad; ctx.beginPath(); ctx.moveTo(2, -24); ctx.quadraticCurveTo(10, -30, 12, -38); ctx.lineTo(8, -24); ctx.fill(); ctx.fillStyle = '#ffff00'; ctx.fillRect(4, -19, 4, 4); ctx.fillStyle = cDark; ctx.fillRect(8, -16, 4, 2); ctx.fillStyle = cBase; ctx.fillRect(0, -12, 5, 16); ctx.fillStyle = cDark; ctx.fillRect(0, 0, 6, 4); ctx.strokeStyle = '#aa0000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, 8); ctx.quadraticCurveTo(-16, 20, -12, 26); ctx.stroke(); }
-    } else if (charDef.id === 'rambo') {
-        const cGreen = '#226622'; const cDarkG = '#113311'; const cLiteG = '#448844'; const cSkin  = '#ffccaa'; const cSkinS = '#ddaa88'; const cBandana = '#dd0000';
-        ctx.fillStyle = cGreen; if (d === 'side') { ctx.fillRect(-5, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-5, 20, 9, 4); } else { ctx.fillRect(-10, 12, 8, 8); ctx.fillRect(2, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-10, 20, 8, 4); ctx.fillRect(2, 20, 8, 4); }
-        const bodyGrad = ctx.createLinearGradient(0, -20, 0, 12); bodyGrad.addColorStop(0, '#448844'); bodyGrad.addColorStop(1, '#225522'); ctx.fillStyle = bodyGrad; ctx.fillRect(-12, -20, 24, 32);
-        ctx.fillStyle = cDarkG; ctx.fillRect(-10, -16, 6, 4); ctx.fillRect(4, -8, 6, 4); ctx.fillRect(-6, 4, 6, 4); ctx.fillStyle = cLiteG; ctx.fillRect(6, -18, 4, 4); ctx.fillRect(-8, 0, 4, 4); ctx.fillRect(2, 10, 4, 4);
-        if (d === 'front') { ctx.fillStyle = cSkin; ctx.fillRect(-19, -18, 7, 18); ctx.fillRect(12, -18, 7, 18); ctx.fillStyle = cSkinS; ctx.fillRect(-19, -18, 2, 18); ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(-12, -20); ctx.lineTo(12, 12); ctx.lineTo(6, 12); ctx.lineTo(-12, -14); ctx.fill(); ctx.fillStyle = '#ffcc00'; ctx.fillRect(-9, -18, 3, 5); ctx.fillRect(-3, -10, 3, 5); ctx.fillRect(3, -2, 3, 5); ctx.fillStyle = cSkin; ctx.fillRect(-10, -26, 20, 16); ctx.fillStyle = cBandana; ctx.fillRect(-12, -26, 24, 6); ctx.fillRect(10, -24, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(-8, -18, 7, 7); ctx.fillRect(1, -18, 7, 7); ctx.fillStyle = '#000'; ctx.fillRect(-5, -16, 2, 2); ctx.fillRect(3, -16, 2, 2); ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(-10, -14, 20, 4); } 
-        else if (d === 'back') { ctx.fillStyle = cSkin; ctx.fillRect(-19, -18, 7, 18); ctx.fillRect(12, -18, 7, 18); ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(12, -20); ctx.lineTo(-12, 12); ctx.lineTo(-6, 12); ctx.lineTo(12, -14); ctx.fill(); ctx.fillStyle = '#ffcc00'; ctx.fillRect(8, -16, 4, 6); ctx.fillRect(2, -8, 4, 6); ctx.fillRect(-4, 0, 4, 6); ctx.fillStyle = '#111'; ctx.fillRect(-10, -26, 20, 16); ctx.fillStyle = cBandana; ctx.fillRect(-12, -26, 24, 6); ctx.fillRect(-4, -26, 8, 12); } 
-        else if (d === 'side') { ctx.fillStyle = '#553311'; ctx.fillRect(-6, -18, 12, 28); ctx.fillStyle = cSkin; ctx.fillRect(-7, -26, 16, 16); ctx.fillStyle = '#111'; ctx.fillRect(-9, -26, 4, 16); ctx.fillStyle = cBandana; ctx.fillRect(-9, -26, 20, 6); ctx.fillRect(-13, -24, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(4, -18, 5, 6); ctx.fillStyle = '#000'; ctx.fillRect(7, -16, 2, 2); ctx.fillStyle = cSkin; ctx.fillRect(0, -12, 7, 20); ctx.fillStyle = cGreen; ctx.fillRect(0, -16, 7, 4); }
-    }
-    else if (charDef.id === 'nun') {
-        ctx.fillStyle = '#111'; if (d === 'side') ctx.fillRect(-5, 14, 10, 4); else { ctx.fillRect(-7, 14, 6, 4); ctx.fillRect(1, 14, 6, 4); }
-        const robeGrad = ctx.createLinearGradient(0, -20, 0, 14); robeGrad.addColorStop(0, '#333'); robeGrad.addColorStop(1, '#000');
-        if (d === 'front') { ctx.fillStyle = robeGrad; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-18, -4, -16, 14); ctx.lineTo(16, 14); ctx.quadraticCurveTo(18, -4, 0, -24); ctx.fill(); ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.quadraticCurveTo(-12, 0, -10, 14); ctx.stroke(); ctx.beginPath(); ctx.moveTo(8, -10); ctx.quadraticCurveTo(12, 0, 10, 14); ctx.stroke(); ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(0, -26); ctx.quadraticCurveTo(-14, -24, -16, -8); ctx.lineTo(16, -8); ctx.quadraticCurveTo(14, -24, 0, -26); ctx.fill(); ctx.fillStyle = '#ffccaa'; ctx.beginPath(); ctx.arc(0, -16, 7, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#000'; ctx.fillRect(-4, -17, 2, 2); ctx.fillRect(2, -17, 2, 2); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -19, 10, Math.PI, 0); ctx.fill(); const gold = ctx.createLinearGradient(0,-6,0,10); gold.addColorStop(0,'#ffdd44'); gold.addColorStop(1,'#aa7700'); ctx.fillStyle = gold; ctx.fillRect(-3, -6, 6, 16); ctx.fillRect(-8, -2, 16, 6); ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(-1, -6, 1, 16); ctx.fillStyle = '#111'; ctx.fillRect(-20, -12, 8, 18); ctx.fillRect(12, -12, 8, 18); ctx.fillStyle = '#ffccaa'; ctx.fillRect(-18, 4, 4, 4); ctx.fillRect(14, 4, 4, 4); } 
-        else if (d === 'back') { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-18, -4, -16, 14); ctx.lineTo(16, 14); ctx.quadraticCurveTo(18, -4, 0, -24); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, -28); ctx.quadraticCurveTo(-14, -10, -12, 10); ctx.lineTo(12, 10); ctx.quadraticCurveTo(14, -10, 0, -28); ctx.fill(); ctx.fillStyle = '#eee'; ctx.fillRect(-8, -24, 16, 2); ctx.fillStyle = robeGrad; ctx.fillRect(-18, -12, 6, 18); ctx.fillRect(12, -12, 6, 18); } 
-        else if (d === 'side') { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-14, -10, -12, 14); ctx.lineTo(10, 14); ctx.quadraticCurveTo(12, -10, 0, -24); ctx.fill(); ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(2, -26); ctx.lineTo(-8, -26); ctx.lineTo(-10, -8); ctx.lineTo(4, -8); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(-4, -26); ctx.quadraticCurveTo(-14, -16, -12, 10); ctx.lineTo(-6, 10); ctx.quadraticCurveTo(-8, -16, -4, -26); ctx.fill(); ctx.fillStyle = '#ffccaa'; ctx.fillRect(2, -22, 6, 12); ctx.fillStyle = '#000'; ctx.fillRect(6, -18, 2, 2); ctx.fillStyle = '#cc9922'; ctx.fillRect(4, 0, 4, 10); ctx.fillRect(2, 2, 8, 4); ctx.fillStyle = '#111'; ctx.fillRect(-2, -12, 10, 18); ctx.fillStyle = '#ffccaa'; ctx.fillRect(-2, 4, 8, 4); }
-    }
-    else if (charDef.id === 'yeti') {
-        const furBase = '#00ccff'; const furDark = '#0088bb'; const furLite = '#e0ffff'; 
-        ctx.fillStyle = furBase; if (d === 'side') { ctx.fillRect(-6, 12, 12, 10); } else { ctx.fillRect(-10, 12, 8, 10); ctx.fillRect(2, 12, 8, 10); }
-        const furGrad = ctx.createLinearGradient(0, -24, 0, 12); furGrad.addColorStop(0, furBase); furGrad.addColorStop(1, furDark); ctx.fillStyle = furGrad; ctx.fillRect(-16, -24, 32, 36); 
-        ctx.fillStyle = furDark; ctx.fillRect(-16, 0, 8, 8); ctx.fillRect(8, -8, 8, 8); ctx.fillRect(-4, 20, 8, 8); ctx.fillStyle = furLite; ctx.fillRect(-12, -20, 4, 4); ctx.fillRect(4, -16, 4, 4); ctx.fillRect(10, 4, 4, 4);
-        if (d === 'front') { ctx.fillStyle = furBase; ctx.fillRect(-22, -16, 8, 26); ctx.fillRect(14, -16, 8, 26); ctx.fillStyle = furLite; ctx.fillRect(-22, -16, 8, 4); ctx.fillRect(14, -16, 8, 4); ctx.fillStyle = '#005599'; ctx.fillRect(-12, -20, 24, 14); ctx.fillStyle = '#fff'; ctx.fillRect(-8, -17, 6, 6); ctx.fillRect(2, -17, 6, 6); ctx.fillStyle = '#000'; ctx.fillRect(-6, -16, 2, 2); ctx.fillRect(4, -16, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(-6, -8, 3, 4); ctx.fillRect(3, -8, 3, 4); } 
-        else if (d === 'back') { ctx.fillStyle = furDark; ctx.fillRect(-10, -14, 20, 24); ctx.fillStyle = furBase; ctx.fillRect(-22, -16, 8, 26); ctx.fillRect(14, -16, 8, 26); } 
-        else if (d === 'side') { ctx.fillStyle = '#005599'; ctx.fillRect(6, -20, 10, 14); ctx.fillStyle = '#fff'; ctx.fillRect(10, -17, 4, 6); ctx.fillStyle = '#000'; ctx.fillRect(12, -16, 2, 2); ctx.fillStyle = furBase; ctx.fillRect(-4, -14, 12, 26); ctx.fillStyle = furLite; ctx.fillRect(-4, -14, 12, 4); }
-    }
+// --- CHARACTER DRAWING ---
+export function drawCharacter(ctx, p) {
+    const x = p.x + TILE_SIZE/2;
+    const y = p.y + TILE_SIZE/2;
+    // Fallback falls charDef fehlt
+    const charDef = p.charDef || CHARACTERS[0];
     
-    // FIX: Blink-Logik aus dem Cache entfernt. 
-    if (isCursed) { 
-        ctx.globalCompositeOperation = 'source-atop'; 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; 
-        ctx.fillRect(-25, -35, 50, 60); 
-        ctx.globalCompositeOperation = 'source-over'; 
-    }
-    
-    spriteCache[key] = c;
-    return c;
+    // Bestimme die Blickrichtung
+    let dirKey = 'down';
+    if (p.lastDir.x > 0) dirKey = 'right';
+    else if (p.lastDir.x < 0) dirKey = 'left';
+    else if (p.lastDir.y < 0) dirKey = 'up';
+    else if (p.lastDir.y > 0) dirKey = 'down';
+
+    // Animations-Frame (0, 1, 2)
+    const frameIndex = Math.floor(p.step) % 3;
+
+    drawProceduralCharacter(ctx, x, y, charDef, dirKey, frameIndex, p.isDead);
 }
 
-// --- LEVEL CACHING ---
-let cachedLevelCanvas = null;
-let lastLevelId = null;
-
-export function clearLevelCache() {
-    cachedLevelCanvas = null;
-    lastLevelId = null;
+// Draw preview for menu
+export function drawCharacterSprite(ctx, x, y, charDef, isSelected = false, lastDir = {x:0, y:1}) {
+    // Für das Menü simulieren wir einen Frame
+    drawProceduralCharacter(ctx, x, y, charDef, 'down', 0, false);
 }
 
-function bakeStaticLevel(levelDef) {
-    const c = document.createElement('canvas');
-    c.width = GRID_W * TILE_SIZE;
-    c.height = GRID_H * TILE_SIZE;
-    const ctx = c.getContext('2d');
 
-    // 1. Hintergrund
-    ctx.fillStyle = levelDef.bg;
-    ctx.fillRect(0, 0, c.width, c.height);
-
-    // 2. Boden-Details (Hell/Ice)
-    if (levelDef.id === 'hell') {
-         ctx.fillStyle = 'rgba(80, 60, 60, 0.2)';
-         for (let y = 0; y < GRID_H; y++) {
-            for (let x = 0; x < GRID_W; x++) {
-                if (Math.random() < 0.2) ctx.fillRect(x * TILE_SIZE + Math.random()*40, y * TILE_SIZE + Math.random()*40, 3, 3);
-            }
-         }
-    } else if (levelDef.id === 'ice') {
-        for (let i = 0; i < 50; i++) {
-             let sx = (Math.sin(i * 123.45) * 43758.5453) % 1 * c.width;
-             let sy = (Math.cos(i * 678.90) * 12345.6789) % 1 * c.height;
-             if (sx < 0) sx *= -1; if (sy < 0) sy *= -1;
-             ctx.fillStyle = i % 2 === 0 ? '#6688aa' : '#ffffff'; ctx.fillRect(sx, sy, 2, 2);
-        }
-    }
-
-    // 3. Grid Lines
-    ctx.strokeStyle = levelDef.grid; ctx.lineWidth = 1; ctx.beginPath();
-    for(let i=0; i<=GRID_W; i++) { ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, c.height); }
-    for(let i=0; i<=GRID_H; i++) { ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(c.width, i*TILE_SIZE); }
-    ctx.stroke();
-
-    // 4. Statische Elemente (Wände, Boden-Tiles)
-    for (let y = 0; y < GRID_H; y++) {
-        for (let x = 0; x < GRID_W; x++) {
-            const px = x * TILE_SIZE; const py = y * TILE_SIZE;
-            const tile = state.grid[y][x];
-
-            // Hard Walls (Unzerstörbar)
-            if (tile === TYPES.WALL_HARD) {
-                if (levelDef.id === 'ice') {
-                    ctx.fillStyle = '#4466ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = '#6688ff'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
-                    ctx.fillStyle = '#2244aa'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
-                    ctx.fillStyle = '#ccffff'; ctx.fillRect(px + 8, py + 8, 8, 8);
-                } else if (levelDef.id === 'jungle') {
-                    ctx.fillStyle = '#666'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, TILE_SIZE/2-2, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2-5, py+TILE_SIZE/2-5, 10, 0, Math.PI*2); ctx.fill();
-                } else if (levelDef.id === 'hell') {
-                    ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = '#222'; ctx.fillRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
-                    ctx.fillStyle = '#111'; ctx.fillRect(px+6, py+6, 4, 4); ctx.fillRect(px+38, py+6, 4, 4); ctx.fillRect(px+6, py+38, 4, 4); ctx.fillRect(px+38, py+38, 4, 4);
-                } else if (levelDef.id === 'stone') {
-                    ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#222'; ctx.lineWidth = 2; ctx.strokeRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
-                    ctx.fillStyle = '#333'; ctx.fillRect(px+10, py+10, TILE_SIZE-20, TILE_SIZE-20);
-                } else {
-                    ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
-                    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
-                }
-            } 
-            // Boden-Objekte (Wasser, Brücken, Öl, Pads)
-            else if (tile === TYPES.WATER) {
-                ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
-            } else if (tile === TYPES.BRIDGE) {
-                ctx.fillStyle = '#4a3b2a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#8b5a2b'; ctx.fillRect(px+2, py, 44, TILE_SIZE);
-                ctx.strokeStyle = '#5c3c1e'; ctx.lineWidth = 2; for(let i=0; i<TILE_SIZE; i+=8) { ctx.beginPath(); ctx.moveTo(px+2, py+i); ctx.lineTo(px+46, py+i); ctx.stroke(); }
-            } else if (tile === TYPES.OIL) {
-                // Öl-Pfütze (Static Part)
-                const cx = px + TILE_SIZE / 2; const cy = py + TILE_SIZE / 2;
-                ctx.fillStyle = '#7a6a6a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#050202'; ctx.beginPath(); ctx.ellipse(cx, cy, TILE_SIZE*0.38, TILE_SIZE*0.32, Math.PI*0.1, 0, Math.PI*2); ctx.fill();
-                const varyX = (x % 5 - 2) * 3; const varyY = (y % 5 - 2) * 3;
-                ctx.beginPath(); ctx.arc(cx - 12 + varyX, cy + 8 + varyY, 10, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(cx + 10 - varyY, cy - 10 + varyX, 9, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
-                ctx.beginPath(); ctx.ellipse(cx - 8, cy - 12, 10, 5, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.ellipse(cx + 12, cy + 12, 4, 2, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
-            }
-
-            // Spezial-Pads (Boost, Direction)
-            if ((levelDef.id === 'hell' || levelDef.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
-                ctx.fillStyle = '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#ff0000'; ctx.fillRect(px + 20, py + 8, 8, 32);
-                ctx.beginPath(); ctx.moveTo(px+24, py+2); ctx.lineTo(px+30, py+10); ctx.lineTo(px+18, py+10); ctx.fill(); 
-                ctx.beginPath(); ctx.moveTo(px+24, py+46); ctx.lineTo(px+30, py+38); ctx.lineTo(px+18, py+38); ctx.fill(); 
-                ctx.fillRect(px + 8, py + 20, 32, 8);
-                ctx.beginPath(); ctx.moveTo(px+2, py+24); ctx.lineTo(px+10, py+18); ctx.lineTo(px+10, py+30); ctx.fill(); 
-                ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
-            }
-            
-            const dirPad = DIRECTION_PADS.find(p => p.x === x && p.y === y);
-            if (dirPad) {
-                const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#aaaaaa'; ctx.beginPath(); const size = 8; 
-                if (dirPad.dir.y === -1) { ctx.moveTo(cx, cy - size - 2); ctx.lineTo(cx - size, cy + size - 2); ctx.lineTo(cx + size, cy + size - 2); } 
-                else if (dirPad.dir.x === 1) { ctx.moveTo(cx + size + 2, cy); ctx.lineTo(cx - size + 2, cy - size); ctx.lineTo(cx - size + 2, cy + size); } 
-                else if (dirPad.dir.y === 1) { ctx.moveTo(cx, cy + size + 2); ctx.lineTo(cx - size, cy - size + 2); ctx.lineTo(cx + size, cy - size + 2); } 
-                else if (dirPad.dir.x === -1) { ctx.moveTo(cx - size - 2, cy); ctx.lineTo(cx + size - 2, cy - size); ctx.lineTo(cx + size - 2, cy + size); }
-                ctx.fill();
-            }
-        }
-    }
-
-    // Hell Center Fire Pit (Static Base)
-    if (levelDef.hasCentralFire) {
-        const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
-        ctx.fillStyle = '#0a0505'; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
-    }
-
-    return c;
-}
-
-// --- EXPORTIERTE FUNKTIONEN ---
-
-export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = {x:0, y:1}) {
+function drawProceduralCharacter(ctx, x, y, charDef, dir, frame, isDead) {
     ctx.save();
     ctx.translate(x, y);
+    if (isDead) ctx.globalAlpha = 0.5;
 
-    let d = 'front'; 
-    if (dir.y < 0) d = 'back';
-    else if (dir.x !== 0) d = 'side';
-    if (dir.x < 0) ctx.scale(-1, 1); 
+    const id = charDef.id;
+    const bodyColor = charDef.color;
+    const accentColor = charDef.accent;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
-
-    const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
-    const sprite = getCachedSprite(charDef, d, showCursedEffect);
+    // --- BASIS KÖRPER FORM ---
+    // Beine Animation
+    ctx.fillStyle = (id === 'pam' || id === 'dua') ? '#ffccaa' : '#222'; // Hautfarbe Beine bei Pam/Dua, sonst Hose/Schuhe dunkel
     
-    ctx.drawImage(sprite, -24, -24);
+    if (id === 'cristiano' || id === 'lebron') ctx.fillStyle = '#fff'; // Weiße Socken/Schuhe
+    if (id === '2pac' || id === 'elon') ctx.fillStyle = '#334455'; // Jeans
+    if (id === 'rambo') ctx.fillStyle = '#334433'; 
+    if (id === 'yeti') ctx.fillStyle = '#ddddff'; 
+    if (id === 'mj') ctx.fillStyle = '#111'; // Schwarze Hose
+
+    // Beine zeichnen
+    if (frame % 2 === 0) {
+        ctx.fillRect(-8, 6, 6, 10); // Links
+        ctx.fillRect(2, 6, 6, 10);  // Rechts
+    } else {
+        ctx.fillRect(-8, 4, 6, 10);
+        ctx.fillRect(2, 8, 6, 8);
+    }
+
+    // Oberkörper (Shirt/Anzug)
+    ctx.fillStyle = bodyColor;
+    
+    // Spezielle Körperformen
+    if (id === 'pam' || id === 'dua' || id === 'gaga') {
+        // Weiblicher Torso (etwas schmaler)
+        ctx.fillRect(-10, -14, 20, 20);
+    } else {
+        // Standard Torso
+        ctx.fillRect(-12, -14, 24, 20);
+    }
+
+    // --- DETAILS JE NACH CHARAKTER ---
+
+    if (id === 'hitman' || id === '007' || id === 'mj') {
+        // Anzug Details (Weißes Hemd Dreieck)
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.moveTo(-4, -14); ctx.lineTo(4, -14); ctx.lineTo(0, -6); ctx.fill();
+        // Krawatte
+        if (id === 'hitman') { ctx.fillStyle = '#ff0000'; ctx.fillRect(-1, -14, 2, 8); } // Rote Krawatte
+        if (id === '007') { ctx.fillStyle = '#333'; ctx.fillRect(-1, -14, 2, 8); } // Dunkle Krawatte
+    }
+
+    if (id === 'cristiano') {
+        // Nr 7 (ganz grob)
+        if (dir === 'down') {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-2, -10, 4, 1); ctx.fillRect(1, -10, 1, 6); // Eine 7
+        }
+    }
+    
+    if (id === 'lebron') {
+        // Trikot Nummer / Lakers Lila
+        if (dir === 'down') {
+            ctx.fillStyle = '#fdb927'; // Gold
+            ctx.fillRect(-4, -10, 8, 8); // Block
+        }
+    }
+
+    if (id === '2pac') {
+        // Weißes Unterhemd (Tanktop)
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-8, -14, 16, 18);
+    }
+
+    // --- KOPF ---
+    let skinColor = '#ffccaa'; // Standard
+    if (id === 'lucifer') skinColor = '#ff0000';
+    if (id === 'yeti') skinColor = '#eeeeff';
+    if (id === 'mj' || id === 'lebron' || id === '2pac' || id === 'drizzy') skinColor = '#8d5524'; // Dunkle Haut
+
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(-9, -26, 18, 12); // Kopf Basis
+
+    // --- HAARE / KOPFBEDECKUNG ---
+
+    // Frisuren Logik
+    if (id === 'hitman' || id === 'lebron' || id === '2pac') {
+        // Glatze oder sehr kurz -> Nichts oder wenig
+        if (id === 'lebron') {
+            ctx.fillStyle = '#111'; // Bart / Kurze Haare
+            ctx.fillRect(-9, -26, 18, 3); // Hairline
+            ctx.fillRect(-9, -18, 18, 4); // Bart
+        }
+    } 
+    else if (id === 'mj') {
+        // Hut (Fedora)
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-12, -28, 24, 4); // Krempe
+        ctx.fillRect(-9, -32, 18, 6);  // Top
+        // Haarsträhne
+        ctx.fillStyle = '#000';
+        ctx.fillRect(4, -24, 2, 6);
+    }
+    else if (id === '2pac') {
+        // Bandana
+        ctx.fillStyle = '#3366cc'; // Blaues Bandana
+        ctx.fillRect(-10, -28, 20, 6); // Stirnband
+        ctx.fillRect(6, -26, 4, 4); // Knoten rechts
+    }
+    else if (id === 'dua' || id === 'pam' || id === 'gaga') {
+        // Lange Haare
+        ctx.fillStyle = (id === 'pam' || id === 'gaga') ? '#ffeeaa' : '#111'; // Blond oder Schwarz
+        ctx.fillRect(-10, -30, 20, 8); // Oben
+        ctx.fillRect(-11, -26, 4, 18); // Seite L
+        ctx.fillRect(7, -26, 4, 18);  // Seite R
+    }
+    else if (id === 'drizzy') {
+        // Kurze Haare + Bart
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-9, -28, 18, 4);
+        ctx.fillRect(-9, -18, 18, 4); // Bart
+    }
+    else if (id === 'elon') {
+        // Elon Frisur
+        ctx.fillStyle = '#332211';
+        ctx.fillRect(-9, -28, 18, 5);
+        if (dir === 'right') ctx.fillRect(4, -28, 4, 4);
+    }
+    else if (id === 'cristiano') {
+        // Gestylt
+        ctx.fillStyle = '#221100';
+        ctx.fillRect(-9, -29, 18, 5);
+    }
+    else if (id === 'rambo') {
+        // Stirnband rot + Schwarze Haare
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-10, -29, 20, 10); // Haare wild
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(-10, -26, 20, 3); // Band
+    }
+    else if (id === 'nun') {
+        // Nonnenhaube
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-10, -30, 20, 12);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-9, -28, 18, 4); // Weißer Rand
+    }
+    else {
+        // Standard Haare (007, etc)
+        ctx.fillStyle = (id === '007') ? '#ccaa88' : '#332200'; // Blond für Bond
+        ctx.fillRect(-9, -29, 18, 5);
+    }
+
+    // --- GESICHT (AUGEN) ---
+    ctx.fillStyle = '#000';
+    let eyeOff = 0;
+    if (dir === 'left') eyeOff = -3;
+    if (dir === 'right') eyeOff = 3;
+    
+    // Sonnenbrille?
+    if (id === '2pac' || id === 'hitman' || id === '007') {
+        // Nein, aber vielleicht coole Augen.
+        // Hitman Barcode hinten? Zu klein.
+    }
+    
+    if (id === 'gaga') {
+        // Pokerface Brille?
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-6 + eyeOff, -22, 12, 4);
+    } else {
+        // Normale Augen
+        ctx.fillRect(-5 + eyeOff, -22, 2, 2);
+        ctx.fillRect(3 + eyeOff, -22, 2, 2);
+    }
+
     ctx.restore();
 }
 
-export function drawLevelPreview(ctx, w, h, levelDef) {
-    const tileSize = w / 3; 
-    ctx.fillStyle = levelDef.bg; ctx.fillRect(0, 0, w, h);
-    const drawBlock = (x, y, type) => {
-        const px = x * tileSize; const py = y * tileSize;
-        if (type === TYPES.WALL_HARD) {
-             ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, tileSize, tileSize);
-             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(px+tileSize-2, py, 2, tileSize); ctx.fillRect(px, py+tileSize-2, tileSize, 2);
-        } else if (type === TYPES.WALL_SOFT) {
-             ctx.fillStyle = levelDef.wallSoft; ctx.fillRect(px, py, tileSize, tileSize);
-             ctx.fillStyle = levelDef.wallSoftLight; ctx.fillRect(px+2, py+2, tileSize-4, tileSize-4);
-        }
-    };
-    drawBlock(0, 0, TYPES.WALL_HARD); drawBlock(1, 0, TYPES.WALL_SOFT); drawBlock(2, 0, TYPES.WALL_HARD);
-    drawBlock(0, 1, TYPES.WALL_SOFT); drawBlock(2, 1, TYPES.WALL_SOFT);
-    drawBlock(0, 2, TYPES.WALL_HARD); drawBlock(1, 2, TYPES.WALL_SOFT); drawBlock(2, 2, TYPES.WALL_HARD);
-}
+// --- LEVEL DRAWING ---
+export function drawLevel(ctx) {
+    const level = state.currentLevel;
+    if(!level) return;
 
-export function drawItem(ctx, type, x, y) {
-    const pad = 2; const size = TILE_SIZE - pad*2;
-    ctx.fillStyle = '#442222'; ctx.fillRect(x+pad, y+pad, size, size);
-    ctx.strokeStyle = '#ff8888'; ctx.lineWidth = 2; ctx.strokeRect(x+pad, y+pad, size, size);
-    const cx = x + TILE_SIZE/2; const cy = y + TILE_SIZE/2;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '32px sans-serif';
-    switch(type) {
-        case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('💣', cx, cy); break; 
-        case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('🔥', cx, cy); break; 
-        case ITEMS.SPEED_UP: ctx.fillStyle = '#ffff00'; ctx.fillText('👟', cx, cy); break; 
-        case ITEMS.NAPALM: ctx.fillStyle = '#ff0000'; ctx.fillText('☢️', cx, cy); break;   
-        case ITEMS.ROLLING: ctx.fillStyle = '#ffffff'; ctx.fillText('🎳', cx, cy); break; 
-        case ITEMS.SKULL: ctx.fillStyle = '#cccccc'; ctx.fillText('💀', cx, cy); break;   
+    ctx.fillStyle = level.bg;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Grid Lines
+    ctx.strokeStyle = level.grid;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let i=0; i<=15; i++) { // GRID_W/H Hardcoded or imported
+        ctx.moveTo(i*TILE_SIZE, 0); ctx.lineTo(i*TILE_SIZE, 15*TILE_SIZE);
     }
-}
-
-// --- OPTIMIERTE DRAW LOOP ---
-export function draw(ctx, canvas) {
-    // 1. Hintergrund aus Cache (ODER neu erstellen, wenn nötig)
-    if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
-        // Falls Cache fehlt oder Level gewechselt -> Neu baken!
-        // Wichtig: Das passiert NACHDEM game.js das Grid initialisiert hat.
-        cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
-        lastLevelId = state.currentLevel.id;
+    for(let i=0; i<=15; i++) {
+        ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(15*TILE_SIZE, i*TILE_SIZE);
     }
-    // Zeichne das statische Bild (Hintergrund, Hard Walls, Boden)
-    ctx.drawImage(cachedLevelCanvas, 0, 0);
+    ctx.stroke();
 
-    // 2. Dynamische Elemente
-    // Hell Center Fire Pit (Dynamic Part)
-    if (state.currentLevel.hasCentralFire) {
-        const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
-        const centerX = cx + TILE_SIZE/2; const centerY = cy + TILE_SIZE/2;
-        if (!state.hellFireActive) {
-            ctx.fillStyle = '#332222'; const w = 16; 
-            ctx.fillRect(centerX - w/2, cy, w, TILE_SIZE/2); ctx.fillRect(centerX - w/2, centerY, w, TILE_SIZE/2);
-            ctx.fillRect(cx, centerY - w/2, TILE_SIZE/2, w); ctx.fillRect(centerX, centerY - w/2, TILE_SIZE/2, w);
-            ctx.beginPath(); ctx.arc(centerX, centerY, 10, 0, Math.PI * 2); ctx.fillStyle = '#221111'; ctx.fill(); ctx.strokeStyle = '#443333'; ctx.lineWidth = 2; ctx.stroke();
-        } else {
-            let lavaColor = '#880000'; let coreColor = '#aa2200';
-            if (state.hellFirePhase === 'WARNING') {
-                const pulse = Math.sin(Date.now() / 50); const r = 200 + 55 * pulse; const g = 100 + 100 * pulse;
-                lavaColor = `rgb(${r}, ${g}, 0)`; coreColor = `rgb(255, ${220 + 35 * pulse}, 200)`; 
+    // Pads
+    if (level.id === 'hell' || level.id === 'ice') {
+        ctx.fillStyle = level.glow;
+        if (level.id === 'ice') ctx.fillStyle = '#00ffff';
+        BOOST_PADS.forEach(p => {
+            ctx.globalAlpha = 0.4;
+            ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = level.glow; ctx.lineWidth = 3;
+            ctx.strokeRect(p.x*TILE_SIZE+4, p.y*TILE_SIZE+4, TILE_SIZE-8, TILE_SIZE-8);
+        });
+    }
+
+    if (level.id === 'jungle') {
+        DIRECTION_PADS.forEach(p => {
+            ctx.fillStyle = 'rgba(50, 200, 50, 0.4)';
+            ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.strokeStyle = '#44aa44';
+            ctx.beginPath();
+            const cx = (p.x+0.5)*TILE_SIZE, cy = (p.y+0.5)*TILE_SIZE;
+            ctx.moveTo(cx - p.dir.x*10, cy - p.dir.y*10);
+            ctx.lineTo(cx + p.dir.x*10, cy + p.dir.y*10);
+            ctx.stroke();
+            // Pfeilspitze vereinfacht
+            ctx.beginPath(); ctx.arc(cx + p.dir.x*10, cy + p.dir.y*10, 3, 0, Math.PI*2); ctx.fill();
+        });
+    }
+
+    if (level.id === 'stone') {
+        ctx.fillStyle = 'rgba(20, 20, 20, 0.6)';
+        OIL_PADS.forEach(p => {
+            ctx.fillRect(p.x*TILE_SIZE, p.y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            for(let i=0; i<3; i++) {
+                 ctx.beginPath();
+                 ctx.arc(p.x*TILE_SIZE + Math.random()*TILE_SIZE, p.y*TILE_SIZE + Math.random()*TILE_SIZE, 2+Math.random()*3, 0, Math.PI*2);
+                 ctx.fill();
             }
-            ctx.fillStyle = lavaColor; const w = 18; 
-            ctx.fillRect(centerX - w/2, cy, w, TILE_SIZE); ctx.fillRect(cx, centerY - w/2, TILE_SIZE, w);
-            ctx.strokeStyle = '#440000'; ctx.lineWidth = 2;
-            ctx.strokeRect(centerX - w/2, cy, w, TILE_SIZE); ctx.strokeRect(cx, centerY - w/2, TILE_SIZE, w);
-            ctx.beginPath(); ctx.arc(centerX, centerY, 14, 0, Math.PI * 2); ctx.fillStyle = coreColor; ctx.fill();
-            ctx.strokeStyle = state.hellFirePhase === 'WARNING' ? '#ffff00' : '#ffaa00'; ctx.lineWidth = 3; ctx.stroke();
-        }
+            ctx.fillStyle = 'rgba(20, 20, 20, 0.6)';
+        });
     }
+}
 
-    // Soft Walls & Items & Bombs
-    for (let y = 0; y < GRID_H; y++) {
-        for (let x = 0; x < GRID_W; x++) {
-            const px = x * TILE_SIZE; const py = y * TILE_SIZE;
-            const item = state.items[y][x];
+// --- OBJECTS & PARTICLES (Items, Walls, Bombs) ---
+export function drawObjects(ctx) {
+    if(!state.grid) return;
+    
+    for(let y=0; y<15; y++) {
+        for(let x=0; x<15; x++) {
             const tile = state.grid[y][x];
+            const item = state.items[y][x];
+            const X = x*TILE_SIZE, Y = y*TILE_SIZE;
+            const level = state.currentLevel;
 
-            // Items (nur wenn keine Soft Wall drauf ist)
-            if (item !== ITEMS.NONE && tile !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
+            // Water / Bridge
+            if (level.hasRiver && tile === TYPES.WATER) {
+                ctx.fillStyle = '#3366cc'; ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
+            }
+            else if (level.hasRiver && tile === TYPES.BRIDGE) {
+                 ctx.fillStyle = '#664422'; ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
+                 ctx.fillStyle = '#442211';
+                 for(let i=0; i<4; i++) ctx.fillRect(X+i*12, Y, 2, TILE_SIZE);
+            }
+            // Walls
+            else if (tile === TYPES.WALL_HARD) {
+                ctx.fillStyle = level.wallHard;
+                ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(X, Y+TILE_SIZE-4, TILE_SIZE, 4);
+                // 3D Effekt Light
+                ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(X, Y, TILE_SIZE, 4); ctx.fillRect(X, Y, 4, TILE_SIZE);
+            } 
+            else if (tile === TYPES.WALL_SOFT) {
+                ctx.fillStyle = level.wallSoft;
+                ctx.fillRect(X, Y, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = level.wallSoftLight;
+                ctx.fillRect(X+4, Y+4, TILE_SIZE-8, TILE_SIZE-8);
+                // Ziegel-Muster
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(X, Y+12, TILE_SIZE, 2);
+                ctx.fillRect(X, Y+36, TILE_SIZE, 2);
+                ctx.fillRect(X+24, Y+12, 2, 24);
+            }
 
-            // Soft Walls (Beweglich/Zerstörbar)
-            if (tile === TYPES.WALL_SOFT) {
-                if (state.currentLevel.id === 'ice') {
-                    ctx.fillStyle = '#88ccff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#4488cc'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + 4, py + 4); ctx.lineTo(px + TILE_SIZE - 4, py + TILE_SIZE - 4); ctx.moveTo(px + TILE_SIZE - 4, py + 4); ctx.lineTo(px + 4, py + TILE_SIZE - 4); ctx.stroke();
-                    ctx.fillStyle = '#ffffff'; ctx.fillRect(px + TILE_SIZE/2 - 2, py + TILE_SIZE/2 - 2, 4, 4); 
-                } else if (state.currentLevel.id === 'jungle') {
-                    ctx.fillStyle = '#116611'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    let seed = x * 12.9898 + y * 78.233; const pseudoRandom = () => { seed += 1; const t = Math.sin(seed) * 10000; return t - Math.floor(t); };
-                    ctx.fillStyle = '#228822'; for(let i=0; i<5; i++) { ctx.beginPath(); ctx.arc(px + pseudoRandom()*40, py + pseudoRandom()*40, 10, 0, Math.PI*2); ctx.fill(); }
-                    ctx.fillStyle = '#44aa44'; for(let i=0; i<3; i++) { ctx.beginPath(); ctx.arc(px + pseudoRandom()*40, py + pseudoRandom()*40, 6, 0, Math.PI*2); ctx.fill(); }
-                } else if (state.currentLevel.id === 'hell') {
-                    ctx.fillStyle = '#880000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = '#aa0000'; ctx.fillRect(px, py, 22, 10); ctx.fillRect(px+26, py, 22, 10); ctx.fillRect(px, py+12, 10, 10); ctx.fillRect(px+14, py+12, 22, 10); ctx.fillRect(px+40, py+12, 8, 10); ctx.fillRect(px, py+24, 22, 10); ctx.fillRect(px+26, py+24, 22, 10); ctx.fillRect(px, py+36, 10, 10); ctx.fillRect(px+14, py+36, 22, 10); ctx.fillRect(px+40, py+36, 8, 10);
-                } else if (state.currentLevel.id === 'stone') {
-                    ctx.fillStyle = '#666'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px+10, py+10); ctx.lineTo(px+20, py+20); ctx.lineTo(px+30, py+10); ctx.moveTo(px+15, py+30); ctx.lineTo(px+25, py+40); ctx.stroke();
-                    ctx.fillStyle = '#555'; ctx.fillRect(px+5, py+35, 10, 5); ctx.fillRect(px+30, py+20, 8, 8);
-                } else {
-                    ctx.fillStyle = state.currentLevel.wallSoft; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = state.currentLevel.wallSoftLight; ctx.fillRect(px+2, py+2, 20, 10); ctx.fillRect(px+26, py+2, 20, 10); ctx.fillRect(px+2, py+14, 10, 10); ctx.fillRect(px+14, py+14, 20, 10); ctx.fillRect(px+36, py+14, 10, 10); ctx.fillRect(px+2, py+26, 20, 10); ctx.fillRect(px+26, py+26, 20, 10);
-                }
+            // Items
+            if (item !== ITEMS.NONE && tile !== TYPES.WALL_SOFT) {
+                let color = '#fff', text = '?';
+                if (item === ITEMS.BOMB_UP) { color='#444444'; text='💣'; }
+                else if (item === ITEMS.RANGE_UP) { color='#ff4400'; text='🔥'; }
+                else if (item === ITEMS.SPEED_UP) { color='#0088ff'; text='⚡'; }
+                else if (item === ITEMS.SKULL) { color='#ff00ff'; text='☠️'; }
+                else if (item === ITEMS.NAPALM) { color='#ff0000'; text='☢️'; }
+                else if (item === ITEMS.ROLLING) { color='#888888'; text='🎳'; }
+                
+                // Item Background Bubble
+                const floatY = Math.sin(Date.now() * 0.005) * 3;
+                ctx.shadowColor = color; ctx.shadowBlur = 10;
+                ctx.fillStyle = 'rgba(20,20,20,0.8)';
+                ctx.beginPath(); ctx.arc(X+TILE_SIZE/2, Y+TILE_SIZE/2 + floatY, TILE_SIZE/2.5, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+                
+                ctx.fillStyle = color; ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(text, X+TILE_SIZE/2, Y+TILE_SIZE/2 + floatY + 2);
             }
         }
     }
 
-    // Bomben (über allem Grid-Kram)
+    // Bombs
     state.bombs.forEach(b => {
-        const px = b.px; const py = b.py; const scale = 1 + Math.sin(Date.now() / 100) * 0.1;
-        let baseColor = '#444444'; if (state.currentLevel.id === 'jungle') baseColor = '#000000';
-        ctx.fillStyle = b.napalm ? '#dd0000' : baseColor; 
-        if (b.isBlue) ctx.fillStyle = '#000080';
-        ctx.beginPath(); ctx.arc(px + TILE_SIZE/2, py + TILE_SIZE/2, 16 * scale, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + TILE_SIZE/2 + 8, py + TILE_SIZE/2 - 8); ctx.lineTo(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14); ctx.stroke();
-        ctx.fillStyle = 'orange'; ctx.beginPath(); ctx.arc(px + TILE_SIZE/2 + 12, py + TILE_SIZE/2 - 14, 3, 0, Math.PI*2); ctx.fill();
-        const tipX = px + TILE_SIZE/2 + 12 * scale; const tipY = py + TILE_SIZE/2 - 14 * scale;
-        ctx.fillStyle = Math.random() > 0.5 ? '#ffff00' : '#ff4400'; ctx.beginPath(); ctx.arc(tipX, tipY, 3 + Math.random()*2, 0, Math.PI*2); ctx.fill();
-        for(let j=0; j<3; j++) { const angle = Math.random() * Math.PI * 2; const dist = 2 + Math.random() * 6; ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.8; ctx.fillRect(tipX + Math.cos(angle)*dist, tipY + Math.sin(angle)*dist, 2, 2); ctx.globalAlpha = 1.0; }
+        const bx = b.px + TILE_SIZE/2, by = b.py + TILE_SIZE/2; // Nutzen px/py für Smoothness bei Rolling
+        
+        // Pulsieren kurz vor Explosion
+        const timePercent = b.timer / 200; // ca 200 ticks
+        const pulseSpeed = timePercent < 0.3 ? 0.8 : 0.2;
+        const pulse = 1 + Math.sin(Date.now() * 0.01 * (1/pulseSpeed)) * 0.1;
+        
+        let color = '#222';
+        if (b.napalm) color = '#aa0000';
+        if (b.isRolling) color = '#555577';
+
+        // Schatten
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath(); ctx.ellipse(bx, by+10, 16, 6, 0, 0, Math.PI*2); ctx.fill();
+
+        // Bomb Body
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(bx, by, (TILE_SIZE/2.5)*pulse, 0, Math.PI*2); ctx.fill();
+        
+        // Highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.beginPath(); ctx.arc(bx-6, by-6, 6*pulse, 0, Math.PI*2); ctx.fill();
+
+        // Zünder / Icons
+        if (b.napalm) {
+            ctx.fillStyle = '#ffcc00'; ctx.font='12px sans-serif'; ctx.textAlign='center'; 
+            ctx.fillText('☢', bx, by+4);
+        } else if (b.isRolling) {
+             ctx.strokeStyle = '#fff'; ctx.lineWidth=2;
+             ctx.beginPath(); ctx.moveTo(bx-6, by); ctx.lineTo(bx+6, by); ctx.stroke();
+             ctx.beginPath(); ctx.moveTo(bx, by-6); ctx.lineTo(bx, by+6); ctx.stroke();
+        }
+        
+        // Lunte (wackelt)
+        const wickX = bx + Math.sin(Date.now()*0.02)*2;
+        ctx.strokeStyle = '#aa8855'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(bx, by-15); ctx.lineTo(wickX, by-22); ctx.stroke();
+        
+        // Funke
+        ctx.fillStyle = `hsl(${Math.random()*60}, 100%, 50%)`;
+        ctx.beginPath(); ctx.arc(wickX, by-22, 3, 0, Math.PI*2); ctx.fill();
     });
+}
 
-    drawAllParticles(ctx);
+export function drawParticles(ctx) {
+    state.particles.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        
+        if (p.isFire) {
+             // Feuer Effekt
+             const size = TILE_SIZE * (0.6 + (p.life/p.maxLife)*0.4);
+             // Farbe variiert von Weiß (Kern) zu Gelb zu Rot
+             const lifeP = p.life / p.maxLife;
+             let color = p.isNapalm ? `rgba(50, 255, 50, ${lifeP})` : `rgba(255, ${Math.floor(lifeP*255)}, 0, ${lifeP})`;
+             if(p.isNapalm) color = `rgb(${Math.floor(50+Math.random()*100)}, ${Math.floor(200+Math.random()*55)}, 50)`; // Giftgrün für Napalm? Oder Lila? Constant sagt Rot. Machen wir es heiß.
+             if(p.isNapalm) color = `rgb(255, ${Math.floor(Math.random()*100)}, 0)`; // Napalm Glut
 
-    state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
+             ctx.fillStyle = color;
+             ctx.fillRect(p.gx*TILE_SIZE + (TILE_SIZE-size)/2, p.gy*TILE_SIZE + (TILE_SIZE-size)/2, size, size);
+             
+             // Core
+             ctx.fillStyle = '#ffffaa';
+             ctx.fillRect(p.gx*TILE_SIZE + TILE_SIZE/2 - 5, p.gy*TILE_SIZE + TILE_SIZE/2 - 5, 10, 10);
+        } else {
+             // Debris / Smoke
+             ctx.fillStyle = p.color || '#fff';
+             ctx.beginPath(); ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI*2); ctx.fill();
+        }
+    });
+    ctx.globalAlpha = 1;
+    
+    // Hell Center Effekt
+    if (state.currentLevel.hasCentralFire) {
+        const center = { x: (HELL_CENTER.x+0.5)*TILE_SIZE, y: (HELL_CENTER.y+0.5)*TILE_SIZE };
+        if (state.hellFirePhase === 'WARNING') {
+             ctx.globalAlpha = 0.3 + Math.sin(Date.now()*0.02)*0.2;
+             ctx.fillStyle = '#ff0000';
+             ctx.beginPath(); ctx.arc(center.x, center.y, TILE_SIZE*2, 0, Math.PI*2); ctx.fill();
+        } else if (state.hellFirePhase === 'ACTIVE') {
+             const size = TILE_SIZE*3 * (0.9 + Math.random()*0.1);
+             const grad = ctx.createRadialGradient(center.x, center.y, size*0.2, center.x, center.y, size);
+             grad.addColorStop(0, '#ffff00');
+             grad.addColorStop(0.5, '#ff4400');
+             grad.addColorStop(1, 'rgba(255,0,0,0)');
+             ctx.fillStyle = grad;
+             ctx.beginPath(); ctx.arc(center.x, center.y, size, 0, Math.PI*2); ctx.fill();
+        }
+    }
+}
+
+export function drawLevelPreview(ctx, w, h, level) {
+    ctx.fillStyle = level.bg; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = level.wallHard; 
+    const s = w/15;
+    ctx.fillRect(0, 0, w, s); ctx.fillRect(0, h-s, w, s);
+    ctx.fillRect(0, 0, s, h); ctx.fillRect(w-s, 0, s, h);
+    
+    ctx.fillStyle = level.wallSoft;
+    ctx.fillRect(w/2 - s, h/2 - s, s*2, s*2);
+    
+    if(level.id === 'hell') {
+        ctx.fillStyle = 'rgba(255,0,0,0.5)';
+        ctx.beginPath(); ctx.arc(w/2, h/2, w/3, 0, Math.PI*2); ctx.fill();
+    }
 }

@@ -44,22 +44,25 @@ export const OIL_PADS = [
 
 export const HELL_CENTER = { x: 7, y: 7 };
 
+// Liste der spielbaren Charaktere
 export const CHARACTERS = [
     { id: 'rambo', name: 'Rambo', color: '#44aa44', accent: '#aa0000' }, 
     { id: 'lucifer', name: 'Lucifer', color: '#ff0000', accent: '#000000' }, 
     { id: 'nun', name: 'Nun', color: '#eeeeee', accent: '#000000' }, 
     { id: 'yeti', name: 'Yeti', color: '#00ccff', accent: '#ffffff' },
-    // Dummies
-    { id: 'ninja', name: 'Ninja', color: '#111111', accent: '#555555' },
-    { id: 'punk', name: 'Punk', color: '#ff00ff', accent: '#00ff00' },
-    { id: 'alien', name: 'Alien', color: '#00ff00', accent: '#004400' },
-    { id: 'robot', name: 'Robot', color: '#888888', accent: '#00ffff' },
-    { id: 'knight', name: 'Knight', color: '#aaaaaa', accent: '#333333' },
-    { id: 'wizard', name: 'Wizard', color: '#442288', accent: '#ffff00' },
-    { id: 'diver', name: 'Diver', color: '#000088', accent: '#ff8800' },
-    { id: 'chef', name: 'Chef', color: '#ffffff', accent: '#cc0000' },
-    { id: 'cowboy', name: 'Cowboy', color: '#885522', accent: '#ffffaa' },
-    { id: 'king', name: 'King', color: '#ffcc00', accent: '#aa0000' }
+    
+    // Neue Promi-Charaktere
+    { id: 'cristiano', name: 'Cristiano', color: '#ff3333', accent: '#ffffff' },
+    { id: 'hitman', name: 'Hitman', color: '#111111', accent: '#cc0000' },
+    { id: 'elon', name: 'Elon', color: '#333333', accent: '#ffffff' },
+    { id: 'mj', name: 'MJ', color: '#222222', accent: '#ffffff' },
+    { id: 'dua', name: 'Dua', color: '#111111', accent: '#ff00ff' },
+    { id: 'lebron', name: 'Lebron', color: '#552583', accent: '#fdb927' }, // Lakers Lila/Gold
+    { id: 'pam', name: 'Pamela', color: '#ff2222', accent: '#ffddaa' },
+    { id: 'drizzy', name: 'Drizzy', color: '#444444', accent: '#ffffff' },
+    { id: '2pac', name: '2Pac', color: '#ffffff', accent: '#222222' },
+    { id: 'gaga', name: 'Gaga', color: '#0099ff', accent: '#eeeeee' }, // Blaues Pokerface Outfit
+    { id: '007', name: '007', color: '#555555', accent: '#cccccc' }
 ];
 
 export const LEVELS = {
