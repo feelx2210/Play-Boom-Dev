@@ -6,7 +6,6 @@ let remappingAction = null;
 let settingsIndex = 0; 
 let carouselInterval = null; 
 
-// --- HUD UPDATE ---
 export function updateHud(player) {
     const elType = document.getElementById('bomb-type');
     if (elType) {
@@ -29,7 +28,6 @@ function updateMobileLabels() {
     if (levelNameEl) levelNameEl.innerText = LEVELS[state.selectedLevelKey].name;
 }
 
-// --- MENU NAVIGATION ---
 function changeSelection(type, dir) {
     if (type === 'char') {
         const len = CHARACTERS.length;
@@ -64,12 +62,10 @@ function setupArrowEvents(el, type, dir) {
     el.onmousedown = startScroll;
     el.onmouseup = stopScroll;
     el.onmouseleave = stopScroll;
-    
     el.ontouchstart = startScroll;
     el.ontouchend = stopScroll;
 }
 
-// --- MAIN MENU RENDER ---
 export function initMenu() {
     const charContainer = document.getElementById('char-select');
     const levelContainer = document.getElementById('level-select');
@@ -120,7 +116,6 @@ export function initMenu() {
         settingsBtn.style.borderColor = "#ffffff"; 
     }
 
-    // Helper Card Creation
     const createCard = (type, index, data, isSelected) => {
         const div = document.createElement('div');
         div.className = `option-card ${isSelected ? 'selected' : ''}`;
@@ -142,13 +137,12 @@ export function initMenu() {
         const ctx = pCanvas.getContext('2d');
 
         if (type === 'char') {
-            // FIX: Höheres Canvas für Charaktere (64px statt 48px), damit Hüte passen
+            // FIX: Vorschau-Canvas auf 48x64 setzen für hohe Hüte
             pCanvas.width = 48; 
             pCanvas.height = 64; 
-            // Zeichne bei Y=40, das ist der definierte Ankerpunkt in graphics.js
+            // Zeichnen bei Y=40 (Fußpunkt in graphics.js)
             drawCharacterSprite(ctx, 24, 40, data);
         } else {
-            // Level bleiben quadratisch
             pCanvas.width = 48; 
             pCanvas.height = 48; 
             drawLevelPreview(ctx, 48, 48, data);
@@ -161,7 +155,6 @@ export function initMenu() {
         return div;
     };
 
-    // --- CHARACTER CAROUSEL ---
     const charLen = CHARACTERS.length;
     const charIndicesToShow = [];
     const offset = state.selectedCharIndex - 1;
@@ -191,7 +184,6 @@ export function initMenu() {
     setupArrowEvents(rightArrow, 'char', 1);
     charContainer.appendChild(rightArrow);
 
-    // --- LEVELS ---
     const levelKeys = Object.keys(LEVELS);
     levelKeys.forEach((key, idx) => { 
         const isSel = (key === state.selectedLevelKey);
@@ -200,7 +192,7 @@ export function initMenu() {
     });
 }
 
-// --- INPUT HANDLING ---
+// ... Rest der ui.js bleibt gleich ... (Input Handling, Settings, Stats)
 export function handleMenuInput(code) {
     if (state.menuState === 4 || state.menuState === 5) return;
 
@@ -246,29 +238,24 @@ function handleStatsInput(code) {
 
 export function showSettings() {
     document.getElementById('main-menu').classList.add('hidden');
-    
     const oldStats = document.getElementById('stats-menu');
     if (oldStats) oldStats.remove();
-
     const oldMenu = document.getElementById('settings-menu');
     if (oldMenu) oldMenu.remove();
 
     const settingsMenu = document.createElement('div');
     settingsMenu.id = 'settings-menu';
     settingsMenu.className = 'screen'; 
-    
     state.menuState = 4; 
     settingsIndex = 0; 
 
     settingsMenu.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%;">
             <h1 style="margin-bottom:40px;">SETTINGS</h1>
-            
             <div style="margin-bottom: 25px; text-align:center;">
                 <h2 style="font-size:14px; margin-bottom:8px; color:#aaa;">DIFFICULTY</h2>
                 <button id="btn-diff" class="main-btn" style="font-size:18px; width:220px; border:2px solid rgba(0,0,0,0.3);">NORMAL</button>
             </div>
-
             <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
                 <button id="btn-controls" class="btn-secondary" style="width:220px; border:2px solid rgba(0,0,0,0.3);">CONTROLS</button>
                 <button id="btn-stats" class="btn-secondary" style="width:220px; border:2px solid rgba(0,0,0,0.3);">STATISTICS</button>
@@ -276,9 +263,7 @@ export function showSettings() {
             </div>
         </div>
     `;
-    
     document.body.appendChild(settingsMenu);
-
     updateDifficultyBtn();
     updateSettingsFocus();
 
@@ -286,12 +271,7 @@ export function showSettings() {
         const el = document.getElementById(id);
         if(!el) return;
         el.onmouseenter = () => { settingsIndex = idx; updateSettingsFocus(); };
-        el.onclick = (e) => { 
-            e.stopPropagation();
-            settingsIndex = idx; 
-            updateSettingsFocus(); 
-            if(isAction) triggerSettingsAction(); 
-        };
+        el.onclick = (e) => { e.stopPropagation(); settingsIndex = idx; updateSettingsFocus(); if(isAction) triggerSettingsAction(); };
     };
     bindMouse('btn-diff', 0, true);
     bindMouse('btn-controls', 1, true);
@@ -303,65 +283,43 @@ export function showStatistics() {
     try {
         const oldSet = document.getElementById('settings-menu');
         if (oldSet) oldSet.remove();
-
         const statsMenu = document.createElement('div');
         statsMenu.id = 'stats-menu';
         statsMenu.className = 'screen';
-        
         state.menuState = 5; 
-
         const s = state.statistics;
-        
         const games = s ? (s.gamesPlayed || 0) : 0;
         const wins = s ? (s.wins || 0) : 0;
         const draws = s ? (s.draws || 0) : 0;
         const losses = s ? (s.losses || 0) : 0;
-
         let bestCharId = '-';
         let maxWins = -1;
         if (s && s.winsByChar) {
             Object.keys(s.winsByChar).forEach(id => {
-                if (s.winsByChar[id] > maxWins) {
-                    maxWins = s.winsByChar[id];
-                    bestCharId = id;
-                }
+                if (s.winsByChar[id] > maxWins) { maxWins = s.winsByChar[id]; bestCharId = id; }
             });
         }
-        
         const bestCharObj = CHARACTERS.find(c => c.id === bestCharId);
         const bestCharName = bestCharObj ? bestCharObj.name.toUpperCase() : (maxWins > 0 ? bestCharId.toUpperCase() : "NONE");
 
         statsMenu.innerHTML = `
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%;">
                 <h1 style="margin-bottom:30px; color:#aaa;">STATISTICS</h1>
-                
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left; font-size:16px; margin-bottom:40px; background:rgba(0,0,0,0.5); padding:20px; border:2px solid #333;">
                     <div style="color:#888;">GAMES PLAYED:</div> <div style="color:#fff; text-align:right;">${games}</div>
                     <div style="color:#00ff00;">TOTAL WINS:</div> <div style="color:#fff; text-align:right;">${wins}</div>
                     <div style="color:#ffff00;">DRAWS:</div> <div style="color:#fff; text-align:right;">${draws}</div>
                     <div style="color:#ff0000;">LOSSES:</div> <div style="color:#fff; text-align:right;">${losses}</div>
-                    
                     <div style="grid-column: 1 / -1; height:1px; background:#444; margin:10px 0;"></div>
-                    
                     <div style="color:#00ccff;">MOST WINS WITH:</div> <div style="color:#fff; text-align:right;">${bestCharName}</div>
                 </div>
-
                 <button id="btn-stats-back" class="btn-secondary" style="width:200px; border:2px solid #fff; cursor:pointer;">BACK</button>
             </div>
         `;
-
         document.body.appendChild(statsMenu);
-        
         const btn = document.getElementById('btn-stats-back');
-        btn.onclick = (e) => { 
-            e.stopPropagation();
-            showSettings(); 
-        };
-
-    } catch(e) {
-        console.error("Stats Error:", e);
-        showSettings(); 
-    }
+        btn.onclick = (e) => { e.stopPropagation(); showSettings(); };
+    } catch(e) { console.error("Stats Error:", e); showSettings(); }
 }
 
 function updateSettingsFocus() {
@@ -369,31 +327,17 @@ function updateSettingsFocus() {
     ids.forEach((id, idx) => {
         const el = document.getElementById(id);
         if (el) {
-            if (idx === settingsIndex) {
-                el.style.border = "2px solid #fff";
-                el.style.transform = "scale(1.05)";
-                el.style.boxShadow = "0 0 10px rgba(255,255,255,0.2)";
-            } else {
-                el.style.border = "2px solid rgba(0,0,0,0.3)";
-                el.style.transform = "scale(1)";
-                el.style.boxShadow = "none";
-            }
+            if (idx === settingsIndex) { el.style.border = "2px solid #fff"; el.style.transform = "scale(1.05)"; el.style.boxShadow = "0 0 10px rgba(255,255,255,0.2)"; } 
+            else { el.style.border = "2px solid rgba(0,0,0,0.3)"; el.style.transform = "scale(1)"; el.style.boxShadow = "none"; }
         }
     });
 }
 
 function triggerSettingsAction() {
-    if (settingsIndex === 0) { 
-        state.difficulty = (state.difficulty + 1) % 3;
-        updateDifficultyBtn();
-    } else if (settingsIndex === 1) { 
-        document.getElementById('settings-menu').remove();
-        showControls();
-    } else if (settingsIndex === 2) { 
-        showStatistics(); 
-    } else if (settingsIndex === 3) { 
-        showMenu();
-    }
+    if (settingsIndex === 0) { state.difficulty = (state.difficulty + 1) % 3; updateDifficultyBtn(); } 
+    else if (settingsIndex === 1) { document.getElementById('settings-menu').remove(); showControls(); } 
+    else if (settingsIndex === 2) { showStatistics(); } 
+    else if (settingsIndex === 3) { showMenu(); }
 }
 
 function updateDifficultyBtn() {
@@ -416,15 +360,9 @@ export function showMenu() {
     document.getElementById('pause-btn').classList.add('hidden'); 
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
-    
-    const oldSet = document.getElementById('settings-menu');
-    if (oldSet) oldSet.remove();
-    const oldStats = document.getElementById('stats-menu');
-    if (oldStats) oldStats.remove();
-    
-    const mobControls = document.getElementById('mobile-controls');
-    if (mobControls) mobControls.classList.add('hidden');
-    
+    const oldSet = document.getElementById('settings-menu'); if (oldSet) oldSet.remove();
+    const oldStats = document.getElementById('stats-menu'); if (oldStats) oldStats.remove();
+    const mobControls = document.getElementById('mobile-controls'); if (mobControls) mobControls.classList.add('hidden');
     state.menuState = 0;
     initMenu();
 }
@@ -451,7 +389,6 @@ export function restartGame() {
 export function endGame(msg, winner) {
     if (state.isGameOver) return; 
     state.isGameOver = true; 
-    
     const s = state.statistics;
     if (s) {
         s.gamesPlayed++;
@@ -462,22 +399,14 @@ export function endGame(msg, winner) {
                     if (!s.winsByChar[winner.charDef.id]) s.winsByChar[winner.charDef.id] = 0;
                     s.winsByChar[winner.charDef.id]++;
                 }
-            } else {
-                s.losses++;
-            }
-        } else {
-            s.draws++;
-        }
+            } else { s.losses++; }
+        } else { s.draws++; }
         localStorage.setItem('boom_stats', JSON.stringify(s));
     }
-
     setTimeout(() => {
         const titleEl = document.getElementById('go-title');
-        if (winner && winner.id === 1) {
-            titleEl.innerText = "YOU WON"; titleEl.style.color = "#00ff00"; titleEl.style.textShadow = "4px 4px 0 #005500"; 
-        } else {
-            titleEl.innerText = "GAME OVER"; titleEl.style.color = "#ff0000"; titleEl.style.textShadow = "4px 4px 0 #550000";
-        }
+        if (winner && winner.id === 1) { titleEl.innerText = "YOU WON"; titleEl.style.color = "#00ff00"; titleEl.style.textShadow = "4px 4px 0 #005500"; } 
+        else { titleEl.innerText = "GAME OVER"; titleEl.style.color = "#ff0000"; titleEl.style.textShadow = "4px 4px 0 #550000"; }
         document.getElementById('go-message').innerText = msg;
         document.getElementById('game-over').classList.remove('hidden');
         document.getElementById('mobile-controls').classList.add('hidden');
@@ -516,21 +445,7 @@ window.restartGame = restartGame;
 window.updateHud = updateHud;
 
 window.addEventListener('keydown', e => {
-    if (remappingAction) {
-        e.preventDefault();
-        keyBindings[remappingAction] = e.code;
-        remappingAction = null;
-        initControlsMenu();
-        return;
-    }
-    if (state.menuState === 4) {
-        e.preventDefault();
-        handleSettingsInput(e.code);
-        return;
-    }
-    if (state.menuState === 5) {
-        e.preventDefault();
-        handleStatsInput(e.code);
-        return;
-    }
+    if (remappingAction) { e.preventDefault(); keyBindings[remappingAction] = e.code; remappingAction = null; initControlsMenu(); return; }
+    if (state.menuState === 4) { e.preventDefault(); handleSettingsInput(e.code); return; }
+    if (state.menuState === 5) { e.preventDefault(); handleStatsInput(e.code); return; }
 });
