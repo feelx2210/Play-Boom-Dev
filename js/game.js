@@ -1,8 +1,8 @@
-import { TILE_SIZE, GRID_W, GRID_H, LEVELS, CHARACTERS } from './constants.js';
+import { TILE_SIZE, GRID_W, GRID_H, LEVELS, CHARACTERS, BOMB_MODES } from './constants.js';
 import { state } from './state.js';
 import { draw, clearLevelCache } from './graphics.js';
 import { Player } from './player.js';
-import { endGame, showMenu, handleMenuInput, togglePause } from './ui.js';
+import { endGame, showMenu, handleMenuInput, togglePause, showSuddenDeathMessage } from './ui.js';
 import { killPlayer, updateHellFire, updateIce, updateBombs, updateParticles, handleInfection } from './mechanics.js';
 import { initLevel } from './level_gen.js'; 
 import { InputHandler } from './InputHandler.js'; 
@@ -81,10 +81,12 @@ window.startGame = function() {
     state.players = [];
     state.isGameOver = false; 
     state.isPaused = false;
+    state.isSuddenDeath = false;
+    
     state.hellFireTimer = 0; state.hellFirePhase = 'IDLE'; state.hellFireActive = false; 
     state.iceTimer = 0; state.iceSpawnCountdown = 1200; 
 
-    // Level Generierung (jetzt extern)
+    // Level Generierung
     initLevel();
 
     // Spieler erstellen
@@ -109,19 +111,50 @@ window.addEventListener('keydown', e => {
     if (e.key.toLowerCase() === 'p' || e.code === 'Escape') togglePause();
 });
 
+// --- SUDDEN DEATH LOGIC ---
+function triggerSuddenDeath(survivors) {
+    state.isSuddenDeath = true;
+    showSuddenDeathMessage();
+    
+    // Kurze Schock-Pause
+    state.isPaused = true;
+    setTimeout(() => {
+        state.isPaused = false;
+    }, 500);
+
+    survivors.forEach(p => {
+        // Visuelles Aufleuchten
+        for(let i=0; i<20; i++) {
+            state.particles.push({
+                x: p.x + TILE_SIZE/2, 
+                y: p.y + TILE_SIZE/2,
+                vx: (Math.random()-0.5)*10,
+                vy: (Math.random()-0.5)*10,
+                life: 45,
+                color: '#ffff00', 
+                size: 4
+            });
+        }
+        // Upgrade Stats
+        p.speed = 4.5;       
+        p.bombRange = 12;    
+        p.maxBombs = 10;     
+        p.currentBombMode = BOMB_MODES.NAPALM; 
+        if (!p.isAI) updateHud(p);
+    });
+}
+
 // --- UPDATE LOOP ---
 function update() {
     if (state.isGameOver) return;
     
     state.players.forEach(p => p.inFire = false);
     
-    // Updates aus mechanics.js
     updateHellFire();
     updateIce();
     updateBombs();
     updateParticles();
     
-    // Players (Input Update)
     state.players.forEach(p => { 
         if (p.inFire) { 
             p.fireTimer++; 
@@ -134,6 +167,11 @@ function update() {
         p.update(input); 
         if (p.alive) { aliveCount++; livingPlayers.push(p); } 
     });
+
+    // CHECK SUDDEN DEATH
+    if (state.players.length > 2 && aliveCount === 2 && !state.isSuddenDeath) {
+        triggerSuddenDeath(livingPlayers);
+    }
 
     handleInfection();
 
@@ -156,8 +194,12 @@ function gameLoop() {
             alert("Game Crashed! Check Console for details.\n" + error.message); 
         } 
     }
+    // Rendern während Sudden Death Pause (damit Bild stehen bleibt)
+    else if (state.isPaused && state.isSuddenDeath) {
+        draw(ctx, canvas);
+    }
+
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// Initial Menu Start
 showMenu();

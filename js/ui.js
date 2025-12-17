@@ -137,11 +137,9 @@ export function initMenu() {
         const ctx = pCanvas.getContext('2d');
 
         if (type === 'char') {
-            // FIX: Vorschau-Canvas auf 48x64 setzen für hohe Hüte
             pCanvas.width = 48; 
             pCanvas.height = 64; 
-            // Zeichnen bei Y=40 (Fußpunkt in graphics.js)
-            drawCharacterSprite(ctx, 24, 40, data);
+            drawCharacterSprite(ctx, 24, 44, data); // Y=44 für Pixel-Arts im Menü
         } else {
             pCanvas.width = 48; 
             pCanvas.height = 48; 
@@ -192,7 +190,6 @@ export function initMenu() {
     });
 }
 
-// ... Rest der ui.js bleibt gleich ... (Input Handling, Settings, Stats)
 export function handleMenuInput(code) {
     if (state.menuState === 4 || state.menuState === 5) return;
 
@@ -435,6 +432,37 @@ function initControlsMenu() {
 }
 
 function startRemap(action) { remappingAction = action; initControlsMenu(); }
+
+// --- NEU: SUDDEN DEATH MESSAGE ---
+export function showSuddenDeathMessage() {
+    const el = document.createElement('div');
+    el.innerText = "LAST MAN STANDING!";
+    el.style.position = "absolute";
+    el.style.top = "40%";
+    el.style.left = "50%";
+    el.style.transform = "translate(-50%, -50%) scale(0)";
+    el.style.color = "#ff0000";
+    el.style.fontSize = "60px";
+    el.style.fontWeight = "bold";
+    el.style.fontFamily = "Impact, sans-serif";
+    el.style.textShadow = "0 0 20px #fff, 4px 4px 0 #000";
+    el.style.zIndex = "1000";
+    el.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+    el.style.pointerEvents = "none";
+    
+    document.body.appendChild(el);
+
+    // Animation rein
+    requestAnimationFrame(() => {
+        el.style.transform = "translate(-50%, -50%) scale(1.5)";
+    });
+
+    // Raus nach 1.5s
+    setTimeout(() => {
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 500);
+    }, 1500);
+}
 
 window.showControls = showControls;
 window.showSettings = showSettings; 
