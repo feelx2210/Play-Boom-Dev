@@ -117,7 +117,7 @@ function getCachedSprite(charDef, d, isCursed) {
                 ctx.beginPath(); ctx.ellipse(14*wMod, -6, 4.5, 11, -0.2, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = skin; fillCircle(-15*wMod, 5, 3.5, skin); fillCircle(15*wMod, 5, 3.5, skin);
             } else {
-                // NEU: SEITEN-ARM
+                // SEITEN-ARM
                 ctx.fillStyle = topColor;
                 if (options.sleeveless) ctx.fillStyle = skin;
                 ctx.beginPath(); ctx.ellipse(0, -6, 4.5, 11, 0, 0, Math.PI*2); ctx.fill();
@@ -221,9 +221,15 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (id === 'gaga') {
             const blue = gradient(-16, 12, '#0055ff', '#0000aa');
             drawVectorBody(skinL, blue, blue, white, { width: 0.9, pantsLen: 5 });
-            ctx.fillStyle='#eee'; ctx.beginPath(); ctx.arc(0, -25, 11, Math.PI, 0); ctx.fill();
-            if(d!=='back') { ctx.fillRect(-11, -25, 5, 20); ctx.fillRect(6, -25, 5, 20); }
-            drawFace(false, true);
+            ctx.fillStyle='#eeeedd'; ctx.beginPath(); ctx.arc(0, -26, 12, Math.PI, 0); ctx.fill(); // Haare
+            // Lange Haare (überall)
+            if (d === 'back') { rect(-12, -26, 24, 22, '#eeeedd'); } 
+            else if (d === 'side') { rect(-8, -26, 10, 22, '#eeeedd'); } 
+            else { rect(-12, -26, 6, 22, '#eeeedd'); rect(6, -26, 6, 22, '#eeeedd'); }
+            // Schleife (Vektor)
+            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(-10, -40); ctx.lineTo(-10, -28); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(10, -40); ctx.lineTo(10, -28); ctx.fill();
+            drawFace(true); // Brille
         }
         // 11. 007
         else if (id === '007') {
@@ -258,7 +264,7 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     else if (dir.x !== 0) d = 'side';
     if (dir.x < 0) ctx.scale(-1, 1); 
 
-    // Schatten
+    // Vektor-Schatten
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 

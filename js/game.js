@@ -135,8 +135,8 @@ function triggerSuddenDeath(survivors) {
                 size: 4
             });
         }
-        // Upgrade Stats
-        p.speed = 4.5;       
+        // Upgrade Stats (Speed auf 4 = Schnell aber kontrollierbar)
+        p.speed = 4;       
         p.bombRange = 12;    
         p.maxBombs = 10;     
         p.currentBombMode = BOMB_MODES.NAPALM; 
@@ -168,7 +168,7 @@ function update() {
         if (p.alive) { aliveCount++; livingPlayers.push(p); } 
     });
 
-    // CHECK SUDDEN DEATH
+    // CHECK SUDDEN DEATH (Wenn nur noch 2 leben und wir mehr als 2 waren)
     if (state.players.length > 2 && aliveCount === 2 && !state.isSuddenDeath) {
         triggerSuddenDeath(livingPlayers);
     }
