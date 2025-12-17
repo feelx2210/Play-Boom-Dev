@@ -1,9 +1,8 @@
 import { TILE_SIZE, GRID_W, GRID_H, TYPES, BOMB_MODES, ITEMS } from './constants.js';
 import { state } from './state.js';
 import { createFloatingText } from './utils.js';
-import { drawCharacterSprite } from './graphics.js';
-import { updateBotLogic } from './ai.js';
-// HIER WURDE DER IMPORT ENTFERNT, UM DEN CRASH ZU VERHINDERN
+import { drawCharacterSprite } from './char_sprites.js';
+import { updateBotLogic } from './ai.js'; // KORREKTER IMPORT
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -46,9 +45,10 @@ export class Player {
         this.bombLock = false;
         this.changeLock = false;
 
+        // Bot Variablen
         this.targetX = x; this.targetY = y; 
         this.changeDirTimer = 0; 
-        this.botDir = {x:0, y:0};
+        this.moveDir = {x:0, y:0};
     }
 
     activateSpeedBoost(multiplier, duration, label) {
@@ -104,7 +104,6 @@ export class Player {
             return;
         }
 
-        // FIX: Update HUD über Global Window statt Import
         if (this.id === 1 && window.updateHud) window.updateHud(this);
         
         this.bobTimer += 0.2;
@@ -119,7 +118,7 @@ export class Player {
         if (this.hasCurse('slow')) currentSpeed *= 0.5;
 
         if (this.isBot) {
-            updateBotLogic(this);
+            updateBotLogic(this); // Aufruf der importierten Funktion
         } else if (input) {
             this.handleInput(input, currentSpeed);
         }
