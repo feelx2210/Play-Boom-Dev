@@ -33,6 +33,7 @@ export function updateBotLogic(bot) {
     // 1. FLUCHT (Prio A++)
     // ------------------------------------------
     if (amInDanger) {
+        // Panik! Such den kürzesten Weg raus.
         nextMove = findSafestPath(gx, gy, dangerMap);
         bot.changeDirTimer = 0; 
     }
@@ -46,10 +47,11 @@ export function updateBotLogic(bot) {
         // A) Bombe legen?
         if (bot.activeBombs < bot.maxBombs) {
             const bombScore = evaluateBombSpot(bot, gx, gy, target);
+            // Auf HARD legen wir aggressiver (ab Score 5), sonst vorsichtiger
             const threshold = isHardMode ? 5 : 10;
 
             if (bombScore > threshold) {
-                // SUIZID-CHECK
+                // SUIZID-CHECK: Überlebe ich das?
                 if (isSafeToPlant(bot, gx, gy, dangerMap)) {
                     wantToBomb = true;
                 }
@@ -57,30 +59,25 @@ export function updateBotLogic(bot) {
         }
 
         if (wantToBomb) {
-            // --- BOMBEN-WAHL LOGIK ---
-            // Standardmäßig normale Bombe (sicherer zum Farmen)
+            // Bomben-Modus wählen
             bot.currentBombMode = BOMB_MODES.STANDARD;
 
             if (bot.hasNapalm) {
-                // Check: Farmen wir gerade? (Ist eine Kiste direkt nebenan?)
+                // Keine Kiste direkt nebenan? (Farmen mit Normal, Kämpfen mit Napalm)
                 let isFarming = false;
                 for (let d of DIRS) {
                     const tx = gx + d.x; const ty = gy + d.y;
                     if (isValid(tx, ty) && state.grid[ty][tx] === TYPES.WALL_SOFT) {
-                        isFarming = true;
-                        break;
+                        isFarming = true; break;
                     }
                 }
-
-                // Check: Ist Gegner in Reichweite?
+                // Gegner nah?
                 let targetNear = false;
                 if (target) {
                     const dist = Math.abs(gx - Math.round(target.x/TILE_SIZE)) + Math.abs(gy - Math.round(target.y/TILE_SIZE));
                     if (dist < 6) targetNear = true;
                 }
 
-                // Entscheidung: Napalm NUR nutzen, wenn wir NICHT farmen UND ein Gegner nah ist
-                // Das verhindert Napalm in der eigenen Ecke.
                 if (!isFarming && targetNear) {
                     bot.currentBombMode = BOMB_MODES.NAPALM;
                 }
@@ -88,10 +85,10 @@ export function updateBotLogic(bot) {
             
             bot.plantBomb();
             
-            // Flucht berechnen
+            // Sofort Flucht berechnen (mit der neuen Gefahr)
             const newDangerMap = getDangerMap(); 
             nextMove = findSafestPath(gx, gy, newDangerMap);
-            bot.changeDirTimer = 5; 
+            bot.changeDirTimer = 2; // Schnell reagieren
         } 
         else {
             // B) Bewegen
@@ -138,7 +135,7 @@ function executeMove(bot) {
     if (bot.botDir.x !== 0 || bot.botDir.y !== 0) {
         bot.move(bot.botDir.x * bot.speed, bot.botDir.y * bot.speed);
         
-        // Anti-Stuck
+        // Anti-Stuck: Wenn wir uns vertikal bewegen, zentrieren wir horizontal (und umgekehrt)
         const centerX = (Math.round(bot.x / TILE_SIZE) * TILE_SIZE);
         const centerY = (Math.round(bot.y / TILE_SIZE) * TILE_SIZE);
         const drift = bot.speed * 0.5;
@@ -155,33 +152,50 @@ function executeMove(bot) {
     }
 }
 
+/**
+ * Kern-Logik für Sicherheit:
+ * Prüft, ob der Bot NACH dem Legen rechtzeitig zu einem sicheren Feld kommt.
+ */
 function isSafeToPlant(bot, gx, gy, currentDangerMap) {
     const futureMap = currentDangerMap.map(row => [...row]);
     const r = bot.bombRange;
-    futureMap[gy][gx] = 180; 
+    futureMap[gy][gx] = 180; // Wir simulieren Gefahr an aktueller Pos
     
     DIRS.forEach(d => {
         for(let i=1; i<=r; i++) {
             const tx = gx + d.x*i; const ty = gy + d.y*i;
             if (!isValid(tx, ty) || state.grid[ty][tx] === TYPES.WALL_HARD) break;
-            futureMap[ty][tx] = 180; 
+            
+            futureMap[ty][tx] = 180; // Strahl ist gefährlich
+            
             if (state.grid[ty][tx] === TYPES.WALL_SOFT) break; 
         }
     });
 
     const queue = [{x:gx, y:gy, dist:0}];
     const visited = new Set([gx+','+gy]);
-    const MAX_DIST = 12;
+
+    // WICHTIG: Das Limit!
+    // Range ist oft 8. Speed ist oft 2.
+    // Geradeaus rennen dauert zu lange. Wir zwingen den Bot, einen nahen Ausweg (< 7 Felder) zu finden.
+    // Findet er keinen (weil er im langen Gang steht), darf er NICHT legen.
+    const MAX_SAFE_DIST = 6; 
 
     while(queue.length > 0) {
         const c = queue.shift();
+        
+        // Haben wir ein Feld erreicht, das in der Zukunftskarte sicher ist?
         if (futureMap[c.y][c.x] === 0) return true; 
-        if (c.dist >= MAX_DIST) continue; 
+
+        if (c.dist >= MAX_SAFE_DIST) continue; 
 
         for(let d of DIRS) {
             const nx = c.x+d.x; const ny = c.y+d.y;
             if (isValid(nx, ny) && !visited.has(nx+','+ny)) {
+                // Das Startfeld ist begehbar (eigene Bombe), sonst nur leere Felder
                 const isStart = (nx === gx && ny === gy);
+                
+                // Wir dürfen nicht in *existierendes* Feuer laufen
                 if ((!isSolid(nx, ny) || isStart) && currentDangerMap[ny][nx] === 0) {
                     visited.add(nx+','+ny);
                     queue.push({x:nx, y:ny, dist: c.dist+1});
@@ -189,7 +203,8 @@ function isSafeToPlant(bot, gx, gy, currentDangerMap) {
             }
         }
     }
-    return false; 
+    
+    return false; // Kein naher Ausweg -> Legen verboten!
 }
 
 function evaluateBombSpot(bot, gx, gy, target) {
@@ -203,23 +218,24 @@ function evaluateBombSpot(bot, gx, gy, target) {
             const tile = state.grid[ty][tx];
 
             if (tile === TYPES.WALL_HARD) break;
-            if (tile === TYPES.WALL_SOFT) { score += 15; break; }
-            if (state.items[ty][tx] === ITEMS.SKULL) { score += 50; break; } 
-            if (state.items[ty][tx] !== ITEMS.NONE) { score -= 200; break; } 
+            if (tile === TYPES.WALL_SOFT) { score += 20; break; }
+            if (state.items[ty][tx] === ITEMS.SKULL) { score += 50; break; } // Weg damit!
+            if (state.items[ty][tx] !== ITEMS.NONE) { score -= 200; break; } // Item schützen
 
             state.players.forEach(p => {
                 if (p.alive && Math.round(p.x/TILE_SIZE)===tx && Math.round(p.y/TILE_SIZE)===ty) {
                     if (p === bot) return;
-                    if (p.isBot) score -= 100; 
-                    else score += 300; 
+                    if (p.isBot) score -= 100; // Friedlich zu anderen Bots
+                    else score += 500; // Spieler töten!
                 }
             });
         }
     });
     
+    // Bonus für Nähe zum Gegner
     if (target) {
         const dist = Math.abs(gx - Math.round(target.x/TILE_SIZE)) + Math.abs(gy - Math.round(target.y/TILE_SIZE));
-        if (dist <= 4) score += 10;
+        if (dist <= 4) score += 20;
     }
 
     return score;
@@ -232,11 +248,13 @@ function evaluateBombSpot(bot, gx, gy, target) {
 function findSafestPath(gx, gy, dangerMap) {
     const queue = [{x:gx, y:gy, move:null}];
     const visited = new Set([gx+','+gy]);
+    
     if (dangerMap[gy][gx] === 0) return {x:0, y:0};
 
     let ops = 0;
-    while(queue.length > 0 && ops++ < 300) {
+    while(queue.length > 0 && ops++ < 400) {
         const c = queue.shift();
+        
         if (dangerMap[c.y][c.x] === 0) return c.move || {x:0, y:0};
 
         for (let d of DIRS) {
@@ -250,7 +268,9 @@ function findSafestPath(gx, gy, dangerMap) {
     return {x:0, y:0};
 }
 
-function findPathToTarget(sx, sy, tx, ty, dangerMap) {
+function findPathToTarget(sx, sy, target, dangerMap) {
+    const tx = Math.round(target.x/TILE_SIZE);
+    const ty = Math.round(target.y/TILE_SIZE);
     const queue = [{x:sx, y:sy, move:null}];
     const visited = new Set([sx+','+sy]);
     let ops = 0;
@@ -262,6 +282,7 @@ function findPathToTarget(sx, sy, tx, ty, dangerMap) {
         for (let d of DIRS) {
             const nx = c.x+d.x; const ny = c.y+d.y;
             const isTarget = (nx === tx && ny === ty);
+            
             if (isValid(nx, ny) && !visited.has(nx+','+ny) && dangerMap[ny][nx] === 0) {
                 if ((!isSolid(nx, ny) || isTarget) && state.items[ny][nx] !== ITEMS.SKULL) {
                     visited.add(nx+','+ny);
