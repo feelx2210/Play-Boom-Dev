@@ -16,7 +16,7 @@ canvas.height = GRID_H * TILE_SIZE;
 let gameLoopId;
 const input = new InputHandler();
 
-// --- RESPONSIVE SCALING ---
+// --- RESPONSIVE SCALING IMPORTANT---
 function resizeGame() {
     const container = document.getElementById('game-container');
     if (!container) return;
