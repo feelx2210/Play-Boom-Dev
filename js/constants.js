@@ -58,7 +58,7 @@ export const CHARACTERS = [
     { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' }        
 ];
 
-// Die guten, alten Level-Designs
+// Die ursprünglichen, kräftigen Level-Designs
 export const LEVELS = {
     stone: { id: 'stone', name: 'STONE CASTLE', bg: '#222', wallHard: '#555', wallSoft: '#777', wallSoftLight: '#888', grid: '#333', border: '#777', glow: '#fff', hasCentralFire: false },
     jungle: { id: 'jungle', name: 'JUNGLE', bg: '#001100', wallHard: '#1a1', wallSoft: '#582f0e', wallSoftLight: '#6f4e37', grid: '#030', border: '#2e2', glow: '#4f4', hasCentralFire: false },
@@ -73,7 +73,7 @@ export const DIRECTION_PADS = [
     {x:5, y:1, dir:{x:1, y:0}}, {x:9, y:13, dir:{x:-1, y:0}}
 ];
 
-// WICHTIG: Die korrekten Tastenbelegungen für Player 1 & 2
+// WICHTIG: Die korrekten Tastenbelegungen (P1_...), damit Player.js funktioniert
 export const keyBindings = {
     P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'ShiftLeft',
     P2_UP: 'KeyW', P2_DOWN: 'KeyS', P2_LEFT: 'KeyA', P2_RIGHT: 'KeyD', P2_BOMB: 'KeyF', P2_CHANGE: 'KeyE'
