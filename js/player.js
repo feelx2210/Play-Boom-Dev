@@ -2,7 +2,7 @@ import { TILE_SIZE, GRID_W, GRID_H, TYPES, BOMB_MODES, ITEMS } from './constants
 import { state } from './state.js';
 import { createFloatingText } from './utils.js';
 import { drawCharacterSprite } from './char_sprites.js';
-import { updateBotLogic } from './ai.js'; // KORREKTER IMPORT
+import { updateBotLogic } from './ai.js'; 
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -48,7 +48,7 @@ export class Player {
         // Bot Variablen
         this.targetX = x; this.targetY = y; 
         this.changeDirTimer = 0; 
-        this.moveDir = {x:0, y:0};
+        this.botDir = {x:0, y:0};
     }
 
     activateSpeedBoost(multiplier, duration, label) {
@@ -118,7 +118,7 @@ export class Player {
         if (this.hasCurse('slow')) currentSpeed *= 0.5;
 
         if (this.isBot) {
-            updateBotLogic(this); // Aufruf der importierten Funktion
+            updateBotLogic(this); 
         } else if (input) {
             this.handleInput(input, currentSpeed);
         }
@@ -161,10 +161,18 @@ export class Player {
     handleInput(input, speed) {
         let dx = 0, dy = 0;
 
-        if (input.isDown('UP')) dy = -speed;
-        if (input.isDown('DOWN')) dy = speed;
-        if (input.isDown('LEFT')) dx = -speed;
-        if (input.isDown('RIGHT')) dx = speed;
+        // Keys basierend auf Spieler-ID
+        const kUp = this.id === 1 ? 'P1_UP' : 'P2_UP';
+        const kDown = this.id === 1 ? 'P1_DOWN' : 'P2_DOWN';
+        const kLeft = this.id === 1 ? 'P1_LEFT' : 'P2_LEFT';
+        const kRight = this.id === 1 ? 'P1_RIGHT' : 'P2_RIGHT';
+        const kBomb = this.id === 1 ? 'P1_BOMB' : 'P2_BOMB';
+        const kChange = this.id === 1 ? 'P1_CHANGE' : 'P2_CHANGE';
+
+        if (input.isDown(kUp)) dy = -speed;
+        if (input.isDown(kDown)) dy = speed;
+        if (input.isDown(kLeft)) dx = -speed;
+        if (input.isDown(kRight)) dx = speed;
         
         if (dx !== 0 || dy !== 0) {
             if (Math.abs(dx) > Math.abs(dy)) this.lastDir = {x: Math.sign(dx), y: 0};
@@ -172,7 +180,7 @@ export class Player {
             this.move(dx, dy);
         }
 
-        if (input.isDown('BOMB')) {
+        if (input.isDown(kBomb)) {
             if (!this.bombLock) {
                 this.plantBomb();
                 this.bombLock = true;
@@ -181,7 +189,8 @@ export class Player {
             this.bombLock = false;
         }
 
-        if (input.isDown('CHANGE')) {
+        // Bomb Switch (Change)
+        if (input.isDown(kChange)) {
              if (!this.changeLock) {
                  this.cycleBombType();
                  this.changeLock = true;
@@ -242,9 +251,16 @@ export class Player {
         
         let idx = modes.indexOf(this.currentBombMode);
         this.currentBombMode = modes[(idx + 1) % modes.length];
+        
+        // Visuelles Feedback
+        let modeName = "STANDARD";
+        if (this.currentBombMode === BOMB_MODES.NAPALM) modeName = "NAPALM";
+        if (this.currentBombMode === BOMB_MODES.ROLLING) modeName = "ROLLING";
+        createFloatingText(this.x, this.y, modeName, "#ffffff");
     }
 
     plantBomb() {
+        // Trigger rolling bombs if exist
         const rollingBomb = state.bombs.find(b => b.owner === this && b.isRolling);
         if (rollingBomb) {
             rollingBomb.isRolling = false;

@@ -34,23 +34,23 @@ export const DIFFICULTIES = ["EASY", "NORMAL", "HARD"];
 
 export const CHARACTERS = [
     // --- ORIGINAL 4 (RENAMED) ---
-    { id: 'commando', name: 'Commando', color: '#228822', accent: '#ff0000' }, // War Rambo
-    { id: 'devil', name: 'The Devil', color: '#ff0000', accent: '#ffff00' },   // War Lucifer
-    { id: 'nun', name: 'The Nun', color: '#000000', accent: '#ffffff' },       // War Nun
-    { id: 'yeti', name: 'Snow Beast', color: '#ffffff', accent: '#00ccff' },   // War Yeti
+    { id: 'commando', name: 'Commando', color: '#228822', accent: '#ff0000' }, 
+    { id: 'devil', name: 'The Devil', color: '#ff0000', accent: '#ffff00' },   
+    { id: 'nun', name: 'The Nun', color: '#000000', accent: '#ffffff' },       
+    { id: 'yeti', name: 'Snow Beast', color: '#ffffff', accent: '#00ccff' },   
     
     // --- NEW 11 (SAFE NAMES) ---
-    { id: 'striker', name: 'Striker', color: '#ff0000', accent: '#ffffff' },   // War Cristiano
-    { id: 'agent', name: 'The Agent', color: '#000000', accent: '#ff0000' },   // War Hitman
-    { id: 'techie', name: 'Tech CEO', color: '#333333', accent: '#aaaaaa' },   // War Elon
-    { id: 'moonwalker', name: 'Moonwalker', color: '#ffffff', accent: '#000000' }, // War MJ
-    { id: 'hoopster', name: 'Hoopster', color: '#fdb927', accent: '#552583' }, // War Lebron
-    { id: 'lifeguard', name: 'Lifeguard', color: '#ff2222', accent: '#ffff88' }, // War Pam
-    { id: 'vocalist', name: 'Vocalist', color: '#000000', accent: '#ffd700' }, // War Drizzy
-    { id: 'rapper', name: 'Rapper', color: '#ffffff', accent: '#3366cc' },     // War 2Pac
-    { id: 'diva', name: 'Pop Diva', color: '#ffb6c1', accent: '#000000' },     // War Dua
-    { id: 'star', name: 'Pop Star', color: '#0000ff', accent: '#eeeeee' },     // War Gaga
-    { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' }        // War 007
+    { id: 'striker', name: 'Striker', color: '#ff0000', accent: '#ffffff' },   
+    { id: 'agent', name: 'The Agent', color: '#000000', accent: '#ff0000' },   
+    { id: 'techie', name: 'Tech CEO', color: '#333333', accent: '#aaaaaa' },   
+    { id: 'moonwalker', name: 'Moonwalker', color: '#ffffff', accent: '#000000' }, 
+    { id: 'hoopster', name: 'Hoopster', color: '#fdb927', accent: '#552583' }, 
+    { id: 'lifeguard', name: 'Lifeguard', color: '#ff2222', accent: '#ffff88' }, 
+    { id: 'vocalist', name: 'Vocalist', color: '#000000', accent: '#ffd700' }, 
+    { id: 'rapper', name: 'Rapper', color: '#ffffff', accent: '#3366cc' },     
+    { id: 'diva', name: 'Pop Diva', color: '#ffb6c1', accent: '#000000' },     
+    { id: 'star', name: 'Pop Star', color: '#0000ff', accent: '#eeeeee' },     
+    { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' }        
 ];
 
 export const LEVELS = {
@@ -68,5 +68,7 @@ export const DIRECTION_PADS = [
 ];
 
 export const keyBindings = {
-    P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space'
+    P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'ShiftLeft',
+    // Fallback für Player 2 (lokaler Multiplayer)
+    P2_UP: 'KeyW', P2_DOWN: 'KeyS', P2_LEFT: 'KeyA', P2_RIGHT: 'KeyD', P2_BOMB: 'KeyF', P2_CHANGE: 'KeyE'
 };
