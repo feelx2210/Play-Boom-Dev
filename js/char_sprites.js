@@ -6,7 +6,15 @@ const spriteCache = {};
 function getCachedSprite(charDef, d, isCursed) {
     if (!charDef) return document.createElement('canvas');
 
-    const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}`;
+    // WICHTIG: Für animierte Chars (wie Duas Glitzer) müssen wir den Cache-Key
+    // zeitabhängig machen, sonst "friert" der Effekt ein.
+    // Wir runden die Zeit, damit nicht JEDER Frame neu gezeichnet wird, sondern nur alle paar ms.
+    let timeKey = '';
+    if (charDef.id === 'dua') {
+        timeKey = `_t${Math.floor(Date.now() / 50)}`; // Update alle 50ms für Glitzer
+    }
+
+    const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}${timeKey}`;
     if (spriteCache[key]) return spriteCache[key];
 
     const c = document.createElement('canvas');
@@ -124,8 +132,10 @@ function getCachedSprite(charDef, d, isCursed) {
                 ctx.fillStyle = skin; fillCircle(0, 5, 3.5, skin);
             }
 
-            // KOPF
-            fillCircle(0, -22, 9.5, skin);
+            // KOPF (Default round head)
+            if (!options.skipHead) {
+                fillCircle(0, -22, 9.5, skin);
+            }
         };
 
         const drawFace = (glasses=false, visor=false, beard=false) => {
@@ -209,27 +219,60 @@ function getCachedSprite(charDef, d, isCursed) {
             if(d==='front') { ctx.beginPath(); ctx.moveTo(8,-29); ctx.lineTo(14,-34); ctx.lineTo(14,-22); ctx.fill(); } 
             drawFace(false, false, true);
         }
-        // 9. DUA
+        // 9. DUA (UPDATED: Glitzer-Anzug, schmaler Kopf, rote Lippen)
         else if (id === 'dua') {
-            drawVectorBody(skinL, black, black, black, { width: 0.8, pantsLen: 4 });
+            // Animierter Glitzer-Effekt
+            const t = Date.now() / 150; 
+            // Diagonaler Verlauf, der sich bewegt
+            const glitter = ctx.createLinearGradient(-15 + Math.sin(t)*15, -20, 15 + Math.sin(t)*15, 20);
+            glitter.addColorStop(0, '#999999');   // Dunkelgrau
+            glitter.addColorStop(0.4, '#cccccc'); // Hellgrau
+            glitter.addColorStop(0.5, '#ffffff'); // Glanzpunkt
+            glitter.addColorStop(0.6, '#cccccc'); // Hellgrau
+            glitter.addColorStop(1, '#999999');   // Dunkelgrau
+
+            // Körper mit Glitzer-Anzug (skipHead, da wir einen schmaleren zeichnen)
+            drawVectorBody(skinL, glitter, glitter, black, { width: 0.8, pantsLen: 4, skipHead: true });
+            
+            // Midriff cutout (Hautfarbe über dem Anzug)
             ctx.fillStyle=skinL; ctx.fillRect(-8, -4, 16, 4);
-            ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -25, 10, Math.PI, 0); ctx.fill();
-            if(d!=='back') { ctx.fillRect(-11, -25, 6, 24); ctx.fillRect(5, -25, 6, 24); } else { ctx.fillRect(-10, -25, 20, 24); }
+
+            // Schmalerer Kopf (Ellipse statt Kreis)
+            ctx.fillStyle = skinL;
+            ctx.beginPath();
+            // Ellipse: x, y, radiusX, radiusY, rotation, startAngle, endAngle
+            ctx.ellipse(0, -23, 7, 9.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Haare (angepasst an schmaleren Kopf)
+            ctx.fillStyle=black;
+            ctx.beginPath(); ctx.arc(0, -26, 9.5, Math.PI, 0); ctx.fill(); 
+            if(d!=='back') {
+                 ctx.fillRect(-10.5, -26, 5, 25);
+                 ctx.fillRect(5.5, -26, 5, 25);
+            } else {
+                 ctx.fillRect(-10, -26, 20, 25);
+            }
+
             drawFace();
+
+            // Rote Lippen
+            if(d==='front') {
+                ctx.fillStyle = '#d00000'; // Dunkles Rot
+                ctx.fillRect(-1.5, -16, 3, 1.5);
+            }
         }
         // 10. GAGA
         else if (id === 'gaga') {
             const blue = gradient(-16, 12, '#0055ff', '#0000aa');
             drawVectorBody(skinL, blue, blue, white, { width: 0.9, pantsLen: 5 });
             ctx.fillStyle='#eeeedd'; ctx.beginPath(); ctx.arc(0, -26, 12, Math.PI, 0); ctx.fill(); // Haare
-            // Lange Haare (überall)
             if (d === 'back') { rect(-12, -26, 24, 22, '#eeeedd'); } 
             else if (d === 'side') { rect(-8, -26, 10, 22, '#eeeedd'); } 
             else { rect(-12, -26, 6, 22, '#eeeedd'); rect(6, -26, 6, 22, '#eeeedd'); }
-            // Schleife (Vektor)
             ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(-10, -40); ctx.lineTo(-10, -28); ctx.fill();
             ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(10, -40); ctx.lineTo(10, -28); ctx.fill();
-            drawFace(true); // Brille
+            drawFace(true); 
         }
         // 11. 007
         else if (id === '007') {
@@ -269,6 +312,7 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
     const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
+    // Sprite holen (Cache wird für Dua regelmäßig invalidiert)
     const sprite = getCachedSprite(charDef, d, showCursedEffect);
     
     // Offset für 48x64 Canvas (Mitte bei 24, 40)
