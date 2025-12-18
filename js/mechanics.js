@@ -4,13 +4,12 @@ import { createFloatingText, isSolid } from './utils.js';
 
 const DIRS = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
 
-// --- UPDATE LOOPS (NEU: Aus game.js ausgelagert) ---
+// --- UPDATE LOOPS ---
 
 export function updateHellFire() {
     if (!state.currentLevel.hasCentralFire) return;
 
     if (!state.hellFireActive) { 
-        // Aktivierung prüfen
         if (state.particles.some(p => p.isFire && p.gx === HELL_CENTER.x && p.gy === HELL_CENTER.y)) { 
             state.hellFireActive = true; 
             state.hellFirePhase = 'WARNING'; 
@@ -51,7 +50,6 @@ export function updateBombs() {
         
         // Rolling Logic
         if (b.isRolling) {
-            // Richtungs-Pads checken
             const dirPad = DIRECTION_PADS.find(p => p.x === b.gx && p.y === b.gy);
             if (dirPad && (b.rollDir.x !== dirPad.dir.x || b.rollDir.y !== dirPad.dir.y)) {
                 const centerX = b.gx * TILE_SIZE; const centerY = b.gy * TILE_SIZE;
@@ -67,17 +65,14 @@ export function updateBombs() {
             const nextGx = Math.floor((b.px + TILE_SIZE/2) / TILE_SIZE); 
             const nextGy = Math.floor((b.py + TILE_SIZE/2) / TILE_SIZE);
             
-            // Kollision mit Feuer (Explosion!)
             if (state.particles.some(p => p.isFire && p.gx === nextGx && p.gy === nextGy)) { 
                 b.isRolling = false; b.gx = nextGx; b.gy = nextGy; b.px = b.gx * TILE_SIZE; b.py = b.gy * TILE_SIZE; b.timer = 0; 
             }
             else {
                 let collision = false;
-                // Wand-Kollision
                 if (nextGx < 0 || nextGx >= GRID_W || nextGy < 0 || nextGy >= GRID_H) collision = true;
                 else if (state.grid[nextGy][nextGx] === TYPES.WALL_HARD || state.grid[nextGy][nextGx] === TYPES.WALL_SOFT || state.grid[nextGy][nextGx] === TYPES.BOMB) collision = true;
                 
-                // Spieler-Kollision (darf rauslaufen, aber nicht rein)
                 if (!collision) { 
                     const bRect = { l: b.px, r: b.px + TILE_SIZE, t: b.py, b: b.py + TILE_SIZE }; 
                     const hitPlayer = state.players.find(p => { 
@@ -92,10 +87,8 @@ export function updateBombs() {
                 
                 if (collision) { 
                     b.isRolling = false; 
-                    // Snap to Grid
                     b.gx = Math.round(b.px / TILE_SIZE); b.gy = Math.round(b.py / TILE_SIZE); 
                     
-                    // Wenn Feld besetzt/blockiert, Schritt zurück
                     let occupied = state.players.some(p => { 
                         if (!p.alive) return false; 
                         const pGx = Math.round(p.x / TILE_SIZE); const pGy = Math.round(p.y / TILE_SIZE); 
@@ -151,7 +144,18 @@ export function updateParticles() {
                 const pCx = pl.x + TILE_SIZE/2; const pCy = pl.y + TILE_SIZE/2; 
                 const plLeft = pCx - hurtSize/2; const plRight = pCx + hurtSize/2; 
                 const plTop = pCy - hurtSize/2; const plBottom = pCy + hurtSize/2; 
-                if (plLeft < fkRight && plRight > fkLeft && plTop < fkBottom && plBottom > fkTop) pl.inFire = true; 
+                
+                if (plLeft < fkRight && plRight > fkLeft && plTop < fkBottom && plBottom > fkTop) {
+                    pl.inFire = true;
+                    
+                    // NEU: Napalm ist heißer/klebriger!
+                    // Fügt zusätzlichen Hitzeschaden hinzu.
+                    // Normaler Speed (2) ist zu langsam und stirbt.
+                    // Schneller Speed (>2) kommt schnell genug durch.
+                    if (p.isNapalm) {
+                        pl.fireTimer = (pl.fireTimer || 0) + 1; // Extra Tick pro Frame
+                    }
+                }
             });
             
             // Bomben Kettenreaktion
