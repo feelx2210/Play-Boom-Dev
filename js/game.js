@@ -2,7 +2,7 @@ import { TILE_SIZE, GRID_W, GRID_H, LEVELS, CHARACTERS, BOMB_MODES } from './con
 import { state } from './state.js';
 import { draw, clearLevelCache } from './graphics.js';
 import { Player } from './player.js';
-import { endGame, showMenu, handleMenuInput, togglePause, showSuddenDeathMessage } from './ui.js';
+import { endGame, showMenu, handleMenuInput, togglePause, showSuddenDeathMessage, updateHud } from './ui.js';
 import { killPlayer, updateHellFire, updateIce, updateBombs, updateParticles, handleInfection } from './mechanics.js';
 import { initLevel } from './level_gen.js'; 
 import { InputHandler } from './InputHandler.js'; 
@@ -16,7 +16,7 @@ canvas.height = GRID_H * TILE_SIZE;
 let gameLoopId;
 const input = new InputHandler();
 
-// --- RESPONSIVE SCALING IMPORTANT---
+// --- RESPONSIVE SCALING ---
 function resizeGame() {
     const container = document.getElementById('game-container');
     if (!container) return;
@@ -91,10 +91,18 @@ window.startGame = function() {
 
     // Spieler erstellen
     state.players.push(new Player(1, 1, 1, userChar, false));
-    const availableChars = CHARACTERS.filter(c => c.id !== userChar.id);
-    state.players.push(new Player(2, GRID_W-2, GRID_H-2, availableChars[0] || CHARACTERS[1], true));
-    state.players.push(new Player(3, GRID_W-2, 1, availableChars[1] || CHARACTERS[2], true));
-    state.players.push(new Player(4, 1, GRID_H-2, availableChars[2] || CHARACTERS[3], true));
+    
+    // --- BOT ZUWEISUNG (NEU: ZUFÄLLIG) ---
+    // 1. Alle Charaktere außer dem Spieler nehmen
+    let availableChars = CHARACTERS.filter(c => c.id !== userChar.id);
+    
+    // 2. Liste zufällig mischen (Fisher-Yates ähnlich oder sort random)
+    availableChars.sort(() => Math.random() - 0.5);
+
+    // 3. Die ersten 3 nehmen
+    state.players.push(new Player(2, GRID_W-2, GRID_H-2, availableChars[0], true));
+    state.players.push(new Player(3, GRID_W-2, 1, availableChars[1], true));
+    state.players.push(new Player(4, 1, GRID_H-2, availableChars[2], true));
 
     document.getElementById('bomb-type').innerText = '⚫';
     
@@ -102,7 +110,7 @@ window.startGame = function() {
     gameLoopId = requestAnimationFrame(gameLoop);
 };
 
-// --- GLOBAL LISTENER (HIER WURDE GEÄNDERT) ---
+// --- GLOBAL LISTENER ---
 window.addEventListener('keydown', e => {
     // 1. Wenn Hauptmenü offen ist -> Menü-Steuerung
     if (!document.getElementById('main-menu').classList.contains('hidden')) { 
@@ -110,7 +118,7 @@ window.addEventListener('keydown', e => {
         return; 
     }
 
-    // 2. NEU: Wenn Game Over Screen offen ist -> Enter/Space führt zum Menü
+    // 2. Wenn Game Over Screen offen ist -> Enter/Space führt zum Menü
     if (!document.getElementById('game-over').classList.contains('hidden')) {
         if (e.code === 'Enter' || e.code === 'Space') {
             showMenu();
@@ -146,12 +154,17 @@ function triggerSuddenDeath(survivors) {
                 size: 4
             });
         }
-        // Upgrade Stats (Speed auf 4 = Schnell aber kontrollierbar)
+        // Upgrade Stats
         p.speed = 4;       
         p.bombRange = 12;    
-        p.maxBombs = 10;     
-        p.currentBombMode = BOMB_MODES.NAPALM; 
-        if (!p.isAI) updateHud(p);
+        p.maxBombs = 10;
+        
+        // Skills permanent freischalten (aber nicht zwingend aktivieren)
+        p.hasNapalm = true; p.napalmTimer = 999999;
+        p.hasRolling = true; p.rollingTimer = 999999;
+        
+        // HUD Update für Mensch
+        if (!p.isBot) updateHud(p);
     });
 }
 
@@ -205,7 +218,7 @@ function gameLoop() {
             alert("Game Crashed! Check Console for details.\n" + error.message); 
         } 
     }
-    // Rendern während Sudden Death Pause (damit Bild stehen bleibt)
+    // Rendern während Sudden Death Pause
     else if (state.isPaused && state.isSuddenDeath) {
         draw(ctx, canvas);
     }
