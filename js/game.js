@@ -2,7 +2,7 @@ import { TILE_SIZE, GRID_W, GRID_H, LEVELS, CHARACTERS, BOMB_MODES } from './con
 import { state } from './state.js';
 import { draw, clearLevelCache } from './graphics.js';
 import { Player } from './player.js';
-import { endGame, showMenu, handleMenuInput, togglePause, showSuddenDeathMessage } from './ui.js';
+import { endGame, showMenu, handleMenuInput, togglePause, showSuddenDeathMessage, updateHud } from './ui.js';
 import { killPlayer, updateHellFire, updateIce, updateBombs, updateParticles, handleInfection } from './mechanics.js';
 import { initLevel } from './level_gen.js'; 
 import { InputHandler } from './InputHandler.js'; 
@@ -123,7 +123,7 @@ function triggerSuddenDeath(survivors) {
     }, 500);
 
     survivors.forEach(p => {
-        // Visuelles Aufleuchten
+        // Visuelles Aufleuchten (Goldene Partikel)
         for(let i=0; i<20; i++) {
             state.particles.push({
                 x: p.x + TILE_SIZE/2, 
@@ -135,12 +135,24 @@ function triggerSuddenDeath(survivors) {
                 size: 4
             });
         }
-        // Upgrade Stats (Speed auf 4 = Schnell aber kontrollierbar)
-        p.speed = 4;       
-        p.bombRange = 12;    
-        p.maxBombs = 10;     
-        p.currentBombMode = BOMB_MODES.NAPALM; 
-        if (!p.isAI) updateHud(p);
+        
+        // --- UPGRADE STATS ---
+        p.speed = 4;        // Schnell, aber kontrollierbar
+        p.bombRange = 8;    // Gewünschte Feuerkraft
+        p.maxBombs = 5;     // Gewünschte Bombenanzahl
+        
+        // --- SKILLS FREISCHALTEN (DAUERHAFT) ---
+        // Wir setzen die Timer extrem hoch, damit sie nicht ablaufen
+        p.hasNapalm = true; 
+        p.napalmTimer = 999999;
+        
+        p.hasRolling = true;
+        p.rollingTimer = 999999;
+
+        // Wir zwingen NICHT mehr in den Napalm-Modus. 
+        // Der Spieler hat nun die Flags und kann selbst wechseln.
+        
+        if (!p.isAI) updateHud(p); // HUD aktualisieren (zeigt ggf. neue Icons)
     });
 }
 
