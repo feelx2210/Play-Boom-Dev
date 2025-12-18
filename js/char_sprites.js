@@ -6,11 +6,10 @@ const spriteCache = {};
 function getCachedSprite(charDef, d, isCursed) {
     if (!charDef) return document.createElement('canvas');
 
-    // WICHTIG: Für animierte Chars (wie Duas Glitzer) müssen wir den Cache-Key
-    // zeitabhängig machen, sonst "friert" der Effekt ein.
+    // Für animierte Chars (wie Diva/Dua)
     let timeKey = '';
-    if (charDef.id === 'dua') {
-        timeKey = `_t${Math.floor(Date.now() / 50)}`; // Update alle 50ms für Glitzer
+    if (charDef.id === 'diva') {
+        timeKey = `_t${Math.floor(Date.now() / 50)}`; 
     }
 
     const key = `${charDef.id}_${d}_${isCursed ? 'cursed' : 'normal'}${timeKey}`;
@@ -18,32 +17,22 @@ function getCachedSprite(charDef, d, isCursed) {
 
     const c = document.createElement('canvas');
     c.width = 48; 
-    c.height = 64; // Extra hoch für Hüte/Haare
+    c.height = 64; 
     const ctx = c.getContext('2d');
     
-    // Ankerpunkt: Füße bei Y=40, damit nach oben Platz für Hüte ist
     ctx.translate(24, 40);
 
-    // --- HELPER ---
-    const fillCircle = (x, y, r, col) => { 
-        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); 
-    };
-    const rect = (x, y, w, h, col) => { 
-        ctx.fillStyle = col; ctx.fillRect(x, y, w, h); 
-    };
-    const gradient = (y1, y2, c1, c2) => { 
-        const g = ctx.createLinearGradient(0, y1, 0, y2); 
-        g.addColorStop(0, c1); g.addColorStop(1, c2); 
-        return g; 
-    };
+    const fillCircle = (x, y, r, col) => { ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); };
+    const rect = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
+    const gradient = (y1, y2, c1, c2) => { const g = ctx.createLinearGradient(0, y1, 0, y2); g.addColorStop(0, c1); g.addColorStop(1, c2); return g; };
 
     const id = charDef.id;
 
     // ============================================================
-    // 1. ORIGINAL CHARACTERS (Dein Vektor-Code)
+    // 1. ORIGINAL CHARACTERS (Generic Names)
     // ============================================================
     
-    if (id === 'lucifer') {
+    if (id === 'devil') { // War Lucifer
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
         else { ctx.fillStyle = cBase; ctx.fillRect(-8, 12, 6, 10); ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-8, 20, 6, 4); ctx.fillRect(2, 20, 6, 4); }
@@ -54,7 +43,8 @@ function getCachedSprite(charDef, d, isCursed) {
         if (d === 'front') { ctx.fillStyle = cBase; ctx.beginPath(); ctx.moveTo(-10, -20); ctx.lineTo(-16, -24); ctx.lineTo(-10, -16); ctx.fill(); ctx.beginPath(); ctx.moveTo(10, -20); ctx.lineTo(16, -24); ctx.lineTo(10, -16); ctx.fill(); ctx.fillStyle = hornGrad; ctx.beginPath(); ctx.moveTo(-7, -24); ctx.quadraticCurveTo(-18, -30, -14, -38); ctx.lineTo(-5, -26); ctx.fill(); ctx.beginPath(); ctx.moveTo(7, -24); ctx.quadraticCurveTo(18, -30, 14, -38); ctx.lineTo(5, -26); ctx.fill(); ctx.fillStyle = '#ffff00'; ctx.fillRect(-8, -20, 5, 4); ctx.fillRect(3, -20, 5, 4); ctx.fillStyle = '#000'; ctx.fillRect(-6, -19, 2, 2); ctx.fillRect(5, -19, 2, 2); ctx.fillStyle = cDark; ctx.fillRect(-2, -16, 4, 2); ctx.fillStyle = '#440000'; ctx.beginPath(); ctx.moveTo(-6, -10); ctx.quadraticCurveTo(0, -6, 6, -10); ctx.lineTo(0, -8); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(-5, -10, 2, 2); ctx.fillRect(3, -10, 2, 2); ctx.fillStyle = cBase; ctx.fillRect(-14, -16, 5, 18); ctx.fillRect(9, -16, 5, 18); ctx.fillStyle = cDark; ctx.fillRect(-14, -2, 5, 4); ctx.fillRect(9, -2, 5, 4); } 
         else if (d === 'back') { ctx.fillStyle = cDark; ctx.fillRect(-4, -18, 8, 30); ctx.fillStyle = '#ddd'; ctx.beginPath(); ctx.moveTo(-7, -24); ctx.quadraticCurveTo(-18, -30, -14, -38); ctx.lineTo(-5, -26); ctx.fill(); ctx.beginPath(); ctx.moveTo(7, -24); ctx.quadraticCurveTo(18, -30, 14, -38); ctx.lineTo(5, -26); ctx.fill(); ctx.strokeStyle = '#aa0000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 8); ctx.quadraticCurveTo(16, 22, 8, 30); ctx.stroke(); ctx.fillStyle = '#aa0000'; ctx.beginPath(); ctx.moveTo(8, 30); ctx.lineTo(12, 34); ctx.lineTo(4, 34); ctx.fill(); ctx.fillStyle = cBase; ctx.fillRect(-14, -16, 5, 18); ctx.fillRect(9, -16, 5, 18); } 
         else if (d === 'side') { ctx.fillStyle = hornGrad; ctx.beginPath(); ctx.moveTo(2, -24); ctx.quadraticCurveTo(10, -30, 12, -38); ctx.lineTo(8, -24); ctx.fill(); ctx.fillStyle = '#ffff00'; ctx.fillRect(4, -19, 4, 4); ctx.fillStyle = cDark; ctx.fillRect(8, -16, 4, 2); ctx.fillStyle = cBase; ctx.fillRect(0, -12, 5, 16); ctx.fillStyle = cDark; ctx.fillRect(0, 0, 6, 4); ctx.strokeStyle = '#aa0000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, 8); ctx.quadraticCurveTo(-16, 20, -12, 26); ctx.stroke(); }
-    } else if (id === 'rambo') {
+    } 
+    else if (id === 'commando') { // War Rambo
         const cGreen = '#226622'; const cDarkG = '#113311'; const cLiteG = '#448844'; const cSkin  = '#ffccaa'; const cSkinS = '#ddaa88'; const cBandana = '#dd0000';
         ctx.fillStyle = cGreen; if (d === 'side') { ctx.fillRect(-5, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-5, 20, 9, 4); } else { ctx.fillRect(-10, 12, 8, 8); ctx.fillRect(2, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-10, 20, 8, 4); ctx.fillRect(2, 20, 8, 4); }
         const bodyGrad = ctx.createLinearGradient(0, -20, 0, 12); bodyGrad.addColorStop(0, '#448844'); bodyGrad.addColorStop(1, '#225522'); ctx.fillStyle = bodyGrad; ctx.fillRect(-12, -20, 24, 32);
@@ -70,7 +60,7 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'back') { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-18, -4, -16, 14); ctx.lineTo(16, 14); ctx.quadraticCurveTo(18, -4, 0, -24); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, -28); ctx.quadraticCurveTo(-14, -10, -12, 10); ctx.lineTo(12, 10); ctx.quadraticCurveTo(14, -10, 0, -28); ctx.fill(); ctx.fillStyle = '#eee'; ctx.fillRect(-8, -24, 16, 2); ctx.fillStyle = robeGrad; ctx.fillRect(-18, -12, 6, 18); ctx.fillRect(12, -12, 6, 18); } 
         else if (d === 'side') { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-14, -10, -12, 14); ctx.lineTo(10, 14); ctx.quadraticCurveTo(12, -10, 0, -24); ctx.fill(); ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(2, -26); ctx.lineTo(-8, -26); ctx.lineTo(-10, -8); ctx.lineTo(4, -8); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(-4, -26); ctx.quadraticCurveTo(-14, -16, -12, 10); ctx.lineTo(-6, 10); ctx.quadraticCurveTo(-8, -16, -4, -26); ctx.fill(); ctx.fillStyle = '#ffccaa'; ctx.fillRect(2, -22, 6, 12); ctx.fillStyle = '#000'; ctx.fillRect(6, -18, 2, 2); ctx.fillStyle = '#cc9922'; ctx.fillRect(4, 0, 4, 10); ctx.fillRect(2, 2, 8, 4); ctx.fillStyle = '#111'; ctx.fillRect(-2, -12, 10, 18); ctx.fillStyle = '#ffccaa'; ctx.fillRect(-2, 4, 8, 4); }
     }
-    else if (id === 'yeti') {
+    else if (id === 'yeti') { // War Yeti/Snow Beast
         const furBase = '#00ccff'; const furDark = '#0088bb'; const furLite = '#e0ffff'; 
         ctx.fillStyle = furBase; if (d === 'side') { ctx.fillRect(-6, 12, 12, 10); } else { ctx.fillRect(-10, 12, 8, 10); ctx.fillRect(2, 12, 8, 10); }
         const furGrad = ctx.createLinearGradient(0, -24, 0, 12); furGrad.addColorStop(0, furBase); furGrad.addColorStop(1, furDark); ctx.fillStyle = furGrad; ctx.fillRect(-16, -24, 32, 36); 
@@ -81,7 +71,7 @@ function getCachedSprite(charDef, d, isCursed) {
     }
 
     // ============================================================
-    // 2. NEUE PROMIS (DETAILIERTER VEKTOR-STIL)
+    // 2. SAFE PARODIES (Vector Style)
     // ============================================================
     else {
         const drawVectorBody = (skin, topColor, pantsColor, shoesColor, options={}) => {
@@ -152,8 +142,8 @@ function getCachedSprite(charDef, d, isCursed) {
         const skinL = '#ffccaa'; const skinD = '#8d5524';
         const black = '#111'; const white = '#fff';
 
-        // 1. CRISTIANO
-        if (id === 'cristiano') {
+        // 1. STRIKER (War Cristiano)
+        if (id === 'striker') {
             const jersey = gradient(-16, 12, '#e00', '#900');
             drawVectorBody(skinL, jersey, white, '#00f', { pantsLen: 6, socks: black });
             if(d==='front' || d==='back') { ctx.fillStyle=white; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText('7', 0, 4); }
@@ -161,136 +151,100 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.beginPath(); ctx.moveTo(-10,-26); ctx.quadraticCurveTo(0,-34,10,-26); ctx.fill();
             drawFace();
         }
-        // 2. HITMAN
-        else if (id === 'hitman') {
+        // 2. AGENT (War Hitman - Barcode entfernt)
+        else if (id === 'agent') {
             const suit = gradient(-16, 12, '#333', '#000');
             drawVectorBody(skinL, suit, black, black);
             if(d==='front') { ctx.fillStyle=white; ctx.beginPath(); ctx.moveTo(-5,-16); ctx.lineTo(5,-16); ctx.lineTo(0,-6); ctx.fill(); ctx.fillStyle='#c00'; ctx.fillRect(-2, -14, 4, 14); }
             drawFace();
-            if(d==='back') rect(-3,-22,6,3,'#000'); 
+            // Barcode REMOVED for safety
         }
-        // 3. ELON
-        else if (id === 'elon') {
+        // 3. TECH CEO (War Elon - Logo entfernt)
+        else if (id === 'techie') {
             drawVectorBody(skinL, '#222', '#222', '#000');
-            if(d==='front') { ctx.fillStyle='#888'; ctx.beginPath(); ctx.moveTo(-6,-6); ctx.lineTo(6,-6); ctx.lineTo(0,-12); ctx.fill(); }
+            // Logo REMOVED
             ctx.fillStyle='#321'; ctx.beginPath(); ctx.arc(0, -25, 10, Math.PI, 0); ctx.fill();
             drawFace();
         }
-        // 4. MJ (UPDATE: Schmaler und schmalerer Kopf)
-        else if (id === 'mj') {
+        // 4. MOONWALKER (War MJ - Slim)
+        else if (id === 'moonwalker') {
             const jacket = gradient(-16, 12, '#eee', '#ccc');
-            // width: 0.8 für schmaleren Körper, skipHead: true für eigenen schmalen Kopf
             drawVectorBody(skinL, jacket, white, black, { socks: white, width: 0.8, skipHead: true });
             
-            // Schmaler Kopf
-            ctx.fillStyle = skinL;
-            ctx.beginPath(); ctx.ellipse(0, -22, 8, 9.5, 0, 0, Math.PI*2); ctx.fill();
-
+            ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -22, 8, 9.5, 0, 0, Math.PI*2); ctx.fill();
             if(d==='front') { ctx.fillStyle='#44f'; ctx.beginPath(); ctx.moveTo(-4,-16); ctx.lineTo(4,-16); ctx.lineTo(0,-8); ctx.fill(); }
             
             ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(0, -29, 11, 4, 0, 0, Math.PI*2); ctx.fill(); 
             ctx.beginPath(); ctx.ellipse(0, -32, 8, 8, 0, Math.PI, 0); ctx.fill(); 
             ctx.fillStyle=black; ctx.fillRect(-8, -32, 16, 3); 
-            ctx.beginPath(); ctx.arc(5, -26, 2, 0, Math.PI*2); ctx.fill(); // Locke
+            ctx.beginPath(); ctx.arc(5, -26, 2, 0, Math.PI*2); ctx.fill(); 
             drawFace();
         }
-        // 5. LEBRON
-        else if (id === 'lebron') {
+        // 5. HOOPSTER (War Lebron)
+        else if (id === 'hoopster') {
             const gold = '#fdb927';
             drawVectorBody(skinD, gold, gold, white, { pantsLen: 7, width: 1.15 }); 
             if(d==='front' || d==='back') { ctx.fillStyle='#552583'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText('23', 0, 4); }
             ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -23, 10, 0, Math.PI*2); ctx.stroke(); 
             drawFace(false, false, true);
         }
-        // 6. PAMELA (UPDATE: Schmaler und schmalerer Kopf)
-        else if (id === 'pam') {
-            // width: 0.8, skipHead: true
+        // 6. LIFEGUARD (War Pam - Slim)
+        else if (id === 'lifeguard') {
             drawVectorBody(skinL, '#f00', '#f00', skinL, { pantsLen: 5, width: 0.8, skipHead: true });
-            
-            // Schmaler Kopf
-            ctx.fillStyle = skinL;
-            ctx.beginPath(); ctx.ellipse(0, -22, 7.5, 9.5, 0, 0, Math.PI*2); ctx.fill();
-
-            ctx.fillStyle='#fe8'; // Haare
+            ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -22, 7.5, 9.5, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle='#fe8'; 
             ctx.beginPath(); ctx.arc(0, -28, 13, Math.PI, 0); ctx.fill();
             ctx.beginPath(); ctx.ellipse(-8, -22, 5, 12, 0.3, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.ellipse(8, -22, 5, 12, -0.3, 0, Math.PI*2); ctx.fill();
             drawFace();
         }
-        // 7. DRIZZY
-        else if (id === 'drizzy') {
+        // 7. VOCALIST (War Drizzy - Owl entfernt)
+        else if (id === 'vocalist') {
             drawVectorBody(skinD, gradient(-16,12,'#111','#000'), '#347', white, { width: 1.1 });
-            if(d==='front') { fillCircle(0, -6, 4, '#fd0'); fillCircle(-1.5, -7, 1, black); fillCircle(1.5, -7, 1, black); }
+            // Owl REMOVED
             ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill();
             drawFace(false, false, true);
         }
-        // 8. 2PAC
-        else if (id === '2pac') {
+        // 8. RAPPER (War 2Pac)
+        else if (id === 'rapper') {
             drawVectorBody(skinD, white, '#369', white, { sleeveless: true });
             ctx.fillStyle='#36c'; ctx.fillRect(-10, -29, 20, 6);
             if(d==='front') { ctx.beginPath(); ctx.moveTo(8,-29); ctx.lineTo(14,-34); ctx.lineTo(14,-22); ctx.fill(); } 
             drawFace(false, false, true);
         }
-        // 9. DUA (Glitzer, schmal)
-        else if (id === 'dua') {
-            // Animierter Glitzer-Effekt
+        // 9. POP DIVA (War Dua - Glitzer, Slim)
+        else if (id === 'diva') {
             const t = Date.now() / 150; 
             const glitter = ctx.createLinearGradient(-15 + Math.sin(t)*15, -20, 15 + Math.sin(t)*15, 20);
-            glitter.addColorStop(0, '#999999');   
-            glitter.addColorStop(0.4, '#cccccc'); 
-            glitter.addColorStop(0.5, '#ffffff'); 
-            glitter.addColorStop(0.6, '#cccccc'); 
-            glitter.addColorStop(1, '#999999');   
+            glitter.addColorStop(0, '#999999'); glitter.addColorStop(0.4, '#cccccc'); glitter.addColorStop(0.5, '#ffffff'); glitter.addColorStop(0.6, '#cccccc'); glitter.addColorStop(1, '#999999');   
 
             drawVectorBody(skinL, glitter, glitter, black, { width: 0.8, pantsLen: 4, skipHead: true });
-            
             ctx.fillStyle=skinL; ctx.fillRect(-8, -4, 16, 4);
-
-            // Schmaler Kopf
-            ctx.fillStyle = skinL;
-            ctx.beginPath(); ctx.ellipse(0, -23, 7, 9.5, 0, 0, Math.PI * 2); ctx.fill();
-
-            // Haare
-            ctx.fillStyle=black;
-            ctx.beginPath(); ctx.arc(0, -26, 9.5, Math.PI, 0); ctx.fill(); 
-            if(d!=='back') { ctx.fillRect(-10.5, -26, 5, 25); ctx.fillRect(5.5, -26, 5, 25); } 
-            else { ctx.fillRect(-10, -26, 20, 25); }
-
+            ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -23, 7, 9.5, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -26, 9.5, Math.PI, 0); ctx.fill(); 
+            if(d!=='back') { ctx.fillRect(-10.5, -26, 5, 25); ctx.fillRect(5.5, -26, 5, 25); } else { ctx.fillRect(-10, -26, 20, 25); }
             drawFace();
             if(d==='front') { ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); }
         }
-        // 10. GAGA (UPDATE: Schmaler und schmalerer Kopf)
-        else if (id === 'gaga') {
+        // 10. POP STAR (War Gaga - Slim)
+        else if (id === 'star') {
             const blue = gradient(-16, 12, '#0055ff', '#0000aa');
-            // width: 0.8, skipHead: true
             drawVectorBody(skinL, blue, blue, white, { width: 0.8, pantsLen: 5, skipHead: true });
-            
-            // Schmaler Kopf
-            ctx.fillStyle = skinL;
-            ctx.beginPath(); ctx.ellipse(0, -23, 7.5, 9.5, 0, 0, Math.PI*2); ctx.fill();
-
+            ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -23, 7.5, 9.5, 0, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle='#eeeedd'; ctx.beginPath(); ctx.arc(0, -26, 10, Math.PI, 0); ctx.fill(); 
-            if (d === 'back') { rect(-10, -26, 20, 22, '#eeeedd'); } 
-            else if (d === 'side') { rect(-7, -26, 8, 22, '#eeeedd'); } 
-            else { rect(-10, -26, 5, 22, '#eeeedd'); rect(5, -26, 5, 22, '#eeeedd'); }
-            
-            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(-9, -40); ctx.lineTo(-9, -28); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(9, -40); ctx.lineTo(9, -28); ctx.fill();
+            if (d === 'back') { rect(-10, -26, 20, 22, '#eeeedd'); } else if (d === 'side') { rect(-7, -26, 8, 22, '#eeeedd'); } else { rect(-10, -26, 5, 22, '#eeeedd'); rect(5, -26, 5, 22, '#eeeedd'); }
+            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(-9, -40); ctx.lineTo(-9, -28); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(9, -40); ctx.lineTo(9, -28); ctx.fill();
             drawFace(true); 
         }
-        // 11. 007
-        else if (id === '007') {
+        // 11. SPY (War 007)
+        else if (id === 'spy') {
             drawVectorBody(skinL, gradient(-16, 12, '#555', '#333'), '#333', black);
-            if(d==='front') {
-                ctx.fillStyle=white; ctx.beginPath(); ctx.moveTo(-5,-16); ctx.lineTo(5,-16); ctx.lineTo(0,-6); ctx.fill();
-                ctx.fillStyle=black; ctx.fillRect(-2, -14, 4, 3); 
-            }
+            if(d==='front') { ctx.fillStyle=white; ctx.beginPath(); ctx.moveTo(-5,-16); ctx.lineTo(5,-16); ctx.lineTo(0,-6); ctx.fill(); ctx.fillStyle=black; ctx.fillRect(-2, -14, 4, 3); }
             ctx.fillStyle='#aa9977'; ctx.beginPath(); ctx.arc(0, -25, 10, Math.PI, 0); ctx.fill();
             drawFace();
         }
     }
 
-    // Cursed Effekt
     if (isCursed) { 
         ctx.globalCompositeOperation = 'source-atop'; 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; 
@@ -305,21 +259,11 @@ function getCachedSprite(charDef, d, isCursed) {
 export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = {x:0, y:1}) {
     ctx.save();
     ctx.translate(x, y);
-
-    let d = 'front'; 
-    if (dir.y < 0) d = 'back';
-    else if (dir.x !== 0) d = 'side';
+    let d = 'front'; if (dir.y < 0) d = 'back'; else if (dir.x !== 0) d = 'side';
     if (dir.x < 0) ctx.scale(-1, 1); 
-
-    // Vektor-Schatten
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
-
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
     const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
     const sprite = getCachedSprite(charDef, d, showCursedEffect);
-    
-    // Offset für 48x64 Canvas (Mitte bei 24, 40)
     ctx.drawImage(sprite, -24, -40);
-    
     ctx.restore();
 }
