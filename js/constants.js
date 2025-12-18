@@ -4,6 +4,13 @@ export const GRID_H = 15;
 
 export const HELL_CENTER = { x: 7, y: 7 };
 
+// Objekt für einfache Abfragen in der KI
+export const DIFFICULTIES = {
+    EASY: 0,
+    NORMAL: 1,
+    HARD: 2
+};
+
 export const TYPES = {
     EMPTY: 0,
     WALL_HARD: 1,
@@ -30,16 +37,14 @@ export const BOMB_MODES = {
     ROLLING: 2
 };
 
-export const DIFFICULTIES = ["EASY", "NORMAL", "HARD"];
-
 export const CHARACTERS = [
-    // --- ORIGINAL 4 (RENAMED) ---
+    // --- ORIGINAL 4 (SAFE PARODIES) ---
     { id: 'commando', name: 'Commando', color: '#228822', accent: '#ff0000' }, 
     { id: 'devil', name: 'The Devil', color: '#ff0000', accent: '#ffff00' },   
     { id: 'nun', name: 'The Nun', color: '#000000', accent: '#ffffff' },       
     { id: 'yeti', name: 'Snow Beast', color: '#ffffff', accent: '#00ccff' },   
     
-    // --- NEW 11 (SAFE NAMES) ---
+    // --- NEW 11 (SAFE PARODIES) ---
     { id: 'striker', name: 'Striker', color: '#ff0000', accent: '#ffffff' },   
     { id: 'agent', name: 'The Agent', color: '#000000', accent: '#ff0000' },   
     { id: 'techie', name: 'Tech CEO', color: '#333333', accent: '#aaaaaa' },   
@@ -53,6 +58,7 @@ export const CHARACTERS = [
     { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' }        
 ];
 
+// Die guten, alten Level-Designs
 export const LEVELS = {
     stone: { id: 'stone', name: 'STONE CASTLE', bg: '#222', wallHard: '#555', wallSoft: '#777', wallSoftLight: '#888', grid: '#333', border: '#777', glow: '#fff', hasCentralFire: false },
     jungle: { id: 'jungle', name: 'JUNGLE', bg: '#001100', wallHard: '#1a1', wallSoft: '#582f0e', wallSoftLight: '#6f4e37', grid: '#030', border: '#2e2', glow: '#4f4', hasCentralFire: false },
@@ -67,8 +73,8 @@ export const DIRECTION_PADS = [
     {x:5, y:1, dir:{x:1, y:0}}, {x:9, y:13, dir:{x:-1, y:0}}
 ];
 
+// WICHTIG: Die korrekten Tastenbelegungen für Player 1 & 2
 export const keyBindings = {
     P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'ShiftLeft',
-    // Fallback für Player 2 (lokaler Multiplayer)
     P2_UP: 'KeyW', P2_DOWN: 'KeyS', P2_LEFT: 'KeyA', P2_RIGHT: 'KeyD', P2_BOMB: 'KeyF', P2_CHANGE: 'KeyE'
 };
