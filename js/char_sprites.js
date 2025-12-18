@@ -8,7 +8,6 @@ function getCachedSprite(charDef, d, isCursed) {
 
     // WICHTIG: Für animierte Chars (wie Duas Glitzer) müssen wir den Cache-Key
     // zeitabhängig machen, sonst "friert" der Effekt ein.
-    // Wir runden die Zeit, damit nicht JEDER Frame neu gezeichnet wird, sondern nur alle paar ms.
     let timeKey = '';
     if (charDef.id === 'dua') {
         timeKey = `_t${Math.floor(Date.now() / 50)}`; // Update alle 50ms für Glitzer
@@ -132,7 +131,7 @@ function getCachedSprite(charDef, d, isCursed) {
                 ctx.fillStyle = skin; fillCircle(0, 5, 3.5, skin);
             }
 
-            // KOPF (Default round head)
+            // KOPF
             if (!options.skipHead) {
                 fillCircle(0, -22, 9.5, skin);
             }
@@ -177,15 +176,22 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.fillStyle='#321'; ctx.beginPath(); ctx.arc(0, -25, 10, Math.PI, 0); ctx.fill();
             drawFace();
         }
-        // 4. MJ
+        // 4. MJ (UPDATE: Schmaler und schmalerer Kopf)
         else if (id === 'mj') {
             const jacket = gradient(-16, 12, '#eee', '#ccc');
-            drawVectorBody(skinL, jacket, white, black, { socks: white });
+            // width: 0.8 für schmaleren Körper, skipHead: true für eigenen schmalen Kopf
+            drawVectorBody(skinL, jacket, white, black, { socks: white, width: 0.8, skipHead: true });
+            
+            // Schmaler Kopf
+            ctx.fillStyle = skinL;
+            ctx.beginPath(); ctx.ellipse(0, -22, 8, 9.5, 0, 0, Math.PI*2); ctx.fill();
+
             if(d==='front') { ctx.fillStyle='#44f'; ctx.beginPath(); ctx.moveTo(-4,-16); ctx.lineTo(4,-16); ctx.lineTo(0,-8); ctx.fill(); }
-            ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(0, -29, 13, 4, 0, 0, Math.PI*2); ctx.fill(); 
-            ctx.beginPath(); ctx.arc(0, -32, 9, Math.PI, 0); ctx.fill(); 
-            ctx.fillStyle=black; ctx.fillRect(-9, -32, 18, 3); 
-            ctx.beginPath(); ctx.arc(6, -26, 2, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(0, -29, 11, 4, 0, 0, Math.PI*2); ctx.fill(); 
+            ctx.beginPath(); ctx.ellipse(0, -32, 8, 8, 0, Math.PI, 0); ctx.fill(); 
+            ctx.fillStyle=black; ctx.fillRect(-8, -32, 16, 3); 
+            ctx.beginPath(); ctx.arc(5, -26, 2, 0, Math.PI*2); ctx.fill(); // Locke
             drawFace();
         }
         // 5. LEBRON
@@ -196,13 +202,19 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -23, 10, 0, Math.PI*2); ctx.stroke(); 
             drawFace(false, false, true);
         }
-        // 6. PAMELA
+        // 6. PAMELA (UPDATE: Schmaler und schmalerer Kopf)
         else if (id === 'pam') {
-            drawVectorBody(skinL, '#f00', '#f00', skinL, { pantsLen: 5, width: 0.9 });
-            ctx.fillStyle='#fe8'; 
-            ctx.beginPath(); ctx.arc(0, -28, 14, Math.PI, 0); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(-9, -22, 6, 12, 0.3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(9, -22, 6, 12, -0.3, 0, Math.PI*2); ctx.fill();
+            // width: 0.8, skipHead: true
+            drawVectorBody(skinL, '#f00', '#f00', skinL, { pantsLen: 5, width: 0.8, skipHead: true });
+            
+            // Schmaler Kopf
+            ctx.fillStyle = skinL;
+            ctx.beginPath(); ctx.ellipse(0, -22, 7.5, 9.5, 0, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle='#fe8'; // Haare
+            ctx.beginPath(); ctx.arc(0, -28, 13, Math.PI, 0); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(-8, -22, 5, 12, 0.3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(8, -22, 5, 12, -0.3, 0, Math.PI*2); ctx.fill();
             drawFace();
         }
         // 7. DRIZZY
@@ -219,59 +231,51 @@ function getCachedSprite(charDef, d, isCursed) {
             if(d==='front') { ctx.beginPath(); ctx.moveTo(8,-29); ctx.lineTo(14,-34); ctx.lineTo(14,-22); ctx.fill(); } 
             drawFace(false, false, true);
         }
-        // 9. DUA (UPDATED: Glitzer-Anzug, schmaler Kopf, rote Lippen)
+        // 9. DUA (Glitzer, schmal)
         else if (id === 'dua') {
             // Animierter Glitzer-Effekt
             const t = Date.now() / 150; 
-            // Diagonaler Verlauf, der sich bewegt
             const glitter = ctx.createLinearGradient(-15 + Math.sin(t)*15, -20, 15 + Math.sin(t)*15, 20);
-            glitter.addColorStop(0, '#999999');   // Dunkelgrau
-            glitter.addColorStop(0.4, '#cccccc'); // Hellgrau
-            glitter.addColorStop(0.5, '#ffffff'); // Glanzpunkt
-            glitter.addColorStop(0.6, '#cccccc'); // Hellgrau
-            glitter.addColorStop(1, '#999999');   // Dunkelgrau
+            glitter.addColorStop(0, '#999999');   
+            glitter.addColorStop(0.4, '#cccccc'); 
+            glitter.addColorStop(0.5, '#ffffff'); 
+            glitter.addColorStop(0.6, '#cccccc'); 
+            glitter.addColorStop(1, '#999999');   
 
-            // Körper mit Glitzer-Anzug (skipHead, da wir einen schmaleren zeichnen)
             drawVectorBody(skinL, glitter, glitter, black, { width: 0.8, pantsLen: 4, skipHead: true });
             
-            // Midriff cutout (Hautfarbe über dem Anzug)
             ctx.fillStyle=skinL; ctx.fillRect(-8, -4, 16, 4);
 
-            // Schmalerer Kopf (Ellipse statt Kreis)
+            // Schmaler Kopf
             ctx.fillStyle = skinL;
-            ctx.beginPath();
-            // Ellipse: x, y, radiusX, radiusY, rotation, startAngle, endAngle
-            ctx.ellipse(0, -23, 7, 9.5, 0, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.ellipse(0, -23, 7, 9.5, 0, 0, Math.PI * 2); ctx.fill();
 
-            // Haare (angepasst an schmaleren Kopf)
+            // Haare
             ctx.fillStyle=black;
             ctx.beginPath(); ctx.arc(0, -26, 9.5, Math.PI, 0); ctx.fill(); 
-            if(d!=='back') {
-                 ctx.fillRect(-10.5, -26, 5, 25);
-                 ctx.fillRect(5.5, -26, 5, 25);
-            } else {
-                 ctx.fillRect(-10, -26, 20, 25);
-            }
+            if(d!=='back') { ctx.fillRect(-10.5, -26, 5, 25); ctx.fillRect(5.5, -26, 5, 25); } 
+            else { ctx.fillRect(-10, -26, 20, 25); }
 
             drawFace();
-
-            // Rote Lippen
-            if(d==='front') {
-                ctx.fillStyle = '#d00000'; // Dunkles Rot
-                ctx.fillRect(-1.5, -16, 3, 1.5);
-            }
+            if(d==='front') { ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); }
         }
-        // 10. GAGA
+        // 10. GAGA (UPDATE: Schmaler und schmalerer Kopf)
         else if (id === 'gaga') {
             const blue = gradient(-16, 12, '#0055ff', '#0000aa');
-            drawVectorBody(skinL, blue, blue, white, { width: 0.9, pantsLen: 5 });
-            ctx.fillStyle='#eeeedd'; ctx.beginPath(); ctx.arc(0, -26, 12, Math.PI, 0); ctx.fill(); // Haare
-            if (d === 'back') { rect(-12, -26, 24, 22, '#eeeedd'); } 
-            else if (d === 'side') { rect(-8, -26, 10, 22, '#eeeedd'); } 
-            else { rect(-12, -26, 6, 22, '#eeeedd'); rect(6, -26, 6, 22, '#eeeedd'); }
-            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(-10, -40); ctx.lineTo(-10, -28); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(10, -40); ctx.lineTo(10, -28); ctx.fill();
+            // width: 0.8, skipHead: true
+            drawVectorBody(skinL, blue, blue, white, { width: 0.8, pantsLen: 5, skipHead: true });
+            
+            // Schmaler Kopf
+            ctx.fillStyle = skinL;
+            ctx.beginPath(); ctx.ellipse(0, -23, 7.5, 9.5, 0, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle='#eeeedd'; ctx.beginPath(); ctx.arc(0, -26, 10, Math.PI, 0); ctx.fill(); 
+            if (d === 'back') { rect(-10, -26, 20, 22, '#eeeedd'); } 
+            else if (d === 'side') { rect(-7, -26, 8, 22, '#eeeedd'); } 
+            else { rect(-10, -26, 5, 22, '#eeeedd'); rect(5, -26, 5, 22, '#eeeedd'); }
+            
+            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(-9, -40); ctx.lineTo(-9, -28); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(9, -40); ctx.lineTo(9, -28); ctx.fill();
             drawFace(true); 
         }
         // 11. 007
@@ -312,7 +316,6 @@ export function drawCharacterSprite(ctx, x, y, charDef, isCursed = false, dir = 
     ctx.beginPath(); ctx.ellipse(0, 16, 12, 5, 0, 0, Math.PI*2); ctx.fill();
 
     const showCursedEffect = isCursed && (Math.floor(Date.now() / 100) % 2 === 0);
-    // Sprite holen (Cache wird für Dua regelmäßig invalidiert)
     const sprite = getCachedSprite(charDef, d, showCursedEffect);
     
     // Offset für 48x64 Canvas (Mitte bei 24, 40)
