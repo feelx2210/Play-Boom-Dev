@@ -1,13 +1,11 @@
-import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER, DIRECTION_PADS, BOMB_MODES } from './constants.js';
+import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER, DIRECTION_PADS } from './constants.js';
 import { state } from './state.js';
 import { drawAllParticles } from './render_particles.js';
-// NEU: Importiere die Charakter-Logik
+// WICHTIG: Wir nutzen die externe Charakter-Datei für die Vektorgrafiken!
 import { drawCharacterSprite } from './char_sprites.js';
 
-// Re-Export für Player.js und UI.js, damit wir dort keine Imports ändern müssen
 export { drawCharacterSprite };
 
-// --- LEVEL CACHING ---
 let cachedLevelCanvas = null;
 let lastLevelId = null;
 
@@ -16,6 +14,7 @@ export function clearLevelCache() {
     lastLevelId = null;
 }
 
+// DEINE ORIGINAL LEVEL-LOGIK
 function bakeStaticLevel(levelDef) {
     const c = document.createElement('canvas');
     c.width = GRID_W * TILE_SIZE;
@@ -79,7 +78,7 @@ function bakeStaticLevel(levelDef) {
                     ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
                 }
             } 
-            // Boden-Objekte (Wasser, Brücken, Öl, Pads)
+            // Boden-Objekte
             else if (tile === TYPES.WATER) {
                 ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
@@ -123,7 +122,6 @@ function bakeStaticLevel(levelDef) {
         }
     }
 
-    // Hell Center Fire Pit (Static Base)
     if (levelDef.hasCentralFire) {
         const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
         ctx.fillStyle = '#0a0505'; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
@@ -166,20 +164,14 @@ export function drawItem(ctx, type, x, y) {
     }
 }
 
-// --- OPTIMIERTE DRAW LOOP ---
 export function draw(ctx, canvas) {
-    // 1. Hintergrund aus Cache (ODER neu erstellen, wenn nötig)
     if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
-        // Falls Cache fehlt oder Level gewechselt -> Neu baken!
-        // Wichtig: Das passiert NACHDEM game.js das Grid initialisiert hat.
         cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
         lastLevelId = state.currentLevel.id;
     }
-    // Zeichne das statische Bild (Hintergrund, Hard Walls, Boden)
     ctx.drawImage(cachedLevelCanvas, 0, 0);
 
-    // 2. Dynamische Elemente
-    // Hell Center Fire Pit (Dynamic Part)
+    // Hell Center Fire Pit (Dynamic)
     if (state.currentLevel.hasCentralFire) {
         const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
         const centerX = cx + TILE_SIZE/2; const centerY = cy + TILE_SIZE/2;
@@ -203,18 +195,17 @@ export function draw(ctx, canvas) {
         }
     }
 
-    // Soft Walls & Items & Bombs
+    // Grid (Soft Walls, Items)
     for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
             const item = state.items[y][x];
             const tile = state.grid[y][x];
 
-            // Items (nur wenn keine Soft Wall drauf ist)
             if (item !== ITEMS.NONE && tile !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
 
-            // Soft Walls (Beweglich/Zerstörbar)
             if (tile === TYPES.WALL_SOFT) {
+                // Deine Original Soft Wall Farben
                 if (state.currentLevel.id === 'ice') {
                     ctx.fillStyle = '#88ccff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = '#4488cc'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + 4, py + 4); ctx.lineTo(px + TILE_SIZE - 4, py + TILE_SIZE - 4); ctx.moveTo(px + TILE_SIZE - 4, py + 4); ctx.lineTo(px + 4, py + TILE_SIZE - 4); ctx.stroke();
@@ -239,7 +230,7 @@ export function draw(ctx, canvas) {
         }
     }
 
-    // Bomben (über allem Grid-Kram)
+    // Bomben
     state.bombs.forEach(b => {
         const px = b.px; const py = b.py; const scale = 1 + Math.sin(Date.now() / 100) * 0.1;
         let baseColor = '#444444'; if (state.currentLevel.id === 'jungle') baseColor = '#000000';
