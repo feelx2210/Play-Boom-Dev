@@ -52,6 +52,9 @@ export class Player {
     }
 
     activateSpeedBoost(multiplier, duration, label) {
+        // NEU: Im Sudden Death Modus Speed-Änderungen blockieren
+        if (state.isSuddenDeath) return;
+
         if (this.hasCurse('slow')) {
             this.activeCurses = this.activeCurses.filter(c => c.type !== 'slow');
             createFloatingText(this.x, this.y, "NORMALIZED!", "#ffffff");
@@ -69,6 +72,9 @@ export class Player {
 
     addCurse(type) {
         if (type === 'speed_rush') {
+            // NEU: Kein Speed-Curse im Sudden Death
+            if (state.isSuddenDeath) return;
+            
             this.activateSpeedBoost(2.5, 900, "SPEED CURSE!"); 
             return;
         }
@@ -127,6 +133,8 @@ export class Player {
     }
 
     updateTimers() {
+        // Im Sudden Death laufen Napalm/Rolling nicht ab (Timer sind riesig),
+        // aber die Logik hier stört nicht.
         if (this.hasRolling && --this.rollingTimer <= 0) {
             this.hasRolling = false;
             if (this.currentBombMode === BOMB_MODES.ROLLING) this.currentBombMode = BOMB_MODES.STANDARD;
