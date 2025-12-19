@@ -6,7 +6,7 @@ function getCachedSprite(charDef, d, isCursed) {
     if (!charDef) return document.createElement('canvas');
 
     let timeKey = '';
-    if (charDef.id === 'diva' || charDef.id === 'lifeguard') { // Lifeguard nutzt auch Diva-Basis
+    if (charDef.id === 'diva' || charDef.id === 'lifeguard') { 
         timeKey = `_t${Math.floor(Date.now() / 50)}`; 
     }
 
@@ -27,7 +27,7 @@ function getCachedSprite(charDef, d, isCursed) {
     const id = charDef.id;
 
     // ============================================================
-    // Vektor-Zeichenfunktion (Shared)
+    // Vektor-Zeichenfunktion
     // ============================================================
     const drawVectorBody = (skin, topColor, pantsColor, shoesColor, options={}) => {
         const wMod = options.width || 1;
@@ -46,12 +46,28 @@ function getCachedSprite(charDef, d, isCursed) {
             else { ctx.fillRect(-9*wMod, 18, 8*wMod, 4); ctx.fillRect(1*wMod, 18, 8*wMod, 4); }
         }
         ctx.fillStyle = pantsColor;
-        if(d==='side') ctx.fillRect(-5, 10, 10, pantsLen);
-        else { ctx.fillRect(-9*wMod, 10, 8*wMod, pantsLen); ctx.fillRect(1*wMod, 10, 8*wMod, pantsLen); }
+        
+        // V-Shape (für Lifeguard/Badeanzüge)
+        if (options.vShape && d !== 'side') {
+            ctx.beginPath();
+            ctx.moveTo(-9*wMod, 10); ctx.lineTo(9*wMod, 10);
+            ctx.lineTo(0, 18); 
+            ctx.fill();
+        } else {
+            if(d==='side') ctx.fillRect(-5, 10, 10, pantsLen);
+            else { ctx.fillRect(-9*wMod, 10, 8*wMod, pantsLen); ctx.fillRect(1*wMod, 10, 8*wMod, pantsLen); }
+        }
 
-        ctx.fillStyle = shoesColor;
-        if(d==='side') { ctx.beginPath(); ctx.ellipse(0, 24, 6, 3, 0, 0, Math.PI*2); ctx.fill(); }
-        else { ctx.beginPath(); ctx.arc(-5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); }
+        // Schuhe / Barfuß
+        if (!options.barefoot) {
+            ctx.fillStyle = shoesColor;
+            if(d==='side') { ctx.beginPath(); ctx.ellipse(0, 24, 6, 3, 0, 0, Math.PI*2); ctx.fill(); }
+            else { ctx.beginPath(); ctx.arc(-5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); }
+        } else {
+            ctx.fillStyle = skin;
+            if(d==='side') { ctx.fillRect(-2, 22, 6, 3); }
+            else { ctx.fillRect(-8*wMod, 22, 6, 3); ctx.fillRect(2*wMod, 22, 6, 3); }
+        }
 
         // TORSO
         ctx.fillStyle = topColor;
@@ -80,7 +96,7 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.fillStyle = skin; fillCircle(0, 5, 3.5, skin);
         }
 
-        // KOPF BASIS
+        // KOPF
         if (!options.skipHead) {
             fillCircle(0, -22, 9.5, skin);
         }
@@ -95,6 +111,8 @@ function getCachedSprite(charDef, d, isCursed) {
         if (glasses) { ctx.fillStyle = '#111'; ctx.fillRect(-9, -26, 18, 5); }
         if (visor) { ctx.fillStyle = '#0044cc'; ctx.fillRect(-10, -28, 20, 8); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(-8, -28, 4, 8); }
         if (beard) { ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.arc(0, -22, 9.5, 0.5, 2.6); ctx.fill(); }
+        
+        // Standard Mund (wenn kein Bart)
         if (!beard) { ctx.fillStyle = '#a0522d'; ctx.fillRect(-2, -17, 4, 1); }
     };
 
@@ -102,11 +120,10 @@ function getCachedSprite(charDef, d, isCursed) {
     const black = '#111'; const white = '#fff';
 
     // ============================================================
-    // CHARAKTER DEFINITIONEN
+    // CHARACTERS
     // ============================================================
     
     if (id === 'devil') {
-        // ... (Devil Code bleibt gleich) ...
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
         else { ctx.fillStyle = cBase; ctx.fillRect(-8, 12, 6, 10); ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-8, 20, 6, 4); ctx.fillRect(2, 20, 6, 4); }
@@ -119,7 +136,6 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'side') { ctx.fillStyle = hornGrad; ctx.beginPath(); ctx.moveTo(2, -24); ctx.quadraticCurveTo(10, -30, 12, -38); ctx.lineTo(8, -24); ctx.fill(); ctx.fillStyle = '#ffff00'; ctx.fillRect(4, -19, 4, 4); ctx.fillStyle = cDark; ctx.fillRect(8, -16, 4, 2); ctx.fillStyle = cBase; ctx.fillRect(0, -12, 5, 16); ctx.fillStyle = cDark; ctx.fillRect(0, 0, 6, 4); ctx.strokeStyle = '#aa0000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, 8); ctx.quadraticCurveTo(-16, 20, -12, 26); ctx.stroke(); }
     } 
     else if (id === 'commando') {
-        // ... (Commando Code bleibt gleich) ...
         const cGreen = '#226622'; const cDarkG = '#113311'; const cLiteG = '#448844'; const cSkin  = '#ffccaa'; const cSkinS = '#ddaa88'; const cBandana = '#dd0000';
         ctx.fillStyle = cGreen; if (d === 'side') { ctx.fillRect(-5, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-5, 20, 9, 4); } else { ctx.fillRect(-10, 12, 8, 8); ctx.fillRect(2, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-10, 20, 8, 4); ctx.fillRect(2, 20, 8, 4); }
         const bodyGrad = ctx.createLinearGradient(0, -20, 0, 12); bodyGrad.addColorStop(0, '#448844'); bodyGrad.addColorStop(1, '#225522'); ctx.fillStyle = bodyGrad; ctx.fillRect(-12, -20, 24, 32);
@@ -130,7 +146,6 @@ function getCachedSprite(charDef, d, isCursed) {
         if(d==='front') { ctx.fillStyle='#a0522d'; ctx.fillRect(-2, -8, 4, 1); }
     }
     else if (id === 'nun') {
-        // ... (Nun Code bleibt gleich) ...
         ctx.fillStyle = '#111'; if (d === 'side') ctx.fillRect(-5, 14, 10, 4); else { ctx.fillRect(-7, 14, 6, 4); ctx.fillRect(1, 14, 6, 4); }
         const robeGrad = ctx.createLinearGradient(0, -20, 0, 14); robeGrad.addColorStop(0, '#333'); robeGrad.addColorStop(1, '#000');
         if (d === 'front') { ctx.fillStyle = robeGrad; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-18, -4, -16, 14); ctx.lineTo(16, 14); ctx.quadraticCurveTo(18, -4, 0, -24); ctx.fill(); ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.quadraticCurveTo(-12, 0, -10, 14); ctx.stroke(); ctx.beginPath(); ctx.moveTo(8, -10); ctx.quadraticCurveTo(12, 0, 10, 14); ctx.stroke(); ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(0, -26); ctx.quadraticCurveTo(-14, -24, -16, -8); ctx.lineTo(16, -8); ctx.quadraticCurveTo(14, -24, 0, -26); ctx.fill(); ctx.fillStyle = '#ffccaa'; ctx.beginPath(); ctx.arc(0, -16, 7, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#000'; ctx.fillRect(-4, -17, 2, 2); ctx.fillRect(2, -17, 2, 2); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -19, 10, Math.PI, 0); ctx.fill(); const gold = ctx.createLinearGradient(0,-6,0,10); gold.addColorStop(0,'#ffdd44'); gold.addColorStop(1,'#aa7700'); ctx.fillStyle = gold; ctx.fillRect(-3, -6, 6, 16); ctx.fillRect(-8, -2, 16, 6); ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(-1, -6, 1, 16); ctx.fillStyle = '#111'; ctx.fillRect(-20, -12, 8, 18); ctx.fillRect(12, -12, 8, 18); ctx.fillStyle = '#ffccaa'; ctx.fillRect(-18, 4, 4, 4); ctx.fillRect(14, 4, 4, 4); } 
@@ -139,7 +154,6 @@ function getCachedSprite(charDef, d, isCursed) {
         if(d==='front') { ctx.fillStyle='#d08060'; ctx.fillRect(-2, -12, 4, 1); }
     }
     else if (id === 'yeti') {
-        // ... (Yeti Code bleibt gleich) ...
         const furBase = '#00ccff'; const furDark = '#0088bb'; const furLite = '#e0ffff'; 
         ctx.fillStyle = furBase; if (d === 'side') { ctx.fillRect(-6, 12, 12, 10); } else { ctx.fillRect(-10, 12, 8, 10); ctx.fillRect(2, 12, 8, 10); }
         const furGrad = ctx.createLinearGradient(0, -24, 0, 12); furGrad.addColorStop(0, furBase); furGrad.addColorStop(1, furDark); ctx.fillStyle = furGrad; ctx.fillRect(-16, -24, 32, 36); 
@@ -192,22 +206,20 @@ function getCachedSprite(charDef, d, isCursed) {
         ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -23, 10, 0, Math.PI*2); ctx.stroke(); 
         drawFace(false, false, true);
     }
-    // 6. LIFEGUARD (NEU: Basiert auf Diva Template, Roter Badeanzug, Blonde Haare, Rote Lippen)
+    // 6. LIFEGUARD
     else if (id === 'lifeguard') {
         const t = Date.now() / 150; 
         const redGlitter = ctx.createLinearGradient(-15 + Math.sin(t)*15, -20, 15 + Math.sin(t)*15, 20);
         redGlitter.addColorStop(0, '#cc0000'); redGlitter.addColorStop(0.5, '#ff0000'); redGlitter.addColorStop(1, '#cc0000');   
 
-        // Roter Badeanzug, Rote Schuhe
         drawVectorBody(skinL, redGlitter, redGlitter, '#d00', { width: 0.8, pantsLen: 4, skipHead: true, sleeveless: true });
         
-        // Blonde Haare
         ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -23, 7, 9.5, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle='#fe8'; ctx.beginPath(); ctx.arc(0, -26, 9.5, Math.PI, 0); ctx.fill(); 
         if(d!=='back') { ctx.fillRect(-10.5, -26, 5, 25); ctx.fillRect(5.5, -26, 5, 25); } else { ctx.fillRect(-10, -26, 20, 25); }
 
         if(d==='front') {
-            ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); // Rote Lippen
+            ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); 
             drawFace(false, false, false);
         } else {
             drawFace();
@@ -230,7 +242,7 @@ function getCachedSprite(charDef, d, isCursed) {
         if(d==='front') { ctx.beginPath(); ctx.moveTo(8,-29); ctx.lineTo(14,-34); ctx.lineTo(14,-22); ctx.fill(); } 
         drawFace(false, false, true);
     }
-    // 9. POP DIVA
+    // 9. POP DIVA (UPDATED: Augen hinzugefügt!)
     else if (id === 'diva') {
         const t = Date.now() / 150; 
         const glitter = ctx.createLinearGradient(-15 + Math.sin(t)*15, -20, 15 + Math.sin(t)*15, 20);
@@ -242,7 +254,13 @@ function getCachedSprite(charDef, d, isCursed) {
         ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -26, 9.5, Math.PI, 0); ctx.fill(); 
         if(d!=='back') { ctx.fillRect(-10.5, -26, 5, 25); ctx.fillRect(5.5, -26, 5, 25); } else { ctx.fillRect(-10, -26, 20, 25); }
         
-        if(d==='front') { ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); } else { drawFace(); }
+        // HIER WAR DER FEHLER: drawFace fehlte!
+        if(d==='front') { 
+            ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); 
+            drawFace(false, false, false); // Jetzt zeichnen wir auch das Gesicht!
+        } else { 
+            drawFace(); 
+        }
     }
     // 10. POP STAR
     else if (id === 'star') {
