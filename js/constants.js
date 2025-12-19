@@ -4,11 +4,14 @@ export const GRID_H = 15;
 
 export const HELL_CENTER = { x: 7, y: 7 };
 
-// Objekt für einfache Abfragen in der KI
 export const DIFFICULTIES = {
     EASY: 0,
     NORMAL: 1,
     HARD: 2
+};
+
+export const COLORS = {
+    EXPLOSION_CORE: '#ffffcc'
 };
 
 export const TYPES = {
@@ -38,13 +41,13 @@ export const BOMB_MODES = {
 };
 
 export const CHARACTERS = [
-    // --- ORIGINAL 4 (SAFE PARODIES) ---
+    // --- ORIGINAL 4 ---
     { id: 'commando', name: 'Commando', color: '#228822', accent: '#ff0000' }, 
     { id: 'devil', name: 'The Devil', color: '#ff0000', accent: '#ffff00' },   
     { id: 'nun', name: 'The Nun', color: '#000000', accent: '#ffffff' },       
     { id: 'yeti', name: 'Snow Beast', color: '#ffffff', accent: '#00ccff' },   
     
-    // --- NEW 11 (SAFE PARODIES) ---
+    // --- UPDATED PARODIES ---
     { id: 'striker', name: 'Striker', color: '#ff0000', accent: '#ffffff' },   
     { id: 'agent', name: 'The Agent', color: '#000000', accent: '#ff0000' },   
     { id: 'techie', name: 'Tech CEO', color: '#333333', accent: '#aaaaaa' },   
@@ -58,15 +61,15 @@ export const CHARACTERS = [
     { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' }        
 ];
 
-// Die guten, alten Level-Designs
+// LEVEL DEFINITIONEN (WIEDERHERGESTELLT: Stone #1a1a1a, Hell #3b1e1e)
 export const LEVELS = {
-    stone: { id: 'stone', name: 'STONE CASTLE', bg: '#222', wallHard: '#555', wallSoft: '#777', wallSoftLight: '#888', grid: '#333', border: '#777', glow: '#fff', hasCentralFire: false },
-    jungle: { id: 'jungle', name: 'JUNGLE', bg: '#001100', wallHard: '#1a1', wallSoft: '#582f0e', wallSoftLight: '#6f4e37', grid: '#030', border: '#2e2', glow: '#4f4', hasCentralFire: false },
-    ice: { id: 'ice', name: 'ICE', bg: '#001133', wallHard: '#336699', wallSoft: '#66ccff', wallSoftLight: '#99ddff', grid: '#002244', border: '#6cf', glow: '#0af', hasCentralFire: false },
-    hell: { id: 'hell', name: 'HELL', bg: '#220000', wallHard: '#440000', wallSoft: '#662222', wallSoftLight: '#883333', grid: '#400', border: '#f00', glow: '#f00', hasCentralFire: true }
+    hell: { id: 'hell', name: 'Hell', bg: '#3b1e1e', wallHard: '#333333', wallSoft: '#aa0000', wallSoftLight: '#cc3333', grid: '#220a0a', glow: '#ff0000', border: '#550000', hasCentralFire: true },
+    ice: { id: 'ice', name: 'Ice', bg: '#000044', wallHard: '#4466ff', wallSoft: '#88ccff', wallSoftLight: '#ccffff', grid: '#000066', glow: '#00ccff', border: '#004488' },
+    jungle: { id: 'jungle', name: 'Jungle', bg: '#4a3b2a', wallHard: '#666666', wallSoft: '#228822', wallSoftLight: '#44aa44', grid: '#3a2b1a', glow: '#22aa22', border: '#114411', hasRiver: true },
+    stone: { id: 'stone', name: 'Stone', bg: '#1a1a1a', wallHard: '#444444', wallSoft: '#888888', wallSoftLight: '#aaaaaa', grid: '#222222', glow: '#aaaaaa', border: '#666666' }
 };
 
-// Maximale Explosionsfelder (Boost Pads) an den neuen Positionen
+// NEUE KOORDINATEN (Max. Explosion)
 export const BOOST_PADS = [
     {x:5, y:4}, {x:5, y:8}, 
     {x:9, y:4}, {x:9, y:8}
@@ -74,7 +77,7 @@ export const BOOST_PADS = [
 
 export const OIL_PADS = [{x:4, y:4}, {x:10, y:4}, {x:4, y:10}, {x:10, y:10}];
 
-// Richtungsfelder (Direction Pads) an den neuen Positionen mit korrekter Ausrichtung
+// NEUE RICHTUNGEN (Rotation)
 export const DIRECTION_PADS = [
     {x:3, y:3, dir:{x:0, y:-1}},   // Oben Links -> Pfeil nach OBEN
     {x:3, y:11, dir:{x:1, y:0}},   // Unten Links -> Pfeil nach RECHTS
@@ -82,7 +85,6 @@ export const DIRECTION_PADS = [
     {x:11, y:3, dir:{x:-1, y:0}}   // Oben Rechts -> Pfeil nach LINKS
 ];
 
-// WICHTIG: Die korrekten Tastenbelegungen für Player 1 & 2
 export const keyBindings = {
     P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'ShiftLeft',
     P2_UP: 'KeyW', P2_DOWN: 'KeyS', P2_LEFT: 'KeyA', P2_RIGHT: 'KeyD', P2_BOMB: 'KeyF', P2_CHANGE: 'KeyE'
