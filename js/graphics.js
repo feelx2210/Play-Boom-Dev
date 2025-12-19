@@ -1,4 +1,4 @@
-import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, OIL_PADS, HELL_CENTER, DIRECTION_PADS } from './constants.js';
+import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, HELL_CENTER, DIRECTION_PADS } from './constants.js';
 import { state } from './state.js';
 import { drawAllParticles } from './render_particles.js';
 // WICHTIG: Wir nutzen die externe Charakter-Datei für die Vektorgrafiken!
@@ -14,7 +14,7 @@ export function clearLevelCache() {
     lastLevelId = null;
 }
 
-// DEINE ORIGINAL LEVEL-LOGIK
+// --- STATISCHE LEVEL-ELEMENTE (Werden nur 1x gemalt) ---
 function bakeStaticLevel(levelDef) {
     const c = document.createElement('canvas');
     c.width = GRID_W * TILE_SIZE;
@@ -25,7 +25,7 @@ function bakeStaticLevel(levelDef) {
     ctx.fillStyle = levelDef.bg;
     ctx.fillRect(0, 0, c.width, c.height);
 
-    // 2. Boden-Details (Hell/Ice)
+    // 2. Boden-Details
     if (levelDef.id === 'hell') {
          ctx.fillStyle = 'rgba(80, 60, 60, 0.2)';
          for (let y = 0; y < GRID_H; y++) {
@@ -48,13 +48,13 @@ function bakeStaticLevel(levelDef) {
     for(let i=0; i<=GRID_H; i++) { ctx.moveTo(0, i*TILE_SIZE); ctx.lineTo(c.width, i*TILE_SIZE); }
     ctx.stroke();
 
-    // 4. Statische Elemente (Wände, Boden-Tiles)
+    // 4. Statische Elemente (Wände, Boden-Tiles, PADS)
     for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
             const tile = state.grid[y][x];
 
-            // Hard Walls (Unzerstörbar)
+            // Hard Walls
             if (tile === TYPES.WALL_HARD) {
                 if (levelDef.id === 'ice') {
                     ctx.fillStyle = '#4466ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
@@ -98,7 +98,7 @@ function bakeStaticLevel(levelDef) {
                 ctx.beginPath(); ctx.ellipse(cx + 12, cy + 12, 4, 2, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
             }
 
-            // Spezial-Pads (Boost, Direction)
+            // Spezial-Pads (Boost)
             if ((levelDef.id === 'hell' || levelDef.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
                 ctx.fillStyle = '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 ctx.fillStyle = '#ff0000'; ctx.fillRect(px + 20, py + 8, 8, 32);
@@ -108,6 +108,8 @@ function bakeStaticLevel(levelDef) {
                 ctx.beginPath(); ctx.moveTo(px+2, py+24); ctx.lineTo(px+10, py+18); ctx.lineTo(px+10, py+30); ctx.fill(); 
                 ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
             }
+            
+            // --- FIX: DIRECTION PADS SIND JETZT HIER (STATISCH) ---
             const dirPad = DIRECTION_PADS.find(p => p.x === x && p.y === y);
             if (dirPad) {
                 const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
@@ -130,46 +132,16 @@ function bakeStaticLevel(levelDef) {
     return c;
 }
 
-export function drawLevelPreview(ctx, w, h, levelDef) {
-    const tileSize = w / 3; 
-    ctx.fillStyle = levelDef.bg; ctx.fillRect(0, 0, w, h);
-    const drawBlock = (x, y, type) => {
-        const px = x * tileSize; const py = y * tileSize;
-        if (type === TYPES.WALL_HARD) {
-             ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, tileSize, tileSize);
-             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(px+tileSize-2, py, 2, tileSize); ctx.fillRect(px, py+tileSize-2, tileSize, 2);
-        } else if (type === TYPES.WALL_SOFT) {
-             ctx.fillStyle = levelDef.wallSoft; ctx.fillRect(px, py, tileSize, tileSize);
-             ctx.fillStyle = levelDef.wallSoftLight; ctx.fillRect(px+2, py+2, tileSize-4, tileSize-4);
-        }
-    };
-    drawBlock(0, 0, TYPES.WALL_HARD); drawBlock(1, 0, TYPES.WALL_SOFT); drawBlock(2, 0, TYPES.WALL_HARD);
-    drawBlock(0, 1, TYPES.WALL_SOFT); drawBlock(2, 1, TYPES.WALL_SOFT);
-    drawBlock(0, 2, TYPES.WALL_HARD); drawBlock(1, 2, TYPES.WALL_SOFT); drawBlock(2, 2, TYPES.WALL_HARD);
-}
-
-export function drawItem(ctx, type, x, y) {
-    const pad = 2; const size = TILE_SIZE - pad*2;
-    ctx.fillStyle = '#442222'; ctx.fillRect(x+pad, y+pad, size, size);
-    ctx.strokeStyle = '#ff8888'; ctx.lineWidth = 2; ctx.strokeRect(x+pad, y+pad, size, size);
-    const cx = x + TILE_SIZE/2; const cy = y + TILE_SIZE/2;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '32px sans-serif';
-    switch(type) {
-        case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('💣', cx, cy); break; 
-        case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('🔥', cx, cy); break; 
-        case ITEMS.SPEED_UP: ctx.fillStyle = '#ffff00'; ctx.fillText('👟', cx, cy); break; 
-        case ITEMS.NAPALM: ctx.fillStyle = '#ff0000'; ctx.fillText('☢️', cx, cy); break;   
-        case ITEMS.ROLLING: ctx.fillStyle = '#ffffff'; ctx.fillText('🎳', cx, cy); break; 
-        case ITEMS.SKULL: ctx.fillStyle = '#cccccc'; ctx.fillText('💀', cx, cy); break;   
-    }
-}
-
+// --- DYNAMISCHE ZEICHEN-SCHLEIFE ---
 export function draw(ctx, canvas) {
+    // 1. Statischen Hintergrund aus Cache laden
     if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
         cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
         lastLevelId = state.currentLevel.id;
     }
     ctx.drawImage(cachedLevelCanvas, 0, 0);
+
+    // 2. Dynamische Elemente (Feuer, Items, Soft Walls)
 
     // Hell Center Fire Pit (Dynamic)
     if (state.currentLevel.hasCentralFire) {
@@ -195,7 +167,7 @@ export function draw(ctx, canvas) {
         }
     }
 
-    // Grid (Soft Walls, Items)
+    // Grid Loop (Soft Walls, Items)
     for (let y = 0; y < GRID_H; y++) {
         for (let x = 0; x < GRID_W; x++) {
             const px = x * TILE_SIZE; const py = y * TILE_SIZE;
@@ -205,7 +177,6 @@ export function draw(ctx, canvas) {
             if (item !== ITEMS.NONE && tile !== TYPES.WALL_SOFT) drawItem(ctx, item, px, py);
 
             if (tile === TYPES.WALL_SOFT) {
-                // Deine Original Soft Wall Farben
                 if (state.currentLevel.id === 'ice') {
                     ctx.fillStyle = '#88ccff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = '#4488cc'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + 4, py + 4); ctx.lineTo(px + TILE_SIZE - 4, py + TILE_SIZE - 4); ctx.moveTo(px + TILE_SIZE - 4, py + 4); ctx.lineTo(px + 4, py + TILE_SIZE - 4); ctx.stroke();
@@ -247,4 +218,39 @@ export function draw(ctx, canvas) {
     drawAllParticles(ctx);
 
     state.players.slice().sort((a,b) => a.y - b.y).forEach(p => p.draw());
+}
+
+// --- HELPER ---
+export function drawLevelPreview(ctx, w, h, levelDef) {
+    const tileSize = w / 3; 
+    ctx.fillStyle = levelDef.bg; ctx.fillRect(0, 0, w, h);
+    const drawBlock = (x, y, type) => {
+        const px = x * tileSize; const py = y * tileSize;
+        if (type === TYPES.WALL_HARD) {
+             ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, tileSize, tileSize);
+             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(px+tileSize-2, py, 2, tileSize); ctx.fillRect(px, py+tileSize-2, tileSize, 2);
+        } else if (type === TYPES.WALL_SOFT) {
+             ctx.fillStyle = levelDef.wallSoft; ctx.fillRect(px, py, tileSize, tileSize);
+             ctx.fillStyle = levelDef.wallSoftLight; ctx.fillRect(px+2, py+2, tileSize-4, tileSize-4);
+        }
+    };
+    drawBlock(0, 0, TYPES.WALL_HARD); drawBlock(1, 0, TYPES.WALL_SOFT); drawBlock(2, 0, TYPES.WALL_HARD);
+    drawBlock(0, 1, TYPES.WALL_SOFT); drawBlock(2, 1, TYPES.WALL_SOFT);
+    drawBlock(0, 2, TYPES.WALL_HARD); drawBlock(1, 2, TYPES.WALL_SOFT); drawBlock(2, 2, TYPES.WALL_HARD);
+}
+
+export function drawItem(ctx, type, x, y) {
+    const pad = 2; const size = TILE_SIZE - pad*2;
+    ctx.fillStyle = '#442222'; ctx.fillRect(x+pad, y+pad, size, size);
+    ctx.strokeStyle = '#ff8888'; ctx.lineWidth = 2; ctx.strokeRect(x+pad, y+pad, size, size);
+    const cx = x + TILE_SIZE/2; const cy = y + TILE_SIZE/2;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '32px sans-serif';
+    switch(type) {
+        case ITEMS.BOMB_UP: ctx.fillStyle = '#0088ff'; ctx.fillText('💣', cx, cy); break; 
+        case ITEMS.RANGE_UP: ctx.fillStyle = '#ffaa00'; ctx.fillText('🔥', cx, cy); break; 
+        case ITEMS.SPEED_UP: ctx.fillStyle = '#ffff00'; ctx.fillText('👟', cx, cy); break; 
+        case ITEMS.NAPALM: ctx.fillStyle = '#ff0000'; ctx.fillText('☢️', cx, cy); break;   
+        case ITEMS.ROLLING: ctx.fillStyle = '#ffffff'; ctx.fillText('🎳', cx, cy); break; 
+        case ITEMS.SKULL: ctx.fillStyle = '#cccccc'; ctx.fillText('💀', cx, cy); break;   
+    }
 }
