@@ -572,4 +572,3 @@ window.addEventListener('keydown', e => {
         return;
     }
 });
-}
