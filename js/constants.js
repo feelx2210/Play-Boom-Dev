@@ -40,25 +40,23 @@ export const BOMB_MODES = {
     ROLLING: 2
 };
 
+// --- CHARACTERS (Neu gemischt) ---
 export const CHARACTERS = [
-    // --- ORIGINAL 4 ---
     { id: 'commando', name: 'Commando', color: '#228822', accent: '#ff0000' }, 
-    { id: 'devil', name: 'The Devil', color: '#ff0000', accent: '#ffff00' },   
-    { id: 'nun', name: 'The Nun', color: '#000000', accent: '#ffffff' },       
+    { id: 'rapper', name: 'Rapper', color: '#000000', accent: '#ffd700' }, // Rapper nach oben geholt
     { id: 'yeti', name: 'Snow Beast', color: '#ffffff', accent: '#00ccff' },   
-    
-    // --- UPDATED PARODIES ---
     { id: 'striker', name: 'Striker', color: '#ff0000', accent: '#ffffff' },   
-    { id: 'agent', name: 'The Agent', color: '#000000', accent: '#ff0000' },   
-    { id: 'techie', name: 'Tech CEO', color: '#333333', accent: '#aaaaaa' },   
-    { id: 'moonwalker', name: 'Moonwalker', color: '#ffffff', accent: '#000000' }, 
+    { id: 'nun', name: 'The Nun', color: '#000000', accent: '#ffffff' },       
     { id: 'baller', name: 'Baller', color: '#fdb927', accent: '#552583' }, 
-    { id: 'lifeguard', name: 'Lifeguard', color: '#ff2222', accent: '#ffff88' }, 
-    { id: 'rapper', name: 'Rapper', color: '#000000', accent: '#ffd700' }, 
-    { id: 'rap_icon', name: 'Rap Icon', color: '#ffffff', accent: '#3366cc' },     
+    { id: 'agent', name: 'The Agent', color: '#000000', accent: '#ff0000' },   
     { id: 'diva', name: 'Pop Diva', color: '#ffb6c1', accent: '#000000' },     
-    { id: 'star', name: 'Pop Star', color: '#0000ff', accent: '#eeeeee' },     
-    { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' }        
+    { id: 'techie', name: 'Tech CEO', color: '#333333', accent: '#aaaaaa' },   
+    { id: 'rap_icon', name: 'Rap Icon', color: '#ffffff', accent: '#3366cc' }, // Weit weg vom anderen Rapper
+    { id: 'devil', name: 'The Devil', color: '#ff0000', accent: '#ffff00' },   
+    { id: 'moonwalker', name: 'Moonwalker', color: '#ffffff', accent: '#000000' }, 
+    { id: 'lifeguard', name: 'Lifeguard', color: '#ff2222', accent: '#ffff88' }, 
+    { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' },        
+    { id: 'star', name: 'Pop Star', color: '#0000ff', accent: '#eeeeee' }      // Getrennt von Diva
 ];
 
 // LEVEL DEFINITIONEN
@@ -78,7 +76,7 @@ export const BOOST_PADS = [
 export const OIL_PADS = [{x:4, y:4}, {x:10, y:4}, {x:4, y:10}, {x:10, y:10}];
 
 // KORRIGIERTE RICHTUNGEN (Clockwise Loop)
-// Wir nutzen hier Canvas-Koordinaten (0/0 oben links), daher die Umrechnung:
+// Umrechnung: User(0,0)=LinksUnten -> Canvas(0,0)=ObenLinks
 export const DIRECTION_PADS = [
     // Dein "Links Oben" (3,11) -> Canvas (3,3) -> NACH RECHTS
     {x:3, y:3, dir:{x:1, y:0}},
@@ -94,7 +92,6 @@ export const DIRECTION_PADS = [
 ];
 
 export const keyBindings = {
-    // Steuerung (X für Bombenwechsel)
     P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'KeyX',
     P2_UP: 'KeyW', P2_DOWN: 'KeyS', P2_LEFT: 'KeyA', P2_RIGHT: 'KeyD', P2_BOMB: 'KeyF', P2_CHANGE: 'KeyE'
 };
