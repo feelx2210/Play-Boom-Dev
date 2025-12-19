@@ -142,10 +142,8 @@ export function initMenu() {
         const ctx = pCanvas.getContext('2d');
 
         if (type === 'char') {
-            // FIX: Höhe auf 64px, um Köpfe nicht abzuschneiden
             pCanvas.width = 48; 
             pCanvas.height = 64; 
-            // Zeichnen bei Y=44 (angepasster Offset für Pixel-Arts)
             drawCharacterSprite(ctx, 24, 44, data);
         } else {
             pCanvas.width = 48; 
@@ -493,9 +491,15 @@ function initControlsMenu() {
     const container = document.getElementById('controls-list');
     container.innerHTML = '';
     const formatKey = (code) => code.replace('Key', '').replace('Arrow', '').replace('Space', 'SPACE').toUpperCase();
-    Object.keys(keyBindings).forEach(action => {
+    
+    // FILTER: Nur P1 Controls anzeigen (P1_...)
+    Object.keys(keyBindings).filter(k => k.startsWith('P1_')).forEach(action => {
         const row = document.createElement('div'); row.className = 'control-row';
-        const label = document.createElement('span'); label.innerText = action;
+        
+        // LABEL CLEANUP: "P1_UP" -> "UP"
+        const displayLabel = action.replace('P1_', '');
+        const label = document.createElement('span'); label.innerText = displayLabel;
+        
         const btn = document.createElement('button'); btn.className = 'key-btn';
         btn.innerText = remappingAction === action ? 'PRESS KEY...' : formatKey(keyBindings[action]);
         if (remappingAction === action) btn.classList.add('active');
@@ -506,7 +510,6 @@ function initControlsMenu() {
 
 function startRemap(action) { remappingAction = action; initControlsMenu(); }
 
-// --- NEU: SUDDEN DEATH MESSAGE (Stil angepasst an H1) ---
 export function showSuddenDeathMessage() {
     const el = document.createElement('div');
     el.innerText = "LAST MAN STANDING!";
@@ -515,9 +518,8 @@ export function showSuddenDeathMessage() {
     el.style.left = "50%";
     el.style.transform = "translate(-50%, -50%) scale(0)";
     
-    // Stil angepasst an die Hauptüberschrift (BOOM)
     el.style.color = "#ff0000"; 
-    el.style.fontSize = "40px"; // Wie H1 in style.css
+    el.style.fontSize = "40px"; 
     el.style.fontFamily = "'Press Start 2P', cursive";
     el.style.textShadow = "4px 4px 0 #550000"; 
     el.style.textAlign = "center";
@@ -528,12 +530,10 @@ export function showSuddenDeathMessage() {
     
     document.body.appendChild(el);
 
-    // Animation rein
     requestAnimationFrame(() => {
         el.style.transform = "translate(-50%, -50%) scale(1)";
     });
 
-    // Raus nach 1.5s
     setTimeout(() => {
         el.style.opacity = "0";
         setTimeout(() => el.remove(), 500);
