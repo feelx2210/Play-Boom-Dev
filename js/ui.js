@@ -76,6 +76,7 @@ export function initMenu() {
     const startBtn = document.getElementById('start-game-btn');
     const footer = document.querySelector('.menu-footer');
     
+    // Settings Button Logic
     let settingsBtn = document.getElementById('settings-btn-main');
     if (!settingsBtn) {
         const oldBtns = footer.querySelectorAll('.btn-secondary');
@@ -92,30 +93,28 @@ export function initMenu() {
     settingsBtn.style.border = "2px solid transparent";
     settingsBtn.style.marginTop = "15px";
 
-    charContainer.innerHTML = '';
-    levelContainer.innerHTML = '';
-    
     updateMobileLabels();
 
+    // Focus / Active States
     charContainer.parentElement.classList.remove('active-group', 'inactive-group');
-    levelContainer.classList.remove('active-group', 'inactive-group');
+    levelContainer.parentElement.classList.remove('active-group', 'inactive-group'); // Fix: Parent!
     startBtn.classList.remove('focused');
     settingsBtn.classList.remove('focused');
     settingsBtn.style.borderColor = "transparent"; 
 
     if (state.menuState === 0) { 
         charContainer.parentElement.classList.add('active-group'); 
-        levelContainer.classList.add('inactive-group');
+        levelContainer.parentElement.classList.add('inactive-group');
     } else if (state.menuState === 1) { 
         charContainer.parentElement.classList.add('inactive-group'); 
-        levelContainer.classList.add('active-group');
+        levelContainer.parentElement.classList.add('active-group');
     } else if (state.menuState === 2) { 
         charContainer.parentElement.classList.add('inactive-group'); 
-        levelContainer.classList.add('inactive-group');
+        levelContainer.parentElement.classList.add('inactive-group');
         startBtn.classList.add('focused');
     } else if (state.menuState === 3) { 
         charContainer.parentElement.classList.add('inactive-group'); 
-        levelContainer.classList.add('inactive-group');
+        levelContainer.parentElement.classList.add('inactive-group');
         settingsBtn.classList.add('focused');
         settingsBtn.style.borderColor = "#ffffff"; 
     }
@@ -158,43 +157,49 @@ export function initMenu() {
         return div;
     };
 
-    // --- CHARACTER CAROUSEL ---
-    const charLen = CHARACTERS.length;
-    const charIndicesToShow = [];
-    const offset = state.selectedCharIndex - 1;
-    
-    for(let i=0; i<4; i++) {
-        let idx = (offset + i) % charLen;
-        if (idx < 0) idx += charLen;
-        charIndicesToShow.push(idx);
-    }
+    // --- CAROUSEL RENDERER ---
+    const renderCarousel = (container, type, dataArray, selectedIndex) => {
+        container.innerHTML = '';
+        const len = dataArray.length;
+        const indicesToShow = [];
+        const offset = selectedIndex - 1;
 
-    const leftArrow = document.createElement('div');
-    leftArrow.className = 'nav-arrow left';
-    leftArrow.innerText = '◀';
-    setupArrowEvents(leftArrow, 'char', -1);
-    charContainer.appendChild(leftArrow);
+        // Zeige 4 Items (Previous, Current, Next, Next+1)
+        for(let i=0; i<4; i++) {
+            let idx = (offset + i) % len;
+            if (idx < 0) idx += len;
+            indicesToShow.push(idx);
+        }
 
-    charIndicesToShow.forEach(idx => {
-        const char = CHARACTERS[idx];
-        const isSel = (idx === state.selectedCharIndex);
-        const card = createCard('char', idx, char, isSel);
-        charContainer.appendChild(card);
-    });
+        const leftArrow = document.createElement('div');
+        leftArrow.className = 'nav-arrow left';
+        leftArrow.innerText = '◀';
+        setupArrowEvents(leftArrow, type, -1);
+        container.appendChild(leftArrow);
 
-    const rightArrow = document.createElement('div');
-    rightArrow.className = 'nav-arrow right';
-    rightArrow.innerText = '▶';
-    setupArrowEvents(rightArrow, 'char', 1);
-    charContainer.appendChild(rightArrow);
+        indicesToShow.forEach(idx => {
+            const data = dataArray[idx];
+            const isSel = (idx === selectedIndex);
+            // Für Levels müssen wir den Key übergeben, aber createCard erwartet Index
+            const card = createCard(type, idx, data, isSel);
+            container.appendChild(card);
+        });
 
-    // --- LEVELS ---
+        const rightArrow = document.createElement('div');
+        rightArrow.className = 'nav-arrow right';
+        rightArrow.innerText = '▶';
+        setupArrowEvents(rightArrow, type, 1);
+        container.appendChild(rightArrow);
+    };
+
+    // Render Chars
+    renderCarousel(charContainer, 'char', CHARACTERS, state.selectedCharIndex);
+
+    // Render Levels
     const levelKeys = Object.keys(LEVELS);
-    levelKeys.forEach((key, idx) => { 
-        const isSel = (key === state.selectedLevelKey);
-        const card = createCard('level', idx, LEVELS[key], isSel);
-        levelContainer.appendChild(card); 
-    });
+    const levelData = levelKeys.map(k => LEVELS[k]);
+    const selLevIdx = levelKeys.indexOf(state.selectedLevelKey);
+    renderCarousel(levelContainer, 'level', levelData, selLevIdx);
 }
 
 // --- INPUT HANDLING ---
@@ -567,3 +572,4 @@ window.addEventListener('keydown', e => {
         return;
     }
 });
+}

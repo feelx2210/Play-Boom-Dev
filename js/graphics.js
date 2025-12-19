@@ -1,7 +1,6 @@
 import { TILE_SIZE, GRID_W, GRID_H, TYPES, ITEMS, BOOST_PADS, HELL_CENTER, DIRECTION_PADS } from './constants.js';
 import { state } from './state.js';
 import { drawAllParticles } from './render_particles.js';
-// WICHTIG: Wir nutzen die externe Charakter-Datei für die Vektorgrafiken!
 import { drawCharacterSprite } from './char_sprites.js';
 
 export { drawCharacterSprite };
@@ -25,7 +24,33 @@ function bakeStaticLevel(levelDef) {
     ctx.fillStyle = levelDef.bg;
     ctx.fillRect(0, 0, c.width, c.height);
 
-    // 2. Boden-Details
+    // BEACH SPECIAL BACKGROUND
+    if (levelDef.id === 'beach') {
+        ctx.fillStyle = levelDef.waterColor;
+        ctx.beginPath();
+        // Starte oben rechts
+        ctx.moveTo(GRID_W * TILE_SIZE, 0);
+        // Linie nach unten, mit Wellen an der Grenze
+        for (let y = 0; y <= GRID_H; y += 0.5) {
+            const limitX = 9 + Math.sin(y * 0.8) * 1.5;
+            ctx.lineTo((limitX + 1) * TILE_SIZE, y * TILE_SIZE); // +1 offset für weichen Übergang
+        }
+        ctx.lineTo(GRID_W * TILE_SIZE, GRID_H * TILE_SIZE);
+        ctx.fill();
+
+        // Schaumkrone an der Grenze
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        for (let y = 0; y <= GRID_H; y += 0.2) {
+            const limitX = 9 + Math.sin(y * 0.8) * 1.5;
+            if (y===0) ctx.moveTo((limitX + 0.8) * TILE_SIZE, y * TILE_SIZE);
+            else ctx.lineTo((limitX + 0.8) * TILE_SIZE, y * TILE_SIZE);
+        }
+        ctx.stroke();
+    }
+    
+    // Details für andere Level
     if (levelDef.id === 'hell') {
          ctx.fillStyle = 'rgba(80, 60, 60, 0.2)';
          for (let y = 0; y < GRID_H; y++) {
@@ -61,9 +86,14 @@ function bakeStaticLevel(levelDef) {
                     ctx.fillStyle = '#6688ff'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
                     ctx.fillStyle = '#2244aa'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
                     ctx.fillStyle = '#ccffff'; ctx.fillRect(px + 8, py + 8, 8, 8);
-                } else if (levelDef.id === 'jungle') {
-                    ctx.fillStyle = '#666'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, TILE_SIZE/2-2, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(px+TILE_SIZE/2-5, py+TILE_SIZE/2-5, 10, 0, Math.PI*2); ctx.fill();
+                } else if (levelDef.id === 'jungle' || levelDef.id === 'beach') {
+                    // Felsiger Look für Beach & Jungle
+                    ctx.fillStyle = levelDef.wallHard; 
+                    if (levelDef.id === 'beach') ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    else { ctx.beginPath(); ctx.arc(px+TILE_SIZE/2, py+TILE_SIZE/2, TILE_SIZE/2-2, 0, Math.PI*2); ctx.fill(); }
+                    
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)'; 
+                    ctx.beginPath(); ctx.arc(px+TILE_SIZE/2-5, py+TILE_SIZE/2-5, 10, 0, Math.PI*2); ctx.fill();
                 } else if (levelDef.id === 'hell') {
                     ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.fillStyle = '#222'; ctx.fillRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
@@ -72,16 +102,14 @@ function bakeStaticLevel(levelDef) {
                     ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = '#222'; ctx.lineWidth = 2; ctx.strokeRect(px+4, py+4, TILE_SIZE-8, TILE_SIZE-8);
                     ctx.fillStyle = '#333'; ctx.fillRect(px+10, py+10, TILE_SIZE-20, TILE_SIZE-20);
-                } else {
-                    ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(px, py, TILE_SIZE, 4); ctx.fillRect(px, py, 4, TILE_SIZE);
-                    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(px + TILE_SIZE - 4, py, 4, TILE_SIZE); ctx.fillRect(px, py + TILE_SIZE - 4, TILE_SIZE, 4);
                 }
             } 
             // Boden-Objekte
             else if (tile === TYPES.WATER) {
-                ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
+                if (levelDef.id !== 'beach') { // Beach Wasser ist im Hintergrund
+                    ctx.fillStyle = '#3366ff'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#6699ff'; ctx.lineWidth = 2; const offset = Math.sin(x) * 4; ctx.beginPath(); ctx.moveTo(px + 4, py + 16 + offset); ctx.bezierCurveTo(px+16, py+8+offset, px+32, py+24+offset, px+44, py+16+offset); ctx.stroke();
+                }
             } else if (tile === TYPES.BRIDGE) {
                 ctx.fillStyle = '#4a3b2a'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 ctx.fillStyle = '#8b5a2b'; ctx.fillRect(px+2, py, 44, TILE_SIZE);
@@ -98,10 +126,14 @@ function bakeStaticLevel(levelDef) {
                 ctx.beginPath(); ctx.ellipse(cx + 12, cy + 12, 4, 2, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
             }
 
-            // Spezial-Pads (Boost)
-            if ((levelDef.id === 'hell' || levelDef.id === 'ice') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
-                ctx.fillStyle = '#440000'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#ff0000'; ctx.fillRect(px + 20, py + 8, 8, 32);
+            // Spezial-Pads (Boost) - Jetzt auch für BEACH
+            if ((levelDef.id === 'hell' || levelDef.id === 'ice' || levelDef.id === 'beach') && BOOST_PADS.some(p => p.x === x && p.y === y)) {
+                ctx.fillStyle = levelDef.id === 'ice' ? '#000044' : '#440000'; 
+                ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                
+                // Boost Pfeil
+                ctx.fillStyle = levelDef.id === 'ice' ? '#00ccff' : '#ff0000'; 
+                ctx.fillRect(px + 20, py + 8, 8, 32);
                 ctx.beginPath(); ctx.moveTo(px+24, py+2); ctx.lineTo(px+30, py+10); ctx.lineTo(px+18, py+10); ctx.fill(); 
                 ctx.beginPath(); ctx.moveTo(px+24, py+46); ctx.lineTo(px+30, py+38); ctx.lineTo(px+18, py+38); ctx.fill(); 
                 ctx.fillRect(px + 8, py + 20, 32, 8);
@@ -109,7 +141,7 @@ function bakeStaticLevel(levelDef) {
                 ctx.beginPath(); ctx.moveTo(px+46, py+24); ctx.lineTo(px+38, py+18); ctx.lineTo(px+38, py+30); ctx.fill(); 
             }
             
-            // --- FIX: DIRECTION PADS SIND JETZT HIER (STATISCH) ---
+            // Direction Pads
             const dirPad = DIRECTION_PADS.find(p => p.x === x && p.y === y);
             if (dirPad) {
                 const cx = px + TILE_SIZE/2; const cy = py + TILE_SIZE/2;
@@ -134,16 +166,13 @@ function bakeStaticLevel(levelDef) {
 
 // --- DYNAMISCHE ZEICHEN-SCHLEIFE ---
 export function draw(ctx, canvas) {
-    // 1. Statischen Hintergrund aus Cache laden
     if (!cachedLevelCanvas || lastLevelId !== state.currentLevel.id) {
         cachedLevelCanvas = bakeStaticLevel(state.currentLevel);
         lastLevelId = state.currentLevel.id;
     }
     ctx.drawImage(cachedLevelCanvas, 0, 0);
 
-    // 2. Dynamische Elemente (Feuer, Items, Soft Walls)
-
-    // Hell Center Fire Pit (Dynamic)
+    // Dynamic Fire Pit
     if (state.currentLevel.hasCentralFire) {
         const cx = HELL_CENTER.x * TILE_SIZE; const cy = HELL_CENTER.y * TILE_SIZE;
         const centerX = cx + TILE_SIZE/2; const centerY = cy + TILE_SIZE/2;
@@ -193,6 +222,20 @@ export function draw(ctx, canvas) {
                     ctx.fillStyle = '#666'; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px+10, py+10); ctx.lineTo(px+20, py+20); ctx.lineTo(px+30, py+10); ctx.moveTo(px+15, py+30); ctx.lineTo(px+25, py+40); ctx.stroke();
                     ctx.fillStyle = '#555'; ctx.fillRect(px+5, py+35, 10, 5); ctx.fillRect(px+30, py+20, 8, 8);
+                } else if (state.currentLevel.id === 'beach') {
+                    // Check if in water
+                    const limit = 9 + Math.sin(y * 0.8) * 1.5;
+                    const isInWater = x > limit;
+
+                    ctx.fillStyle = isInWater ? state.currentLevel.wallSoftWater : state.currentLevel.wallSoft; 
+                    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    
+                    // Struktur (Treibholz/Koralle)
+                    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                    ctx.fillRect(px+5, py+5, TILE_SIZE-10, 5);
+                    ctx.fillRect(px+5, py+15, TILE_SIZE-10, 5);
+                    ctx.fillRect(px+5, py+25, TILE_SIZE-10, 5);
+                    ctx.fillRect(px+5, py+35, TILE_SIZE-10, 5);
                 } else {
                     ctx.fillStyle = state.currentLevel.wallSoft; ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                     ctx.fillStyle = state.currentLevel.wallSoftLight; ctx.fillRect(px+2, py+2, 20, 10); ctx.fillRect(px+26, py+2, 20, 10); ctx.fillRect(px+2, py+14, 10, 10); ctx.fillRect(px+14, py+14, 20, 10); ctx.fillRect(px+36, py+14, 10, 10); ctx.fillRect(px+2, py+26, 20, 10); ctx.fillRect(px+26, py+26, 20, 10);
@@ -224,14 +267,29 @@ export function draw(ctx, canvas) {
 export function drawLevelPreview(ctx, w, h, levelDef) {
     const tileSize = w / 3; 
     ctx.fillStyle = levelDef.bg; ctx.fillRect(0, 0, w, h);
+    
+    // BEACH PREVIEW SPECIAL
+    if (levelDef.id === 'beach') {
+        ctx.fillStyle = levelDef.waterColor; 
+        ctx.beginPath();
+        ctx.moveTo(w, 0); ctx.lineTo(w, h); ctx.lineTo(w*0.6, h); ctx.lineTo(w*0.6, 0);
+        ctx.fill();
+    }
+
     const drawBlock = (x, y, type) => {
         const px = x * tileSize; const py = y * tileSize;
         if (type === TYPES.WALL_HARD) {
              ctx.fillStyle = levelDef.wallHard; ctx.fillRect(px, py, tileSize, tileSize);
-             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(px+tileSize-2, py, 2, tileSize); ctx.fillRect(px, py+tileSize-2, tileSize, 2);
+             if (levelDef.id !== 'beach') {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(px+tileSize-2, py, 2, tileSize); ctx.fillRect(px, py+tileSize-2, tileSize, 2);
+             }
         } else if (type === TYPES.WALL_SOFT) {
-             ctx.fillStyle = levelDef.wallSoft; ctx.fillRect(px, py, tileSize, tileSize);
-             ctx.fillStyle = levelDef.wallSoftLight; ctx.fillRect(px+2, py+2, tileSize-4, tileSize-4);
+             const isInWater = (levelDef.id === 'beach' && x === 2); // Im Preview ist rechts Wasser
+             ctx.fillStyle = isInWater ? (levelDef.wallSoftWater || levelDef.wallSoft) : levelDef.wallSoft; 
+             ctx.fillRect(px, py, tileSize, tileSize);
+             if (levelDef.id !== 'beach') {
+                ctx.fillStyle = levelDef.wallSoftLight; ctx.fillRect(px+2, py+2, tileSize-4, tileSize-4);
+             }
         }
     };
     drawBlock(0, 0, TYPES.WALL_HARD); drawBlock(1, 0, TYPES.WALL_SOFT); drawBlock(2, 0, TYPES.WALL_HARD);
