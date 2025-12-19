@@ -61,7 +61,7 @@ export const CHARACTERS = [
     { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' }        
 ];
 
-// LEVEL DEFINITIONEN (WIEDERHERGESTELLT: Stone #1a1a1a, Hell #3b1e1e)
+// LEVEL DEFINITIONEN
 export const LEVELS = {
     hell: { id: 'hell', name: 'Hell', bg: '#3b1e1e', wallHard: '#333333', wallSoft: '#aa0000', wallSoftLight: '#cc3333', grid: '#220a0a', glow: '#ff0000', border: '#550000', hasCentralFire: true },
     ice: { id: 'ice', name: 'Ice', bg: '#000044', wallHard: '#4466ff', wallSoft: '#88ccff', wallSoftLight: '#ccffff', grid: '#000066', glow: '#00ccff', border: '#004488' },
@@ -78,15 +78,15 @@ export const BOOST_PADS = [
 export const OIL_PADS = [{x:4, y:4}, {x:10, y:4}, {x:4, y:10}, {x:10, y:10}];
 
 // KORRIGIERTE RICHTUNGEN (Counter-Clockwise Loop)
-// 3,3 -> UNTEN | 3,11 -> RECHTS | 11,11 -> OBEN | 11,3 -> LINKS
 export const DIRECTION_PADS = [
-    {x:3, y:3, dir:{x:0, y:1}},    // Oben Links -> Pfeil nach UNTEN (Korrektur für Loop)
+    {x:3, y:3, dir:{x:0, y:1}},    // Oben Links -> Pfeil nach UNTEN
     {x:3, y:11, dir:{x:1, y:0}},   // Unten Links -> Pfeil nach RECHTS
-    {x:11, y:11, dir:{x:0, y:-1}}, // Unten Rechts -> Pfeil nach OBEN (Korrektur für Loop)
+    {x:11, y:11, dir:{x:0, y:-1}}, // Unten Rechts -> Pfeil nach OBEN
     {x:11, y:3, dir:{x:-1, y:0}}   // Oben Rechts -> Pfeil nach LINKS
 ];
 
 export const keyBindings = {
-    P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'ShiftLeft',
+    // P1_CHANGE jetzt auf 'KeyX' statt 'ShiftLeft'
+    P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'KeyX',
     P2_UP: 'KeyW', P2_DOWN: 'KeyS', P2_LEFT: 'KeyA', P2_RIGHT: 'KeyD', P2_BOMB: 'KeyF', P2_CHANGE: 'KeyE'
 };
