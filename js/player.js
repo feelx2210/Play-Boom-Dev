@@ -289,7 +289,8 @@ export class Player {
         const tile = state.grid[gy][gx];
 
         let canPlant = (tile === TYPES.EMPTY || tile === TYPES.OIL);
-        if (state.currentLevel.id === 'jungle' && (tile === TYPES.WATER || tile === TYPES.BRIDGE)) canPlant = true;
+    // KORRIGIERTE ZEILE:
+        if ((state.currentLevel.id === 'jungle' || state.currentLevel.id === 'beach') && (tile === TYPES.WATER || tile === TYPES.BRIDGE)) canPlant = true;
 
         if (!canPlant) return; 
 
