@@ -77,11 +77,12 @@ export const BOOST_PADS = [
 
 export const OIL_PADS = [{x:4, y:4}, {x:10, y:4}, {x:4, y:10}, {x:10, y:10}];
 
-// NEUE RICHTUNGEN (Rotation)
+// KORRIGIERTE RICHTUNGEN (Counter-Clockwise Loop)
+// 3,3 -> UNTEN | 3,11 -> RECHTS | 11,11 -> OBEN | 11,3 -> LINKS
 export const DIRECTION_PADS = [
-    {x:3, y:3, dir:{x:0, y:-1}},   // Oben Links -> Pfeil nach OBEN
+    {x:3, y:3, dir:{x:0, y:1}},    // Oben Links -> Pfeil nach UNTEN (Korrektur für Loop)
     {x:3, y:11, dir:{x:1, y:0}},   // Unten Links -> Pfeil nach RECHTS
-    {x:11, y:11, dir:{x:0, y:1}},  // Unten Rechts -> Pfeil nach UNTEN
+    {x:11, y:11, dir:{x:0, y:-1}}, // Unten Rechts -> Pfeil nach OBEN (Korrektur für Loop)
     {x:11, y:3, dir:{x:-1, y:0}}   // Oben Rechts -> Pfeil nach LINKS
 ];
 
