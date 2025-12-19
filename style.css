@@ -43,6 +43,11 @@ body {
     -webkit-touch-callout: none;
 }
 
+/* WICHTIG: Erzwingt Pixel-Font auch auf Buttons */
+button, input, select, textarea {
+    font-family: 'Press Start 2P', cursive;
+}
+
 #game-container {
     position: relative;
     width: 720px; height: 720px;
@@ -77,12 +82,11 @@ h2 {
 
 /* --- OPTION CARDS (CAROUSEL) --- */
 .selection-grid {
-    display: flex; flex-direction: row; justify-content: center; align-items: center; /* Center Items + Arrows */
+    display: flex; flex-direction: row; justify-content: center; align-items: center;
     gap: var(--gap-desktop); margin-bottom: 20px; padding: 10px; width: 100%;
     transition: 0.2s; border: 2px solid transparent;
 }
 
-/* NEU: Navigation Arrows */
 .nav-arrow {
     color: #888;
     font-size: 24px;
@@ -90,14 +94,12 @@ h2 {
     padding: 10px;
     user-select: none;
     transition: transform 0.1s, color 0.1s;
-    /* Damit sie auch auf Mobile gut klickbar sind */
     width: 30px; height: 30px; 
     display: flex; align-items: center; justify-content: center;
 }
 .nav-arrow:hover { color: #fff; transform: scale(1.2); }
 .nav-arrow:active { transform: scale(0.9); }
 
-/* Desktop Active States */
 .menu-section.active-group .selection-grid { border: 2px dashed var(--c-text); background: rgba(50, 50, 0, 0.3); opacity: 1; }
 .menu-section.inactive-group .selection-grid { border: 2px solid transparent; opacity: 0.5; }
 
@@ -117,7 +119,6 @@ h2 {
 .preview-canvas { margin-bottom: 5px; border: 2px solid #333; background: #000; }
 .card-label { font-size: 10px; color: var(--c-text-dim); margin-top: 5px; text-transform: uppercase; }
 
-/* Hide Mobile Elements on Desktop */
 .mobile-label { display: none; }
 
 /* --- BUTTONS --- */
@@ -125,7 +126,7 @@ h2 {
 
 button.main-btn {
     background: var(--c-accent); color: white; border: none; padding: 15px 40px;
-    font-family: inherit; font-size: 20px; cursor: pointer;
+    font-family: 'Press Start 2P', cursive; font-size: 20px; cursor: pointer;
     box-shadow: 4px 4px 0 var(--c-shadow); border: 4px solid transparent; 
     display: block; margin: 0;
     pointer-events: auto;
@@ -136,7 +137,7 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 
 .btn-secondary { 
     background: #444; color: white; border: none; padding: 10px 20px; 
-    font-family: inherit; font-size: 14px; cursor: pointer; margin-top: 15px; 
+    font-family: 'Press Start 2P', cursive; font-size: 14px; cursor: pointer; margin-top: 15px; 
     box-shadow: 4px 4px 0 #222; display: block; 
     pointer-events: auto;
 }
@@ -168,9 +169,21 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; color: #fff; font-size: 14px; display: flex; gap: 15px; }
 .hidden { display: none !important; }
 
-.controls-list { display: flex; flex-direction: column; gap: 10px; width: 80%; max-width: 400px; }
-.control-row { display: flex; justify-content: space-between; color: var(--c-text-dim); }
-.key-btn { background: #333; border: 2px solid #555; color: #fff; padding: 8px 16px; width: 180px; text-align: center; pointer-events: auto; }
+/* --- CONTROLS MENU STYLING --- */
+.controls-list { display: flex; flex-direction: column; gap: 15px; width: 80%; max-width: 500px; margin-bottom: 20px; }
+.control-row { 
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--c-text-dim); font-size: 14px;
+}
+.key-btn { 
+    background: #222; border: 2px solid #555; color: #fff; 
+    padding: 10px 15px; width: 220px; text-align: center; pointer-events: auto;
+    font-family: 'Press Start 2P', cursive; font-size: 12px;
+    text-transform: uppercase;
+    box-shadow: 2px 2px 0 #000;
+}
+.key-btn:hover { background: #333; border-color: #777; }
+.key-btn.active { background: #500; border-color: #f00; color: #ffaaaa; animation: pulse 0.5s infinite; }
 
 /* --- MOBILE CONTROLS --- */
 #mobile-controls {
@@ -254,9 +267,6 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
     h1 { font-size: 32px; margin: 0 0 10px 0; flex-shrink: 0; }
     h2 { font-size: 14px; margin: 0 0 5px 0; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
 
-    /* MOBILE GRID ADJUSTMENT for Carousel
-       Auf Mobile zeigen wir auch das Karussell mit Pfeilen
-    */
     .selection-grid { 
         display: flex !important; 
         flex-direction: row !important;
@@ -266,7 +276,6 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
         border: none !important; background: transparent !important;
     }
 
-    /* Cards kleiner auf Mobile */
     .option-card { 
         display: flex !important; width: 60px !important; padding: 5px; margin: 0;
         transform: scale(0.9); transform-origin: center center;
