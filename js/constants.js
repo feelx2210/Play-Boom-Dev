@@ -77,16 +77,24 @@ export const BOOST_PADS = [
 
 export const OIL_PADS = [{x:4, y:4}, {x:10, y:4}, {x:4, y:10}, {x:10, y:10}];
 
-// KORRIGIERTE RICHTUNGEN (Counter-Clockwise Loop)
+// KORRIGIERTE RICHTUNGEN (Clockwise Loop)
+// Wir nutzen hier Canvas-Koordinaten (0/0 oben links), daher die Umrechnung:
 export const DIRECTION_PADS = [
-    {x:3, y:3, dir:{x:0, y:1}},    // Oben Links -> Pfeil nach UNTEN
-    {x:3, y:11, dir:{x:1, y:0}},   // Unten Links -> Pfeil nach RECHTS
-    {x:11, y:11, dir:{x:0, y:-1}}, // Unten Rechts -> Pfeil nach OBEN
-    {x:11, y:3, dir:{x:-1, y:0}}   // Oben Rechts -> Pfeil nach LINKS
+    // Dein "Links Oben" (3,11) -> Canvas (3,3) -> NACH RECHTS
+    {x:3, y:3, dir:{x:1, y:0}},
+    
+    // Dein "Links Unten" (3,3) -> Canvas (3,11) -> NACH OBEN
+    {x:3, y:11, dir:{x:0, y:-1}},
+    
+    // Dein "Rechts Unten" (11,3) -> Canvas (11,11) -> NACH LINKS
+    {x:11, y:11, dir:{x:-1, y:0}},
+
+    // Dein "Rechts Oben" (11,11) -> Canvas (11,3) -> NACH UNTEN
+    {x:11, y:3, dir:{x:0, y:1}}
 ];
 
 export const keyBindings = {
-    // P1_CHANGE jetzt auf 'KeyX' statt 'ShiftLeft'
+    // Steuerung (X für Bombenwechsel)
     P1_UP: 'ArrowUp', P1_DOWN: 'ArrowDown', P1_LEFT: 'ArrowLeft', P1_RIGHT: 'ArrowRight', P1_BOMB: 'Space', P1_CHANGE: 'KeyX',
     P2_UP: 'KeyW', P2_DOWN: 'KeyS', P2_LEFT: 'KeyA', P2_RIGHT: 'KeyD', P2_BOMB: 'KeyF', P2_CHANGE: 'KeyE'
 };
