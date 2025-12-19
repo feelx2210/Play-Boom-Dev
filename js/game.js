@@ -92,14 +92,10 @@ window.startGame = function() {
     // Spieler erstellen
     state.players.push(new Player(1, 1, 1, userChar, false));
     
-    // --- BOT ZUWEISUNG (NEU: ZUFÄLLIG) ---
-    // 1. Alle Charaktere außer dem Spieler nehmen
+    // --- BOT ZUWEISUNG (ZUFÄLLIG) ---
     let availableChars = CHARACTERS.filter(c => c.id !== userChar.id);
-    
-    // 2. Liste zufällig mischen (Fisher-Yates ähnlich oder sort random)
     availableChars.sort(() => Math.random() - 0.5);
 
-    // 3. Die ersten 3 nehmen
     state.players.push(new Player(2, GRID_W-2, GRID_H-2, availableChars[0], true));
     state.players.push(new Player(3, GRID_W-2, 1, availableChars[1], true));
     state.players.push(new Player(4, 1, GRID_H-2, availableChars[2], true));
@@ -112,25 +108,20 @@ window.startGame = function() {
 
 // --- GLOBAL LISTENER ---
 window.addEventListener('keydown', e => {
-    // 1. Wenn Hauptmenü offen ist -> Menü-Steuerung
     if (!document.getElementById('main-menu').classList.contains('hidden')) { 
         handleMenuInput(e.code); 
         return; 
     }
-
-    // 2. Wenn Game Over Screen offen ist -> Enter/Space führt zum Menü
     if (!document.getElementById('game-over').classList.contains('hidden')) {
         if (e.code === 'Enter' || e.code === 'Space') {
             showMenu();
         }
         return;
     }
-
-    // 3. Im Spiel -> Pause toggeln
     if (e.key.toLowerCase() === 'p' || e.code === 'Escape') togglePause();
 });
 
-// --- SUDDEN DEATH LOGIC ---
+// --- SUDDEN DEATH LOGIC (FIXED SPEED) ---
 function triggerSuddenDeath(survivors) {
     state.isSuddenDeath = true;
     showSuddenDeathMessage();
@@ -154,16 +145,22 @@ function triggerSuddenDeath(survivors) {
                 size: 4
             });
         }
+        
         // Upgrade Stats
-        p.speed = 4;       
+        p.speed = 4; // Basis-Speed auf 4 setzen (entspricht Normal 2 * SpeedUp 2)
+        
+        // WICHTIG: Bestehende Multiplikatoren entfernen!
+        // Sonst würde ein aktiver Speed-Buff (x2) den Speed auf 8 verdoppeln.
+        p.speedMultiplier = 1;
+        p.speedTimer = 0; 
+        
         p.bombRange = 12;    
         p.maxBombs = 10;
         
-        // Skills permanent freischalten (aber nicht zwingend aktivieren)
+        // Skills permanent freischalten
         p.hasNapalm = true; p.napalmTimer = 999999;
         p.hasRolling = true; p.rollingTimer = 999999;
         
-        // HUD Update für Mensch
         if (!p.isBot) updateHud(p);
     });
 }
@@ -192,7 +189,7 @@ function update() {
         if (p.alive) { aliveCount++; livingPlayers.push(p); } 
     });
 
-    // CHECK SUDDEN DEATH (Wenn nur noch 2 leben und wir mehr als 2 waren)
+    // CHECK SUDDEN DEATH
     if (state.players.length > 2 && aliveCount === 2 && !state.isSuddenDeath) {
         triggerSuddenDeath(livingPlayers);
     }
@@ -218,7 +215,6 @@ function gameLoop() {
             alert("Game Crashed! Check Console for details.\n" + error.message); 
         } 
     }
-    // Rendern während Sudden Death Pause
     else if (state.isPaused && state.isSuddenDeath) {
         draw(ctx, canvas);
     }
