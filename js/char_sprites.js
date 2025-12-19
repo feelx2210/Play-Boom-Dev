@@ -1,12 +1,10 @@
 import { CHARACTERS } from './constants.js';
 
-// Cache für generierte Sprites
 const spriteCache = {};
 
 function getCachedSprite(charDef, d, isCursed) {
     if (!charDef) return document.createElement('canvas');
 
-    // Für animierte Chars (wie Diva/Dua)
     let timeKey = '';
     if (charDef.id === 'diva') {
         timeKey = `_t${Math.floor(Date.now() / 50)}`; 
@@ -29,10 +27,14 @@ function getCachedSprite(charDef, d, isCursed) {
     const id = charDef.id;
 
     // ============================================================
-    // 1. ORIGINAL CHARACTERS (Generic Names)
+    // 1. ORIGINAL CHARACTERS
     // ============================================================
     
-    if (id === 'devil') { // War Lucifer
+    // ... [ORIGINAL CHARACTERS (Devil, Nun, Yeti, Commando) bleiben GLEICH wie vorher] ...
+    // Ich füge hier der Kürze halber nur die Änderungen ein, aber im echten Code muss alles stehen.
+    // Da ich den ganzen File liefern soll, hier kompakt:
+    
+    if (id === 'devil') {
         const cBase = '#e62020'; const cDark = '#aa0000'; const cLite = '#ff5555'; const cHoof = '#1a0505'; 
         if (d === 'side') { ctx.fillStyle = cDark; ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(2, 20, 6, 4); ctx.fillStyle = cBase; ctx.fillRect(-6, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-6, 20, 6, 4); } 
         else { ctx.fillStyle = cBase; ctx.fillRect(-8, 12, 6, 10); ctx.fillRect(2, 12, 6, 10); ctx.fillStyle = cHoof; ctx.fillRect(-8, 20, 6, 4); ctx.fillRect(2, 20, 6, 4); }
@@ -44,7 +46,7 @@ function getCachedSprite(charDef, d, isCursed) {
         else if (d === 'back') { ctx.fillStyle = cDark; ctx.fillRect(-4, -18, 8, 30); ctx.fillStyle = '#ddd'; ctx.beginPath(); ctx.moveTo(-7, -24); ctx.quadraticCurveTo(-18, -30, -14, -38); ctx.lineTo(-5, -26); ctx.fill(); ctx.beginPath(); ctx.moveTo(7, -24); ctx.quadraticCurveTo(18, -30, 14, -38); ctx.lineTo(5, -26); ctx.fill(); ctx.strokeStyle = '#aa0000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 8); ctx.quadraticCurveTo(16, 22, 8, 30); ctx.stroke(); ctx.fillStyle = '#aa0000'; ctx.beginPath(); ctx.moveTo(8, 30); ctx.lineTo(12, 34); ctx.lineTo(4, 34); ctx.fill(); ctx.fillStyle = cBase; ctx.fillRect(-14, -16, 5, 18); ctx.fillRect(9, -16, 5, 18); } 
         else if (d === 'side') { ctx.fillStyle = hornGrad; ctx.beginPath(); ctx.moveTo(2, -24); ctx.quadraticCurveTo(10, -30, 12, -38); ctx.lineTo(8, -24); ctx.fill(); ctx.fillStyle = '#ffff00'; ctx.fillRect(4, -19, 4, 4); ctx.fillStyle = cDark; ctx.fillRect(8, -16, 4, 2); ctx.fillStyle = cBase; ctx.fillRect(0, -12, 5, 16); ctx.fillStyle = cDark; ctx.fillRect(0, 0, 6, 4); ctx.strokeStyle = '#aa0000'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, 8); ctx.quadraticCurveTo(-16, 20, -12, 26); ctx.stroke(); }
     } 
-    else if (id === 'commando') { // War Rambo
+    else if (id === 'commando') {
         const cGreen = '#226622'; const cDarkG = '#113311'; const cLiteG = '#448844'; const cSkin  = '#ffccaa'; const cSkinS = '#ddaa88'; const cBandana = '#dd0000';
         ctx.fillStyle = cGreen; if (d === 'side') { ctx.fillRect(-5, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-5, 20, 9, 4); } else { ctx.fillRect(-10, 12, 8, 8); ctx.fillRect(2, 12, 8, 8); ctx.fillStyle = '#111'; ctx.fillRect(-10, 20, 8, 4); ctx.fillRect(2, 20, 8, 4); }
         const bodyGrad = ctx.createLinearGradient(0, -20, 0, 12); bodyGrad.addColorStop(0, '#448844'); bodyGrad.addColorStop(1, '#225522'); ctx.fillStyle = bodyGrad; ctx.fillRect(-12, -20, 24, 32);
@@ -52,6 +54,8 @@ function getCachedSprite(charDef, d, isCursed) {
         if (d === 'front') { ctx.fillStyle = cSkin; ctx.fillRect(-19, -18, 7, 18); ctx.fillRect(12, -18, 7, 18); ctx.fillStyle = cSkinS; ctx.fillRect(-19, -18, 2, 18); ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(-12, -20); ctx.lineTo(12, 12); ctx.lineTo(6, 12); ctx.lineTo(-12, -14); ctx.fill(); ctx.fillStyle = '#ffcc00'; ctx.fillRect(-9, -18, 3, 5); ctx.fillRect(-3, -10, 3, 5); ctx.fillRect(3, -2, 3, 5); ctx.fillStyle = cSkin; ctx.fillRect(-10, -26, 20, 16); ctx.fillStyle = cBandana; ctx.fillRect(-12, -26, 24, 6); ctx.fillRect(10, -24, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(-8, -18, 7, 7); ctx.fillRect(1, -18, 7, 7); ctx.fillStyle = '#000'; ctx.fillRect(-5, -16, 2, 2); ctx.fillRect(3, -16, 2, 2); ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(-10, -14, 20, 4); } 
         else if (d === 'back') { ctx.fillStyle = cSkin; ctx.fillRect(-19, -18, 7, 18); ctx.fillRect(12, -18, 7, 18); ctx.fillStyle = '#553311'; ctx.beginPath(); ctx.moveTo(12, -20); ctx.lineTo(-12, 12); ctx.lineTo(-6, 12); ctx.lineTo(12, -14); ctx.fill(); ctx.fillStyle = '#ffcc00'; ctx.fillRect(8, -16, 4, 6); ctx.fillRect(2, -8, 4, 6); ctx.fillRect(-4, 0, 4, 6); ctx.fillStyle = '#111'; ctx.fillRect(-10, -26, 20, 16); ctx.fillStyle = cBandana; ctx.fillRect(-12, -26, 24, 6); ctx.fillRect(-4, -26, 8, 12); } 
         else if (d === 'side') { ctx.fillStyle = '#553311'; ctx.fillRect(-6, -18, 12, 28); ctx.fillStyle = cSkin; ctx.fillRect(-7, -26, 16, 16); ctx.fillStyle = '#111'; ctx.fillRect(-9, -26, 4, 16); ctx.fillStyle = cBandana; ctx.fillRect(-9, -26, 20, 6); ctx.fillRect(-13, -24, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(4, -18, 5, 6); ctx.fillStyle = '#000'; ctx.fillRect(7, -16, 2, 2); ctx.fillStyle = cSkin; ctx.fillRect(0, -12, 7, 20); ctx.fillStyle = cGreen; ctx.fillRect(0, -16, 7, 4); }
+        // Rambo Mund (simple line)
+        if(d==='front') { ctx.fillStyle='#a0522d'; ctx.fillRect(-2, -8, 4, 1); }
     }
     else if (id === 'nun') {
         ctx.fillStyle = '#111'; if (d === 'side') ctx.fillRect(-5, 14, 10, 4); else { ctx.fillRect(-7, 14, 6, 4); ctx.fillRect(1, 14, 6, 4); }
@@ -59,8 +63,10 @@ function getCachedSprite(charDef, d, isCursed) {
         if (d === 'front') { ctx.fillStyle = robeGrad; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-18, -4, -16, 14); ctx.lineTo(16, 14); ctx.quadraticCurveTo(18, -4, 0, -24); ctx.fill(); ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, -10); ctx.quadraticCurveTo(-12, 0, -10, 14); ctx.stroke(); ctx.beginPath(); ctx.moveTo(8, -10); ctx.quadraticCurveTo(12, 0, 10, 14); ctx.stroke(); ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(0, -26); ctx.quadraticCurveTo(-14, -24, -16, -8); ctx.lineTo(16, -8); ctx.quadraticCurveTo(14, -24, 0, -26); ctx.fill(); ctx.fillStyle = '#ffccaa'; ctx.beginPath(); ctx.arc(0, -16, 7, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#000'; ctx.fillRect(-4, -17, 2, 2); ctx.fillRect(2, -17, 2, 2); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -19, 10, Math.PI, 0); ctx.fill(); const gold = ctx.createLinearGradient(0,-6,0,10); gold.addColorStop(0,'#ffdd44'); gold.addColorStop(1,'#aa7700'); ctx.fillStyle = gold; ctx.fillRect(-3, -6, 6, 16); ctx.fillRect(-8, -2, 16, 6); ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(-1, -6, 1, 16); ctx.fillStyle = '#111'; ctx.fillRect(-20, -12, 8, 18); ctx.fillRect(12, -12, 8, 18); ctx.fillStyle = '#ffccaa'; ctx.fillRect(-18, 4, 4, 4); ctx.fillRect(14, 4, 4, 4); } 
         else if (d === 'back') { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-18, -4, -16, 14); ctx.lineTo(16, 14); ctx.quadraticCurveTo(18, -4, 0, -24); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, -28); ctx.quadraticCurveTo(-14, -10, -12, 10); ctx.lineTo(12, 10); ctx.quadraticCurveTo(14, -10, 0, -28); ctx.fill(); ctx.fillStyle = '#eee'; ctx.fillRect(-8, -24, 16, 2); ctx.fillStyle = robeGrad; ctx.fillRect(-18, -12, 6, 18); ctx.fillRect(12, -12, 6, 18); } 
         else if (d === 'side') { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-14, -10, -12, 14); ctx.lineTo(10, 14); ctx.quadraticCurveTo(12, -10, 0, -24); ctx.fill(); ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(2, -26); ctx.lineTo(-8, -26); ctx.lineTo(-10, -8); ctx.lineTo(4, -8); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(-4, -26); ctx.quadraticCurveTo(-14, -16, -12, 10); ctx.lineTo(-6, 10); ctx.quadraticCurveTo(-8, -16, -4, -26); ctx.fill(); ctx.fillStyle = '#ffccaa'; ctx.fillRect(2, -22, 6, 12); ctx.fillStyle = '#000'; ctx.fillRect(6, -18, 2, 2); ctx.fillStyle = '#cc9922'; ctx.fillRect(4, 0, 4, 10); ctx.fillRect(2, 2, 8, 4); ctx.fillStyle = '#111'; ctx.fillRect(-2, -12, 10, 18); ctx.fillStyle = '#ffccaa'; ctx.fillRect(-2, 4, 8, 4); }
+        // Nun Mund
+        if(d==='front') { ctx.fillStyle='#d08060'; ctx.fillRect(-2, -12, 4, 1); }
     }
-    else if (id === 'yeti') { // War Yeti/Snow Beast
+    else if (id === 'yeti') {
         const furBase = '#00ccff'; const furDark = '#0088bb'; const furLite = '#e0ffff'; 
         ctx.fillStyle = furBase; if (d === 'side') { ctx.fillRect(-6, 12, 12, 10); } else { ctx.fillRect(-10, 12, 8, 10); ctx.fillRect(2, 12, 8, 10); }
         const furGrad = ctx.createLinearGradient(0, -24, 0, 12); furGrad.addColorStop(0, furBase); furGrad.addColorStop(1, furDark); ctx.fillStyle = furGrad; ctx.fillRect(-16, -24, 32, 36); 
@@ -68,10 +74,12 @@ function getCachedSprite(charDef, d, isCursed) {
         if (d === 'front') { ctx.fillStyle = furBase; ctx.fillRect(-22, -16, 8, 26); ctx.fillRect(14, -16, 8, 26); ctx.fillStyle = furLite; ctx.fillRect(-22, -16, 8, 4); ctx.fillRect(14, -16, 8, 4); ctx.fillStyle = '#005599'; ctx.fillRect(-12, -20, 24, 14); ctx.fillStyle = '#fff'; ctx.fillRect(-8, -17, 6, 6); ctx.fillRect(2, -17, 6, 6); ctx.fillStyle = '#000'; ctx.fillRect(-6, -16, 2, 2); ctx.fillRect(4, -16, 2, 2); ctx.fillStyle = '#fff'; ctx.fillRect(-6, -8, 3, 4); ctx.fillRect(3, -8, 3, 4); } 
         else if (d === 'back') { ctx.fillStyle = furDark; ctx.fillRect(-10, -14, 20, 24); ctx.fillStyle = furBase; ctx.fillRect(-22, -16, 8, 26); ctx.fillRect(14, -16, 8, 26); } 
         else if (d === 'side') { ctx.fillStyle = '#005599'; ctx.fillRect(6, -20, 10, 14); ctx.fillStyle = '#fff'; ctx.fillRect(10, -17, 4, 6); ctx.fillStyle = '#000'; ctx.fillRect(12, -16, 2, 2); ctx.fillStyle = furBase; ctx.fillRect(-4, -14, 12, 26); ctx.fillStyle = furLite; ctx.fillRect(-4, -14, 12, 4); }
+        // Yeti Mund
+        if(d==='front') { ctx.fillStyle='#002244'; ctx.fillRect(-3, -10, 6, 2); }
     }
 
     // ============================================================
-    // 2. SAFE PARODIES (Vector Style)
+    // 2. UPDATED PARODIES
     // ============================================================
     else {
         const drawVectorBody = (skin, topColor, pantsColor, shoesColor, options={}) => {
@@ -79,27 +87,45 @@ function getCachedSprite(charDef, d, isCursed) {
             const pantsLen = options.pantsLen || 12; 
             const sockColor = options.socks || null;
             
-            // BEINE
+            // BEINE & SCHUHE
             if (pantsLen < 12) {
                 ctx.fillStyle = skin;
                 if(d==='side') ctx.fillRect(-4, 12, 8, 12);
                 else { ctx.fillRect(-9*wMod, 12, 8*wMod, 12); ctx.fillRect(1*wMod, 12, 8*wMod, 12); }
             }
+            // Socken
             if (sockColor) {
                 ctx.fillStyle = sockColor;
                 if(d==='side') ctx.fillRect(-4, 18, 8, 4);
                 else { ctx.fillRect(-9*wMod, 18, 8*wMod, 4); ctx.fillRect(1*wMod, 18, 8*wMod, 4); }
             }
+            // Hose
             ctx.fillStyle = pantsColor;
-            if(d==='side') ctx.fillRect(-5, 10, 10, pantsLen);
-            else { ctx.fillRect(-9*wMod, 10, 8*wMod, pantsLen); ctx.fillRect(1*wMod, 10, 8*wMod, pantsLen); }
+            
+            // Lifeguard V-Shape Anpassung
+            if (options.vShape && d !== 'side') {
+                ctx.beginPath();
+                ctx.moveTo(-9*wMod, 10); ctx.lineTo(9*wMod, 10);
+                ctx.lineTo(0, 18); 
+                ctx.fill();
+            } else {
+                if(d==='side') ctx.fillRect(-5, 10, 10, pantsLen);
+                else { ctx.fillRect(-9*wMod, 10, 8*wMod, pantsLen); ctx.fillRect(1*wMod, 10, 8*wMod, pantsLen); }
+            }
 
-            // SCHUHE
-            ctx.fillStyle = shoesColor;
-            if(d==='side') { ctx.beginPath(); ctx.ellipse(0, 24, 6, 3, 0, 0, Math.PI*2); ctx.fill(); }
-            else { ctx.beginPath(); ctx.arc(-5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); }
+            // Schuhe (außer Lifeguard, barfuß?) -> lassen wir Schuhe an für Gameplay-Klarheit
+            if (!options.barefoot) {
+                ctx.fillStyle = shoesColor;
+                if(d==='side') { ctx.beginPath(); ctx.ellipse(0, 24, 6, 3, 0, 0, Math.PI*2); ctx.fill(); }
+                else { ctx.beginPath(); ctx.arc(-5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(5*wMod, 24, 4, 0, Math.PI*2); ctx.fill(); }
+            } else {
+                // Barfuß
+                ctx.fillStyle = skin;
+                if(d==='side') { ctx.fillRect(-2, 22, 6, 3); }
+                else { ctx.fillRect(-8*wMod, 22, 6, 3); ctx.fillRect(2*wMod, 22, 6, 3); }
+            }
 
-            // TORSO (Vektor)
+            // TORSO
             ctx.fillStyle = topColor;
             ctx.beginPath(); 
             ctx.moveTo(-11*wMod, -16); ctx.lineTo(11*wMod, -16); 
@@ -113,8 +139,14 @@ function getCachedSprite(charDef, d, isCursed) {
                 ctx.beginPath(); ctx.ellipse(-14*wMod, -6, 4.5, 11, 0.2, 0, Math.PI*2); ctx.fill();
                 ctx.beginPath(); ctx.ellipse(14*wMod, -6, 4.5, 11, -0.2, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = skin; fillCircle(-15*wMod, 5, 3.5, skin); fillCircle(15*wMod, 5, 3.5, skin);
+                
+                // Tattoo (Rap Icon)
+                if (options.tattoos) {
+                    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(-16*wMod, -8); ctx.lineTo(-12*wMod, 0); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(16*wMod, -8); ctx.lineTo(12*wMod, 0); ctx.stroke();
+                }
             } else {
-                // SEITEN-ARM
                 ctx.fillStyle = topColor;
                 if (options.sleeveless) ctx.fillStyle = skin;
                 ctx.beginPath(); ctx.ellipse(0, -6, 4.5, 11, 0, 0, Math.PI*2); ctx.fill();
@@ -136,13 +168,18 @@ function getCachedSprite(charDef, d, isCursed) {
             if (glasses) { ctx.fillStyle = '#111'; ctx.fillRect(-9, -26, 18, 5); }
             if (visor) { ctx.fillStyle = '#0044cc'; ctx.fillRect(-10, -28, 20, 8); ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.fillRect(-8, -28, 4, 8); }
             if (beard) { ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.arc(0, -22, 9.5, 0.5, 2.6); ctx.fill(); }
+            
+            // NEU: MUND
+            if (!beard) {
+                ctx.fillStyle = '#a0522d'; // Dunkler Hautton für Mund
+                ctx.fillRect(-2, -17, 4, 1);
+            }
         };
 
-        // COLORS
         const skinL = '#ffccaa'; const skinD = '#8d5524';
         const black = '#111'; const white = '#fff';
 
-        // 1. STRIKER (War Cristiano)
+        // 1. STRIKER
         if (id === 'striker') {
             const jersey = gradient(-16, 12, '#e00', '#900');
             drawVectorBody(skinL, jersey, white, '#00f', { pantsLen: 6, socks: black });
@@ -151,68 +188,85 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.beginPath(); ctx.moveTo(-10,-26); ctx.quadraticCurveTo(0,-34,10,-26); ctx.fill();
             drawFace();
         }
-        // 2. AGENT (War Hitman - Barcode entfernt)
+        // 2. AGENT
         else if (id === 'agent') {
             const suit = gradient(-16, 12, '#333', '#000');
             drawVectorBody(skinL, suit, black, black);
             if(d==='front') { ctx.fillStyle=white; ctx.beginPath(); ctx.moveTo(-5,-16); ctx.lineTo(5,-16); ctx.lineTo(0,-6); ctx.fill(); ctx.fillStyle='#c00'; ctx.fillRect(-2, -14, 4, 14); }
             drawFace();
-            // Barcode REMOVED for safety
         }
-        // 3. TECH CEO (War Elon - Logo entfernt)
+        // 3. TECH CEO
         else if (id === 'techie') {
             drawVectorBody(skinL, '#222', '#222', '#000');
-            // Logo REMOVED
             ctx.fillStyle='#321'; ctx.beginPath(); ctx.arc(0, -25, 10, Math.PI, 0); ctx.fill();
             drawFace();
         }
-        // 4. MOONWALKER (War MJ - Slim)
+        // 4. MOONWALKER
         else if (id === 'moonwalker') {
             const jacket = gradient(-16, 12, '#eee', '#ccc');
             drawVectorBody(skinL, jacket, white, black, { socks: white, width: 0.8, skipHead: true });
-            
             ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -22, 8, 9.5, 0, 0, Math.PI*2); ctx.fill();
             if(d==='front') { ctx.fillStyle='#44f'; ctx.beginPath(); ctx.moveTo(-4,-16); ctx.lineTo(4,-16); ctx.lineTo(0,-8); ctx.fill(); }
-            
             ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(0, -29, 11, 4, 0, 0, Math.PI*2); ctx.fill(); 
             ctx.beginPath(); ctx.ellipse(0, -32, 8, 8, 0, Math.PI, 0); ctx.fill(); 
             ctx.fillStyle=black; ctx.fillRect(-8, -32, 16, 3); 
             ctx.beginPath(); ctx.arc(5, -26, 2, 0, Math.PI*2); ctx.fill(); 
             drawFace();
         }
-        // 5. HOOPSTER (War Lebron)
-        else if (id === 'hoopster') {
+        // 5. BALLER (UPDATED: Lila Hose, Tanktop)
+        else if (id === 'baller') { // War Hoopster
             const gold = '#fdb927';
-            drawVectorBody(skinD, gold, gold, white, { pantsLen: 7, width: 1.15 }); 
-            if(d==='front' || d==='back') { ctx.fillStyle='#552583'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText('23', 0, 4); }
+            const purple = '#552583';
+            // Lila Hose, Gold Shirt, Sleeveless
+            drawVectorBody(skinD, gold, purple, white, { pantsLen: 7, width: 1.15, sleeveless: true }); 
+            if(d==='front' || d==='back') { ctx.fillStyle=purple; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText('23', 0, 4); }
             ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -23, 10, 0, Math.PI*2); ctx.stroke(); 
             drawFace(false, false, true);
         }
-        // 6. LIFEGUARD (War Pam - Slim)
+        // 6. LIFEGUARD (UPDATED: V-Shape, Ärmellos, Haare korrigiert)
         else if (id === 'lifeguard') {
-            drawVectorBody(skinL, '#f00', '#f00', skinL, { pantsLen: 5, width: 0.8, skipHead: true });
+            // width: 0.8, skipHead: true, sleeveless: true, vShape: true, barefoot: true
+            drawVectorBody(skinL, '#f00', '#f00', skinL, { width: 0.8, skipHead: true, sleeveless: true, vShape: true, barefoot: true });
+            
             ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -22, 7.5, 9.5, 0, 0, Math.PI*2); ctx.fill();
+            
+            // Korrigierte Haare (weniger 'Helm', mehr 'Strand')
             ctx.fillStyle='#fe8'; 
-            ctx.beginPath(); ctx.arc(0, -28, 13, Math.PI, 0); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(-8, -22, 5, 12, 0.3, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(8, -22, 5, 12, -0.3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); 
+            ctx.moveTo(-10, -20); 
+            ctx.quadraticCurveTo(0, -35, 10, -20); // Oben rund
+            ctx.lineTo(12, -10); // Lang rechts
+            ctx.quadraticCurveTo(0, -15, -12, -10); // Unten
+            ctx.fill();
+
             drawFace();
         }
-        // 7. VOCALIST (War Drizzy - Owl entfernt)
-        else if (id === 'vocalist') {
+        // 7. RAPPER (UPDATED: Eule auf Shirt) - War Vocalist
+        else if (id === 'rapper') {
             drawVectorBody(skinD, gradient(-16,12,'#111','#000'), '#347', white, { width: 1.1 });
-            // Owl REMOVED
+            
+            // Eule (Simple Form)
+            if(d==='front') { 
+                ctx.fillStyle = '#fd0'; // Gold
+                ctx.beginPath();
+                ctx.ellipse(0, -6, 4, 5, 0, 0, Math.PI*2); // Körper
+                ctx.fill();
+                ctx.fillStyle = black; // Augen
+                ctx.beginPath(); ctx.arc(-1.5, -7, 1, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(1.5, -7, 1, 0, Math.PI*2); ctx.fill();
+            }
             ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -24, 10, Math.PI, 0); ctx.fill();
             drawFace(false, false, true);
         }
-        // 8. RAPPER (War 2Pac)
-        else if (id === 'rapper') {
-            drawVectorBody(skinD, white, '#369', white, { sleeveless: true });
-            ctx.fillStyle='#36c'; ctx.fillRect(-10, -29, 20, 6);
+        // 8. RAP ICON (UPDATED: Tattoos) - War Rapper
+        else if (id === 'rap_icon') {
+            // Tattoos enabled
+            drawVectorBody(skinD, white, '#369', white, { sleeveless: true, tattoos: true });
+            ctx.fillStyle='#36c'; ctx.fillRect(-10, -29, 20, 6); // Bandana
             if(d==='front') { ctx.beginPath(); ctx.moveTo(8,-29); ctx.lineTo(14,-34); ctx.lineTo(14,-22); ctx.fill(); } 
             drawFace(false, false, true);
         }
-        // 9. POP DIVA (War Dua - Glitzer, Slim)
+        // 9. POP DIVA
         else if (id === 'diva') {
             const t = Date.now() / 150; 
             const glitter = ctx.createLinearGradient(-15 + Math.sin(t)*15, -20, 15 + Math.sin(t)*15, 20);
@@ -223,10 +277,14 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.fillStyle = skinL; ctx.beginPath(); ctx.ellipse(0, -23, 7, 9.5, 0, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle=black; ctx.beginPath(); ctx.arc(0, -26, 9.5, Math.PI, 0); ctx.fill(); 
             if(d!=='back') { ctx.fillRect(-10.5, -26, 5, 25); ctx.fillRect(5.5, -26, 5, 25); } else { ctx.fillRect(-10, -26, 20, 25); }
-            drawFace();
-            if(d==='front') { ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); }
+            
+            if(d==='front') { 
+                ctx.fillStyle = '#d00000'; ctx.fillRect(-1.5, -16, 3, 1.5); // Rote Lippen
+            } else {
+                drawFace();
+            }
         }
-        // 10. POP STAR (War Gaga - Slim)
+        // 10. POP STAR
         else if (id === 'star') {
             const blue = gradient(-16, 12, '#0055ff', '#0000aa');
             drawVectorBody(skinL, blue, blue, white, { width: 0.8, pantsLen: 5, skipHead: true });
@@ -236,7 +294,7 @@ function getCachedSprite(charDef, d, isCursed) {
             ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(-9, -40); ctx.lineTo(-9, -28); ctx.fill(); ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(9, -40); ctx.lineTo(9, -28); ctx.fill();
             drawFace(true); 
         }
-        // 11. SPY (War 007)
+        // 11. SPY
         else if (id === 'spy') {
             drawVectorBody(skinL, gradient(-16, 12, '#555', '#333'), '#333', black);
             if(d==='front') { ctx.fillStyle=white; ctx.beginPath(); ctx.moveTo(-5,-16); ctx.lineTo(5,-16); ctx.lineTo(0,-6); ctx.fill(); ctx.fillStyle=black; ctx.fillRect(-2, -14, 4, 3); }
