@@ -296,3 +296,30 @@ button.main-btn.focused { background: #fff; color: var(--c-accent); border-color
 }
 
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+/* --- IMPRINT STYLE --- */
+#imprint-link {
+    position: absolute; 
+    bottom: 15px; 
+    left: 15px;
+    color: #444; 
+    font-size: 10px; 
+    font-family: 'Press Start 2P', cursive;
+    cursor: pointer;
+    text-transform: uppercase;
+    z-index: 100;
+    transition: color 0.2s;
+}
+
+#imprint-link:hover {
+    color: #ff3333; 
+    text-decoration: underline;
+}
+
+@media (orientation: portrait) {
+    #imprint-link {
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%); /* Auf Handy mittig unten */
+    }
+}

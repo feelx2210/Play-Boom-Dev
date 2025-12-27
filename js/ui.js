@@ -204,7 +204,7 @@ export function initMenu() {
 
 // --- INPUT HANDLING ---
 export function handleMenuInput(code) {
-    if (state.menuState === 4 || state.menuState === 5) return;
+    if (state.menuState === 4 || state.menuState === 5 || state.menuState === 99) return;
 
     if (state.menuState === 0) { 
         if (code === 'ArrowLeft') changeSelection('char', -1);
@@ -419,6 +419,10 @@ export function showMenu() {
     document.getElementById('pause-menu').classList.add('hidden'); 
     document.getElementById('controls-menu').classList.add('hidden');
     
+    // NEU: Imprint Menü schließen
+    const imprintMenu = document.getElementById('imprint-menu');
+    if (imprintMenu) imprintMenu.classList.add('hidden');
+    
     const oldSet = document.getElementById('settings-menu');
     if (oldSet) oldSet.remove();
     const oldStats = document.getElementById('stats-menu');
@@ -429,6 +433,13 @@ export function showMenu() {
     
     state.menuState = 0;
     initMenu();
+}
+
+// NEU: Imprint Logik
+export function showImprint() {
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('imprint-menu').classList.remove('hidden');
+    state.menuState = 99; // 99 = Imprint State (Input blockieren)
 }
 
 export function togglePause() {
@@ -552,6 +563,8 @@ window.quitGame = quitGame;
 window.showMenu = showMenu;
 window.restartGame = restartGame; 
 window.updateHud = updateHud;
+// NEU: Global verfügbar machen
+window.showImprint = showImprint;
 
 window.addEventListener('keydown', e => {
     if (remappingAction) {

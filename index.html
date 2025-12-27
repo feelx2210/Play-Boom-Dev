@@ -8,10 +8,6 @@
     <script defer src="https://cloud.umami.is/script.js" data-website-id="0fb8f7bf-1091-455c-97aa-4ef76bc400a9"></script>
 </head>
 <body>
-    </body>
-</html>
-    </head>
-<body>
 
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
@@ -47,6 +43,8 @@
                 <button id="start-game-btn" class="main-btn" onclick="startGame()">START GAME</button>
                 <button class="btn-secondary desktop-only" onclick="showSettings()">SETTINGS</button>
             </div>
+
+            <div id="imprint-link" onclick="showImprint()">IMPRINT</div>
         </div>
     </div>
 
@@ -79,6 +77,28 @@
         <h1>CONTROLS</h1>
         <div class="controls-list" id="controls-list"></div>
         <button class="btn-secondary" onclick="showSettings()">BACK</button>
+    </div>
+
+    <div id="imprint-menu" class="screen hidden">
+        <h1>IMPRINT</h1>
+        <div style="text-align: center; color: #ccc; font-size: 10px; line-height: 1.6; max-width: 600px; padding: 20px; font-family: 'Press Start 2P', cursive;">
+            <p style="margin-bottom: 20px;">
+                <strong>ANGABEN GEMÄSS § 5 TMG</strong><br><br>
+                Felix Hüning<br>
+                Musterstraße 1<br>
+                12345 Musterstadt
+            </p>
+            <p style="margin-bottom: 20px;">
+                <strong>KONTAKT</strong><br><br>
+                E-Mail: kontakt@playboom.xyz
+            </p>
+            <p style="margin-bottom: 20px;">
+                <strong>COPYRIGHT</strong><br><br>
+                © 2025 Boom Bomberman 1995.<br>
+                All rights reserved.
+            </p>
+        </div>
+        <button class="btn-secondary" onclick="showMenu()">BACK</button>
     </div>
 
     <div id="pause-menu" class="screen hidden">
