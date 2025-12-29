@@ -1,6 +1,6 @@
-# 💣 Boom Bomberman 1995
+# 💣 Boom 1995
 
-**Boom Bomberman 1995** is a fast-paced, retro-style arcade game built entirely with vanilla JavaScript and HTML5 Canvas. Inspired by the classic Bomberman mechanics, it features strategic explosive action, unique power-ups, diverse levels, and a mobile-first responsive design.
+**Boom 1995** is a fast-paced, retro-style arcade game built entirely with vanilla JavaScript and HTML5 Canvas. Inspired by the classic Bomberman mechanics, it features strategic explosive action, unique power-ups, diverse levels, and a mobile-first responsive design.
 
 👉 **Play Online:** [playboom.xyz](https://playboom.xyz)
 
@@ -67,7 +67,7 @@
 
 ## 🔒 License & Copyright
 
-**© 2025 Boom Bomberman 1995. All Rights Reserved. Felix Huening**
+**© 2025 Boom 1995. All Rights Reserved. Felix Huening**
 
 This project and its source code are proprietary. Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited without the explicit written permission of the copyright holder.
 
