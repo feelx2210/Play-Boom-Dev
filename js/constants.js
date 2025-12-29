@@ -53,7 +53,7 @@ export const CHARACTERS = [
     { id: 'techie', name: 'Tech CEO', color: '#333333', accent: '#aaaaaa' },   
     { id: 'rap_icon', name: 'Rap Icon', color: '#ffffff', accent: '#3366cc' }, 
     { id: 'devil', name: 'The Devil', color: '#ff0000', accent: '#ffff00' },   
-    { id: 'moonwalker', name: 'Moonwalker', color: '#ffffff', accent: '#000000' }, 
+    { id: 'moonwalker', name: 'Dancer', color: '#ffffff', accent: '#000000' }, 
     { id: 'lifeguard', name: 'Lifeguard', color: '#ff2222', accent: '#ffff88' }, 
     { id: 'spy', name: 'The Spy', color: '#555555', accent: '#000000' },        
     { id: 'star', name: 'Pop Star', color: '#0000ff', accent: '#eeeeee' }      
