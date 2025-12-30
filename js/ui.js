@@ -140,13 +140,21 @@ export function initMenu() {
         pCanvas.className = 'preview-canvas';
         const ctx = pCanvas.getContext('2d');
 
+        // SAFARI FIX: 
+        // Wir erzwingen hier direkt per Inline-Style, dass die Höhe "auto" ist 
+        // und setzen die korrekte Aspect-Ratio. Das überschreibt alle globalen CSS-Probleme.
+        pCanvas.style.width = '100%';
+        pCanvas.style.height = 'auto';
+
         if (type === 'char') {
             pCanvas.width = 48; 
             pCanvas.height = 64; 
+            pCanvas.style.aspectRatio = '3 / 4'; // Fix für Safari (48:64)
             drawCharacterSprite(ctx, 24, 44, data);
         } else {
             pCanvas.width = 48; 
             pCanvas.height = 48; 
+            pCanvas.style.aspectRatio = '1 / 1'; // Fix für Safari (Quadratisch)
             drawLevelPreview(ctx, 48, 48, data);
         }
 
